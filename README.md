@@ -24,7 +24,7 @@ O sistema foi desenvolvido para centralizar o fluxo de atendimento operacional e
 | Frontend | React, Vite, CSS, React Leaflet |
 | Backend | Node.js, Express, Mongoose, bcryptjs, cors, dotenv |
 | Banco de dados | MongoDB |
-| Publicação sugerida | Vercel (frontend), Render (backend), MongoDB Atlas (banco) |
+| Publicação sugerida | Vercel (frontend), Render (backend), MongoDB Atlas(banco) |
 
 ## Estrutura do projeto
 
