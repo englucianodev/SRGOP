@@ -3,65 +3,40 @@ const Vehicle = require("../models/Vehicle");
 
 const router = express.Router();
 
-// LISTAR VIATURAS
 router.get("/", async (req, res) => {
   try {
-    const viaturas = await Vehicle.find().sort({ createdAt: -1 });
-    return res.status(200).json(viaturas);
+    const vehicles = await Vehicle.find().sort({ createdAt: -1 });
+    return res.status(200).json(vehicles);
   } catch (error) {
-    return res.status(500).json({
-      message: "Erro ao buscar viaturas.",
-      error: error.message,
-    });
+    return res.status(500).json({ message: "Erro ao listar viaturas.", origem: error.message });
   }
 });
 
-// CADASTRAR VIATURA
 router.post("/", async (req, res) => {
   try {
-    const novaViatura = new Vehicle(req.body);
-    await novaViatura.save();
-
-    return res.status(201).json(novaViatura);
+    const vehicle = new Vehicle(req.body);
+    await vehicle.save();
+    return res.status(201).json(vehicle);
   } catch (error) {
-    return res.status(500).json({
-      message: "Erro ao cadastrar viatura.",
-      error: error.message,
-    });
+    return res.status(500).json({ message: "Erro ao cadastrar viatura.", origem: error.message });
   }
 });
 
-// ATUALIZAR VIATURA
 router.put("/:id", async (req, res) => {
   try {
-    const viaturaAtualizada = await Vehicle.findByIdAndUpdate(
-      req.params.id,
-      req.body,
-      { new: true }
-    );
-
-    return res.status(200).json(viaturaAtualizada);
+    const vehicle = await Vehicle.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    return res.status(200).json(vehicle);
   } catch (error) {
-    return res.status(500).json({
-      message: "Erro ao atualizar viatura.",
-      error: error.message,
-    });
+    return res.status(500).json({ message: "Erro ao alterar viatura.", origem: error.message });
   }
 });
 
-// EXCLUIR VIATURA
 router.delete("/:id", async (req, res) => {
   try {
     await Vehicle.findByIdAndDelete(req.params.id);
-
-    return res.status(200).json({
-      message: "Viatura removida com sucesso.",
-    });
+    return res.status(200).json({ message: "Viatura excluída com sucesso." });
   } catch (error) {
-    return res.status(500).json({
-      message: "Erro ao excluir viatura.",
-      error: error.message,
-    });
+    return res.status(500).json({ message: "Erro ao excluir viatura.", origem: error.message });
   }
 });
 

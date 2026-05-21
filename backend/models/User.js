@@ -6,7 +6,16 @@ const userSchema = new mongoose.Schema(
     email: { type: String, required: true, unique: true, trim: true },
     senha: { type: String, required: true },
     cidade: { type: String, required: true, trim: true },
-    permissao: { type: String, default: "operador" }
+    tipoAcesso: {
+      type: String,
+      enum: ["Administrativo", "Oficial", "Praça"],
+      required: true,
+      default: "Praça",
+    },
+    guarnicao: { type: String, default: "" },
+    responsavelServico: { type: Boolean, default: false },
+    dataServico: { type: String, default: "" },
+    ativo: { type: Boolean, default: true },
   },
   { timestamps: true }
 );
