@@ -9,7 +9,7 @@ const MENUS = [
   "Atendimento",
   "Guarnições",
   "Viaturas",
-  "Mapa",
+  "Mapas",
   "Relatórios",
   "Usuários",
   "Administrativo",
