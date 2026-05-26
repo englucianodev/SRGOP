@@ -19,7 +19,7 @@ const MENUS = [
 
 const CITY_OPTIONS = [
   "Presidente Dutra",
-  "Tuntun",
+  "Tuntum",
   "Graça Aranha",
   "Governador Eugênio Barrros",
   "Governador Luis Rocha",
@@ -38,7 +38,7 @@ const CITY_OPTIONS = [
 
 const dashboardCardsBase = [
   "Hoje", "Mês", "Ano", "Encerradas", "Em Aberto", "Alertas", "Viaturas", "Guarnições",
-  "Cidades", "Tempo Médio", "Operações", "Armas Apreendidas", "Veículos Recuperados", "Conduzidos", "Abordagens", "CPU"
+  "Cidades", "Tempo Médio", "Operações", "Armas Apreendidas", "Veículos Recuperados", "Conduções", "Abordagens", "CPU de DIA"
 ];
 
 const initialRegister = {
@@ -681,13 +681,13 @@ function App() {
           <section className="panel-card map-panel">
             <h3>Mapa operacional</h3>
             <div className="map-frame">
-              <MapContainer center={[-5.5264, -47.4918]} zoom={8} scrollWheelZoom>
+              <MapContainer center={[-5.2884, -44.5012]} zoom={9} scrollWheelZoom>
                 <TileLayer attribution='&copy; OpenStreetMap contributors' url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-                <Marker position={[-5.5264, -47.4918]}>
+                <Marker position={[-5.2884, -44.5012]}>
                   <Popup>18º BPM • Área base</Popup>
                 </Marker>
                 {occurrences.slice(0, 5).map((item, index) => (
-                  <Marker key={item._id} position={[-5.52 + index * 0.08, -47.49 + index * 0.06]}>
+                  <Marker key={item._id} position={[-5.288 + index * 0.08, -44.501 + index * 0.06]}>
                     <Popup>{item.tipoCrime} • {item.municipio}</Popup>
                   </Marker>
                 ))}
