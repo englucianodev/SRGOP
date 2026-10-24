@@ -1,0 +1,1037 @@
+
+--- PDF PÁGINA 1 ---
+UNIVERSIDADE ESTADUAL DO MARANHÃO  
+NÚCLEO DE TECNOLOGIAS PARA EDUCAÇÃO 
+CURSO SUPERIOR DE TECNOLOGIA EM ANÁLISE E DESENVOLVIMENTO DE 
+SISTEMAS 
+ 
+LUCIANO FERREIRA PONTES  
+WENDERSON DE JESUS DA COSTA SILVA 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+SRGOP – SISTEMA DE RECEBIMENTO E GERENCIAMENTO DE 
+OCORRÊNCIAS POLICIAIS 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+CAXIAS 
+2026 
+  
+
+--- PDF PÁGINA 2 ---
+2 
+ 
+LUCIANO FERREIRA PONTES  
+WENDERSON DE JESUS DA COSTA SILVA 
+ 
+ 
+ 
+ 
+ 
+ 
+SRGOP – SISTEMA DE RECEBIMENTO E GERENCIAMENTO DE 
+OCORRÊNCIAS POLICIAIS 
+ 
+ 
+Projeto apresentado ao Curso Superior de 
+Tecnologia em Análise e Desenvolvimento 
+de Sistemas, da Universidade Estadual do 
+Maranhão, Núcleo de Tecnologias para 
+Educação, como requisito parcial para 
+integralização da Prática Profissional 
+Supervisionada – Primeira Etapa. 
+ 
+Docente: Prof. Me Pedro Brandão Neto. 
+Tutor (a): Prof. Fandson da Silva Morais 
+ 
+ 
+ 
+ 
+ 
+ 
+CAXIAS 
+2026  
+
+--- PDF PÁGINA 3 ---
+3 
+ 
+SUMÁRIO 
+ 
+1 INTRODUÇÃO ......................................................................................................... 5 
+2 DESCRIÇÃO DO AMBIENTE OBSERVADO .......................................................... 6 
+3 NECESSIDADE/PROBLEMA IDENTIFICADO ........................................................ 7 
+4 OBJETIVOS ............................................................................................................. 8 
+4.1 Geral ..................................................................................................................... 8 
+4.2 Específicos .......................................................................................................... 8 
+5 PROPOSTA TECNOLÓGICA .................................................................................. 9 
+6 DESENVOLVIMENTO DO MVP ............................................................................ 10 
+7 REGISTRO DO PROCESSO: testes, ajustes, decisões e aprendizados do grupo
+ .................................................................................................................................. 14 
+8 RESULTADOS ALCANÇADOS ............................................................................ 16 
+9 LIMITAÇÕES E MELHORIAS FUTURAS ............................................................. 18 
+10 CONSIDERAÇÕES FINAIS ................................................................................. 21 
+REFERÊNCIAS ......................................................................................................... 22 
+ANEXOS ................................................................................................................... 23 
+Anexo A – Estrutura de pastas do projeto ............................................................ 23 
+Anexo B – Banco de dados MongoDB Atlas ......................................................... 24 
+Anexo C – Criptografia de senhas de usuários .................................................... 25 
+Anexo D – Tela de atendimento de Ocorrência Policial ....................................... 25 
+Anexo E– Cadastro de Guarnições ........................................................................ 26 
+Anexo F – Cadastro de Viaturas Policiais ............................................................. 26 
+ 
+ 
+ 
+ 
+
+--- PDF PÁGINA 4 ---
+1 INTRODUÇÃO 
+A transformação digital tem impactado diretamente organizações públicas que 
+dependem de rapidez, rastreabilidade e organização das informações para executar 
+suas atividades com maior eficiência. No contexto da segurança pública, essa 
+necessidade se torna ainda mais evidente, porque o registro, o acompanhamento e o 
+despacho de ocorrências exigem fluxo de trabalho bem definido, acesso rápido aos 
+dados e redução de falhas operacionais decorrentes de controles manuais ou 
+fragmentados. 
+O projeto SRGOP – Sistema de Recebimento e Gerenciamento de Ocorrências 
+Policiais surgiu a partir da observação de um ambiente real ligado à rotina operacional 
+do 18º BPM do Maranhão, unidade responsável por atender 14 cidades e, portanto, 
+sujeita a uma dinâmica de trabalho ampla, distribuída e dependente de coordenação 
+constante. A percepção inicial indicou a necessidade de centralizar informações 
+essenciais em um sistema único, com interface acessível, responsiva e compatível 
+com a rotina de usuários com diferentes perfis e níveis de permissão. 
+Na primeira etapa do projeto, correspondente à análise inicial do ambiente, foi 
+possível compreender o contexto, identificar gargalos e formular uma proposta 
+tecnológica alinhada às necessidades observadas. Na etapa seguinte, essa proposta 
+foi convertida e m um protótipo funcional, ou seja, em um MVP, permitindo validar a 
+ideia por meio de uma solução prática com recursos já utilizáveis no contexto 
+estudado. 
+Este relatório técnico -científico tem como finalidade registrar de maneira 
+sistemática todo o percurso do projeto, desde a origem da ideia até o desenvolvimento 
+do MVP. O documento apresenta o ambiente analisado, o problema identificado, a 
+proposta tecnoló gica formulada, o processo de construção do protótipo, os testes 
+realizados, as decisões tomadas ao longo da implementação, os resultados obtidos, 
+as limitações encontradas e as perspectivas de evolução da solução. 
+Além de cumprir uma função acadêmica, este relatório consolida o 
+conhecimento produzido pelo grupo durante a primeira fase do projeto. Assim, o texto 
+não se limita a descrever um produto final, mas registra também o processo de 
+
+--- PDF PÁGINA 5 ---
+6 
+ 
+6 
+ 
+aprendizagem, experimentação e refinamento que conduziu à construção do SRGOP 
+como uma solução tecnológica orientada por uma necessidade real. 
+2 DESCRIÇÃO DO AMBIENTE OBSERVADO 
+O ambiente observado corresponde à realidade operacional do 18º Batalhão 
+de Polícia Militar do Maranhão, que atua em um território composto por 14 cidades e 
+depende de organização contínua para receber informações, registrar ocorrências, 
+acompanhar o andamento do serviço, identificar responsáveis e coordenar equipes e 
+viaturas disponíveis. 
+A observação desse contexto permitiu compreender que o trabalho policial 
+envolve circulação intensa de informações, necessidade de atualização constante e 
+tomada de decisão em tempo reduzido. Em ambientes assim, qualquer atraso no 
+acesso a dados, falha de comunicação entre setores ou ausência de padronização no 
+registro pode comprometer a agilidade do atendimento e a qualidade do 
+acompanhamento das ações realizadas. 
+Também foi percebido que o ambiente exige o tratamento diferenciado de perfis 
+de usuários. Nem todos os integrantes possuem o mesmo nível de responsabilidade 
+administrativa ou operacional, o que torna indispensável a definição de permissões 
+específicas dentro do sistema. Essa necessidade apareceu de forma clara quando 
+foram discutidos perfis como administrativo, oficial e praça, cada um com atribuições 
+e limites distintos dentro da rotina institucional. 
+Outro aspecto relevante da observação do ambiente foi a necessidade de 
+integração entre diferentes frentes do trabalho operacional. O gerenciamento de 
+ocorrências não é uma atividade isolada, pois se relaciona com despacho, guarnições, 
+viaturas, usuários e acompanhamento do serviço diário. Essa característica reforçou 
+a percepção de que a solução não deveria ser apenas um formulário digital de registro, 
+mas um sistema mais amplo, capaz de centralizar módulos complementares em uma 
+única interface. 
+A análise do ambiente indicou ainda a importância de um sistema com boa 
+usabilidade e visual organizado. Como se trata de um contexto operacional, a interface 
+precisaria ser funcional, clara e responsiva, de modo a facilitar a navegação e reduzir 
+
+--- PDF PÁGINA 6 ---
+7 
+ 
+7 
+ 
+ruídos no uso cotidiano. Por isso, desde a concepção do projeto foi estabelecido que 
+a solução deveria ser visualmente agradável, objetiva e adaptável a diferentes 
+dispositivos. 
+ 
+Figura 1 - 18º Batalhão de Polícia Militar de Presidente Dutra - MA 
+3 NECESSIDADE/PROBLEMA IDENTIFICADO 
+A principal necessidade identificada foi a ausência de uma ferramenta 
+integrada para recebimento, organização e gerenciamento de ocorrências policiais 
+dentro de um fluxo operacional coerente. A partir da análise realizada, ficou evidente 
+que a rotina obser vada demandava mais do que controles dispersos ou 
+procedimentos não centralizados, exigindo uma solução capaz de reunir informações 
+essenciais em um único ambiente digital. 
+O problema central pode ser sintetizado como a dificuldade de consolidar, 
+acompanhar e administrar dados operacionais de forma rápida, segura e organizada. 
+Quando registros, despachos, vínculos entre usuários, guarnições e viaturas e 
+informações administrativas não estão integrados, aumenta a chance de retrabalho, 
+inconsistência de dados, perda de tempo e dificuldade de rastrear responsabilidades 
+dentro do serviço diário. 
+
+
+--- PDF PÁGINA 7 ---
+8 
+ 
+8 
+ 
+Também foi identificado um problema ligado ao controle de acesso às funções 
+do sistema. Em um ambiente como o policial, nem todos os usuários devem visualizar 
+ou alterar os mesmos dados. Assim, a inexistência de uma estrutura clara de 
+permissões comprometeria a segurança da informação e a aderência do sistema à 
+lógica hierárquica e funcional do contexto observado. 
+Outro ponto que motivou o desenvolvimento da solução foi a necessidade de 
+tornar a operação mais inteligível para seus usuários. Um sistema com dashboard, 
+menus organizados e módulos separados por função facilitaria a navegação, a 
+consulta e a execução de tarefas, reduzindo a desorganização e proporcionando 
+melhor visão geral da operação em andamento. 
+Desse modo, o desenvolvimento do SRGOP foi motivado pela busca de uma 
+resposta tecnológica concreta para um problema real: estruturar um sistema digital 
+capaz de apoiar o gerenciamento operacional policial, permitindo maior controle, 
+centralização de infor mações e adequação às regras de acesso e uso do ambiente 
+institucional observado. 
+4 OBJETIVOS 
+São objetivos desta proposta tecnológica desenvolver uma solução digital 
+capaz de apoiar o recebimento, o registro, a organização e o gerenciamento de 
+ocorrências policiais dentro do contexto operacional observado no 18º BPM do 
+Maranhão. 
+4.1 Geral  
+Desenvolver um sistema web para recebimento e gerenciamento de 
+ocorrências policiais, com interface responsiva e recursos de apoio à organização 
+operacional do 18º BPM do Maranhão. 
+4.2 Específicos 
+• Identificar as necessidades operacionais do ambiente observado, 
+considerando o fluxo de registro, acompanhamento e organização das 
+ocorrências policiais.  
+
+--- PDF PÁGINA 8 ---
+9 
+ 
+9 
+ 
+• Diagnosticar limitações existentes no processo de gerenciamento das 
+informações operacionais, especialmente quanto à centralização, 
+rastreabilidade e controle dos dados.  
+• Apresentar uma proposta tecnológica capaz de responder ao problema 
+identificado por meio de uma aplicação web estruturada e compatível com a 
+rotina institucional analisada.  
+• Levantar os requisitos funcionais essenciais do sistema, incluindo 
+autenticação, dashboard, gerenciamento de usuários, ocorrências, guarnições, 
+viaturas e demais módulos necessários ao MVP. 
+• Projetar a arquitetura da solução com separação entre frontend e backend, 
+utilizando tecnologias adequadas para interface, regras de negócio e 
+persistência de dados. 
+• Implementar um protótipo funcional com React, Vite, Node.js, Express e 
+MongoDB, permitindo validar na prática a proposta elaborada. 
+• Elaborar uma base inicial de navegação, controle de acesso e organização dos 
+módulos do sistema, considerando diferentes perfis de usuários e 
+necessidades operacionais do contexto policial 
+5 PROPOSTA TECNOLÓGICA 
+A proposta tecnológica formulada para responder ao problema identificado 
+consistiu na criação do SRGOP – Sistema de Recebimento e Gerenciamento de 
+Ocorrências Policiais, concebido como uma aplicação web com arquitetura separada 
+entre frontend e backend, ba nco de dados persistente e interface moderna para uso 
+operacional. 
+A solução foi planejada com base em uma estrutura tecnológica compatível 
+com aplicações web contemporâneas. No frontend, foi adotado React com Vite, 
+visando construção de interface dinâmica, componentizada e responsiva. No backend, 
+foi utilizado Node.js com Express para criação das rotas e da lógica de negócio. Para 
+persistência dos dados, foi escolhido MongoDB com Mongoose, permitindo 
+modelagem flexível das entidades do sistema. 
+A proposta previu a divisão do projeto em pastas independentes de frontend e 
+backend, o que favorece organização do código, manutenção e posterior deploy em 
+
+--- PDF PÁGINA 9 ---
+10 
+ 
+10 
+ 
+plataformas distintas. Essa separação também permitiu pensar o sistema de forma 
+modular, com consumo de API pelo cliente e tratamento dos dados no servidor. 
+Do ponto de vista funcional, a proposta tecnológica buscou contemplar os 
+principais elementos do fluxo operacional observado. Entre eles, destacam -se 
+autenticação de usuários, cadastro e gerenciamento de usuários, dashboard inicial, 
+módulo de ocorrências, despacho, controle de guarnições, viaturas e mapa, além da 
+aplicação de permissões de acesso conforme o perfil do usuário. 
+A proposta também incorporou requisitos qualitativos relevantes. O sistema 
+deveria ser bonito, responsivo, de navegação clara e preparado para apresentar 
+mensagens de erro com identificação da origem da falha, redirecionando o usuário ao 
+dashboard quando n ecessário. Esse comportamento foi pensado para tornar o 
+sistema mais usável e mais confiável dentro de um contexto operacional sensível. 
+Quadro de alinhamento entre problema e solução proposta 
+Necessidade identificada Resposta prevista na proposta tecnológica 
+Falta de centralização das 
+informações operacionais 
+Sistema único com dashboard e módulos integrados. 
+Dificuldade de organizar registros e 
+despacho 
+Estrutura com áreas específicas para ocorrências e 
+despacho. 
+Necessidade de controlar perfis de 
+acesso 
+Definição de usuários com perfis distintos e permissões 
+associadas. 
+Necessidade de persistência e 
+rastreabilidade 
+Uso de MongoDB com models e rotas no backend. 
+Necessidade de acesso web 
+moderno e responsivo 
+Frontend em React/Vite com interface responsiva. 
+Futuro deploy em ambiente online 
+Arquitetura preparada para frontend em Vercel e backend 
+em Render, com MongoDB Atlas. 
+ 
+6 DESENVOLVIMENTO DO MVP 
+O desenvolvimento do MVP ocorreu de maneira incremental, partindo da 
+definição da arquitetura e avançando para a implementação das telas, rotas, modelos 
+de dados e regras iniciais de negócio. A escolha por um MVP decorreu da 
+necessidade de validar rapidamente a proposta tecnológica com um conjunto enxuto, 
+porém funcional, de recursos essenciais. 
+
+--- PDF PÁGINA 10 ---
+11 
+ 
+11 
+ 
+A primeira etapa prática consistiu na organização da base do projeto em duas 
+partes: frontend, responsável pela interface do usuário, e backend, responsável pela 
+API, regras do sistema e comunicação com o banco de dados. Essa divisão foi 
+importante para manter clareza estrutural desde o início e preparar o projeto para 
+crescimento futuro. 
+No frontend, o MVP foi desenvolvido com React e Vite. A utilização de React 
+permitiu construir telas reutilizáveis e organizar o comportamento da aplicação em 
+componentes, enquanto o Vite contribuiu para um ambiente de desenvolvimento mais 
+rápido e adequad o à prototipagem. Nessa camada, foram produzidas telas como 
+login, cadastro de usuário e dashboard, além da estrutura de navegação com menu 
+lateral para acesso aos módulos do sistema. 
+No backend, foram implementadas rotas com Node.js e Express, além de 
+models com Mongoose para representar entidades importantes da aplicação, como 
+usuários, ocorrências, guarnições e viaturas. Também foram estruturadas rotas para 
+autenticação e para operações específicas dos módulos principais do sistema. 
+A integração com MongoDB permitiu salvar e consultar informações reais 
+dentro do protótipo. Isso foi essencial para que o MVP não fosse apenas visual, mas 
+de fato utilizável para testes básicos de fluxo, como cadastrar usuário, efetuar login e 
+registrar dados em uma base persistente. 
+Ao longo do desenvolvimento, o sistema foi recebendo novos elementos 
+conforme as necessidades eram refinadas. Entre as evoluções descritas no histórico 
+do projeto estão a criação da dashboard inicial após login, o menu lateral com 
+múltiplas seções e a estr utura inicial para administração de ocorrências, guarnições, 
+viaturas e usuários. 
+Ferramentas, linguagens e tecnologias utilizadas 
+Categoria Ferramenta/Tecnologia Finalidade no projeto 
+Frontend React 
+Construção da interface e 
+componentização. 
+Frontend Vite 
+Ambiente de desenvolvimento e 
+inicialização rápida do projeto. 
+Backend Node.js Execução do servidor da aplicação. 
+
+--- PDF PÁGINA 11 ---
+12 
+ 
+12 
+ 
+Backend Express Criação das rotas e da API. 
+Banco de dados MongoDB Persistência dos dados operacionais. 
+ODM Mongoose 
+Modelagem dos schemas e interação 
+com MongoDB. 
+Autenticação/segurança bcryptjs 
+Proteção de senhas no 
+cadastro/autenticação. 
+Deploy planejado 
+Vercel / Render / MongoDB 
+Atlas 
+Publicação do frontend, backend e 
+banco em ambiente online. 
+Versionamento e 
+organização 
+GitHub 
+Registro e hospedagem do código do 
+projeto. 
+ 
+Etapas de construção do MVP 
+1. Definição do nome, objetivo e escopo inicial do projeto SRGOP. 
+2. Escolha da stack tecnológica adequada ao perfil do sistema web proposto. 
+3. Separação da aplicação em frontend e backend. 
+4. Criação da tela de login e evolução posterior para React/Vite. 
+5. Implementação da tela de cadastro com persistência no MongoDB. 
+6. Construção da dashboard inicial com menu lateral e navegação por módulos. 
+7. Criação de models e rotas para ocorrência, guarnição, viatura e autenticação. 
+8. Ajustes em permissões e regras de negócio dos usuários. 
+9. Preparação da aplicação para deploy web futuro. 
+ 
+ 
+
+
+--- PDF PÁGINA 12 ---
+13 
+ 
+13 
+ 
+ 
+Figura 3 - Tela de login do sistema SRGOP 
+ 
+ 
+ 
+ 
+Figura 2 - Tela de cadastro de usuário 
+
+--- PDF PÁGINA 13 ---
+14 
+ 
+14 
+ 
+ 
+7 REGISTRO DO PROCESSO: testes, ajustes, decisões e aprendizados do 
+grupo 
+O processo de desenvolvimento do MVP não foi linear, mas caracterizou-se por 
+sucessivos ciclos de construção, teste, correção e aperfeiçoamento. Esse movimento 
+foi importante para tornar a solução mais aderente às necessidades observadas e, ao 
+mesmo tempo, viável dentro do escopo da primeira fase do projeto. 
+Uma das primeiras decisões importantes foi migrar a ideia inicial de páginas 
+simples em HTML/CSS para uma aplicação estruturada com React e Vite. Essa 
+mudança ocorreu porque a complexidade esperada do sistema, com múltiplas telas, 
+autenticação e navegação interna, exigia uma base mais adequada à construção de 
+uma interface dinâmica e expansível. 
+Outra decisão importante envolveu a separação entre frontend e backend. Em 
+vez de concentrar toda a lógica em uma única aplicação, optou-se por uma arquitetura 
+com cliente e servidor independentes, conectados por API. Essa escolha contribuiu 
+para melhor organização do código e para maior proximidade com práticas modernas 
+de desenvolvimento web. 
+Figura 4 - Dashboard do sistema SRGOP 
+
+--- PDF PÁGINA 14 ---
+15 
+ 
+15 
+ 
+Durante os testes iniciais, vários ajustes precisaram ser feitos na estrutura dos 
+arquivos e na integração entre rotas, models e servidor. Um exemplo disso foi a 
+necessidade de corrigir problemas de exportação em arquivos de rota e alinhar o 
+conteúdo de server.js, models e routes para evitar erros de execução no backend. 
+Também houve refinamentos no comportamento da interface. O dashboard 
+passou a concentrar informações iniciais após o login e a oferecer acesso às áreas 
+principais do sistema por meio de menu lateral. Essa escolha melhorou a experiência 
+de navegação e tornou o protótipo mais próximo de um sistema operacional real, em 
+vez de um conjunto disperso de páginas. 
+No módulo de usuários, decisões importantes foram tomadas em torno dos 
+perfis e permissões. A necessidade de representar usuários administrativos, oficiais e 
+praças levou ao estabelecimento de regras diferenciadas para visualização e 
+modificação de dados, refletindo a organização hierárquica e funcional do ambiente 
+observado. 
+Os testes realizados no decorrer da implementação tiveram caráter 
+principalmente funcional e estrutural. Foram validados fluxos como cadastro de 
+usuário, autenticação, abertura da dashboard após login, comunicação entre frontend 
+e backend e persistência de  dados no banco. Além disso, ocorreram testes de 
+correção a partir de erros identificados em arquivos colados em local incorreto, 
+problemas com imports, exports e organização de componentes React. 
+Em termos de aprendizagem, o processo mostrou a importância de 
+desenvolver iterativamente, começar por uma base mínima funcional e ampliar o 
+sistema de acordo com as necessidades mais claras. Também ficou evidente que 
+sistemas orientados por contexto real exigem atenção não apenas à programação, 
+mas às regras do ambiente em que serão usados. 
+Principais decisões tomadas ao longo do processo 
+Decisão Justificativa Impacto no projeto 
+Migrar a interface 
+para React/Vite 
+Melhor atender à necessidade de 
+múltiplas telas e interface dinâmica. 
+Tornou o frontend mais 
+organizado, reutilizável e 
+escalável. 
+
+--- PDF PÁGINA 15 ---
+16 
+ 
+16 
+ 
+Separar frontend e 
+backend 
+Facilitar manutenção e estruturar API 
+própria. 
+Melhorou a arquitetura do 
+sistema. 
+Utilizar MongoDB com 
+Mongoose 
+Permitir persistência flexível e 
+modelagem das entidades. 
+Viabilizou cadastro, login e 
+registros persistentes. 
+Criar dashboard com 
+menu lateral 
+Centralizar navegação e visão geral 
+do sistema. 
+Aumentou usabilidade e coerência 
+operacional. 
+Definir perfis de 
+usuário 
+Adaptar o sistema à realidade 
+hierárquica do contexto policial. 
+Reforçou segurança lógica e 
+adequação ao ambiente. 
+Planejar deploy com 
+serviços distintos 
+Facilitar publicação do sistema na 
+internet. 
+Preparou o MVP para futura 
+disponibilização online. 
+ 
+8 RESULTADOS ALCANÇADOS 
+O principal resultado alcançado nesta fase foi a construção de um MVP 
+funcional para o SRGOP, capaz de materializar a proposta tecnológica em uma 
+solução concreta e utilizável. Ainda que não represente a versão final do sistema, o 
+protótipo já demonstra a viabilidade prática da ideia e confirma que o problema 
+identificado pode ser enfrentado por meio de uma aplicação web estruturada. 
+Entre os resultados obtidos, destaca -se a implementação de uma base 
+completa do projeto com separação entre frontend e backend, permitindo organização 
+clara da arquitetura e evolução modular da solução. Essa base já contempla uma 
+aplicação cliente desenvol vida em React/Vite, um servidor em Node.js/Express e 
+integração com banco de dados MongoDB. 
+Do ponto de vista funcional, o MVP já permite realizar cadastro de usuários, 
+autenticação inicial e navegação para uma dashboard principal após login. Também 
+foi estruturado um menu lateral com acesso às áreas centrais do sistema, incluindo 
+módulos relacio nados a ocorrências, despacho, guarnições, viaturas, mapa e 
+usuários. 
+Outro resultado importante foi a definição inicial de perfis de usuários e regras 
+de permissão associadas. Ainda que essas regras possam evoluir em versões futuras, 
+o projeto já avançou na representação de diferentes níveis de acesso, respeitando as 
+necessidades do contexto institucional observado. 
+
+--- PDF PÁGINA 16 ---
+17 
+ 
+17 
+ 
+Também se destaca como resultado a preparação do sistema para 
+continuidade técnica, incluindo possibilidade de deploy em ambiente online por meio 
+de Vercel, Render e MongoDB Atlas. Isso demonstra que o MVP não foi pensado 
+apenas como exercício acadêmico isolado, mas como base plausível para expansão 
+e uso real em estágios posteriores. 
+O que o MVP já consegue fazer na prática 
+• Cadastrar usuários com dados básicos e persistir essas informações no banco 
+de dados. 
+• Permitir login de usuários cadastrados e direcionamento para a área interna do 
+sistema. 
+• Exibir dashboard inicial com navegação lateral para os módulos principais. 
+• Estruturar entidades básicas do sistema no backend, como ocorrência, 
+guarnição e viatura. 
+• Organizar o sistema para tratamento inicial de perfis e permissões de acesso. 
+• Servir como base concreta para novos incrementos, incluindo segurança 
+avançada, CRUDs completos e deploy. 
+  
+ 
+Figura 5 - Cadastro de Ocorrências no SRGOP 
+
+--- PDF PÁGINA 17 ---
+18 
+ 
+18 
+ 
+ 
+ 
+9 LIMITAÇÕES E MELHORIAS FUTURAS 
+Embora o MVP do SRGOP tenha demonstrado a viabilidade da proposta 
+tecnológica, sua adoção em contexto real exige análise mais aprofundada de fatores 
+técnicos, jurídicos, institucionais e operacionais. Isso ocorre porque o sistema não lida 
+apenas com dados comuns, mas com informações potencialmente sensíveis 
+relacionadas à rotina policial, ao registro de ocorrências, à identificação de usuários e 
+ao acompanhamento das atividades operacionais. 
+Uma das principais limitações do projeto está relacionada à segurança da 
+informação. Por armazenar dados sensíveis, o sistema precisa atingir um nível 
+elevado de robustez, confiabilidade e proteção contra vazamentos, acessos indevidos, 
+indisponibilidade e perda de dados. Em uma aplicação desse tipo, não basta apenas 
+funcionar tecnicamente; é necessário também adotar práticas rigorosas de segurança, 
+como proteção de credenciais, segregação de permissões, uso correto de variáveis 
+de ambiente, controle de acesso por perfil, rotinas de backup e mecanismos mais 
+maduros de autenticação e auditoria. 
+Além da dimensão técnica, existe uma limitação de natureza jurídico-
+administrativa. Como o sistema trata dados que podem envolver informações 
+funcionais, operacionais e possivelmente pessoais, sua utilização institucional 
+Figura 6 - Encaminhamento de Ocorrências 
+
+--- PDF PÁGINA 18 ---
+19 
+ 
+19 
+ 
+dependeria de análise da legislação vigente sobre tratamento de dados, segurança 
+da informação e uso de sistemas em órgãos públicos. Antes de uma implantação real, 
+seria necessário verificar exigências legais, normativas internas e, se for o caso, 
+solicitar autorizações formais aos órgãos competentes, a fim de garantir que o uso da 
+solução ocorra dentro dos limites legais e administrativos aplicáveis.  
+Outra limitação importante refere-se ao processo de implantação institucional. 
+A Polícia Militar, por ser um órgão público estadual, está sujeita a normas, fluxos 
+administrativos e critérios de autorização que podem tornar a adoção de um novo 
+sistema mais demorada e complexa. Mesmo que a solução seja tecnicamente 
+adequada, sua impl ementação prática pode depender de validação interna, análise 
+de viabilidade, compatibilidade com políticas públicas, aprovação hierárquica e 
+aceitação por parte do órgão responsável pela gestão tecnológica ou administrativa.  
+Também deve ser considerada a limitação associada à infraestrutura mínima 
+necessária. Para que o sistema seja realmente seguro e funcional em ambiente de 
+uso institucional, não basta desenvolver o software: é necessário dispor de 
+infraestrutura adequada de hospedagem, conectividade, controle de acesso, banco 
+de dados, backups e monitoramento. Além disso, a manutenção do sistema depende 
+de pessoas capacitadas tanto para operá-lo no cotidiano quanto para realizar suporte 
+técnico, atualizações, correções e acompanhamento da segurança da plataforma ao 
+longo do tempo.  
+No campo da escalabilidade, há ainda uma limitação relacionada ao 
+crescimento progressivo da base de dados . Como o sistema tende a acumular 
+registros ao longo do tempo, o volume de informações armazenadas pode aumentar 
+significativamente, especialmente em um contexto com múltiplas cidades atendidas e 
+uso contínuo da aplicação. Isso pode gerar necessidade de ampliação da capacidade 
+do banco de dados em nuvem, contratação de planos mais robustos ou até migração 
+para outra infraestrutura de armazenamento, dependendo da evolução do uso e da 
+disponibilidade orçamentária do órgão.  
+Essa questão conduz a outra possibilidade relevante: se a solução em nuvem 
+não puder ser mantida por restrições financeiras, técnicas ou institucionais, pode ser 
+necessário reavaliar o modelo de disponibilização do sistema. Nesse cenário, uma 
+
+--- PDF PÁGINA 19 ---
+20 
+ 
+20 
+ 
+alternativa futura seria adaptar a solução para um formato desktop ou para uma 
+estrutura hospedada em ambiente interno do próprio órgão, reduzindo dependência 
+de serviços externos e ajustando o projeto às condições reais de implantação.  
+Diante dessas limitações, as melhorias futuras do projeto não devem se 
+restringir apenas à ampliação de funcionalidades, mas também ao fortalecimento de 
+sua maturidade institucional e tecnológica. Entre os principais avanços recomendados 
+estão a implementa ção de autenticação mais robusta, políticas de backup e 
+recuperação, criptografia de dados sensíveis, logs de auditoria, revisão jurídica sobre 
+tratamento de dados, planejamento formal de implantação institucional, estudo de 
+custos operacionais e definição do modelo mais adequado de hospedagem, seja em 
+nuvem, seja em infraestrutura local. 
+Possíveis melhorias futuras 
+• Implementar mecanismos mais robustos de autenticação, autorização e 
+auditoria para aumentar a proteção dos dados armazenados. 
+• Estabelecer políticas de backup, recuperação de desastres e prevenção contra 
+perda de dados. 
+• Consultar a legislação vigente e os órgãos competentes para verificar requisitos 
+legais e autorizações necessárias ao uso institucional do sistema. 
+• Planejar a implantação considerando os fluxos administrativos próprios de um 
+órgão público estadual. 
+• Estruturar infraestrutura mínima segura para hospedagem, monitoramento e 
+manutenção contínua da aplicação. 
+• Capacitar usuários e responsáveis técnicos para operação e manutenção do 
+sistema. 
+• Avaliar periodicamente o crescimento do banco de dados e os custos de 
+expansão em nuvem. 
+• Estudar alternativas de hospedagem, inclusive migração para servidor mais 
+robusto ou adaptação futura para software desktop, caso o cenário institucional 
+ou orçamentário assim exija.  
+  
+
+--- PDF PÁGINA 20 ---
+21 
+ 
+21 
+ 
+10 CONSIDERAÇÕES FINAIS 
+A trajetória de desenvolvimento do SRGOP demonstrou como a observação de 
+um ambiente real pode orientar a criação de uma solução tecnológica significativa, 
+aplicável e coerente com necessidades concretas. O projeto partiu de uma percepção 
+contextual, foi t ransformado em proposta tecnológica e, em seguida, ganhou forma 
+por meio de um MVP funcional, registrando uma evolução consistente entre problema, 
+planejamento e implementação. 
+A experiência também evidenciou que desenvolver um sistema não significa 
+apenas programar telas e funcionalidades, mas compreender o ambiente de uso, 
+reconhecer restrições, definir prioridades e tomar decisões técnicas compatíveis com 
+o contexto. Nesse sentido, o processo foi tão importante quanto o produto obtido, pois 
+dele resultaram conhecimentos sobre arquitetura, organização de código, modelagem 
+de dados, integração de tecnologias e adaptação da solução à realidade observada. 
+O MVP desenvolvido já representa um avanço relevante, porque traduz em 
+software uma necessidade concreta de gestão operacional policial, ainda que em 
+versão inicial. Ao mesmo tempo, o projeto permanece aberto à evolução, o que é 
+coerente com a natureza ite rativa do desenvolvimento tecnológico e com o próprio 
+propósito de um protótipo funcional. 
+Conclui-se, portanto, que a primeira fase do projeto cumpriu seu papel ao 
+integrar diagnóstico, proposta e construção prática de uma solução. O relatório 
+técnico-científico consolida esse percurso e formaliza o conhecimento produzido, 
+servindo como base pa ra continuidade do SRGOP em fases futuras, com 
+aprofundamento técnico, expansão funcional e eventual consolidação como 
+ferramenta de apoio institucional. 
+  
+
+--- PDF PÁGINA 21 ---
+22 
+ 
+22 
+ 
+REFERÊNCIAS 
+MARANHÃO. Polícia Militar do Maranhão.  PMMA. São Luís: Polícia Militar do 
+Maranhão, s.d. Disponível em: https://pm.ssp.ma.gov.br. Acesso em: 25 jun. 2026. 
+BRASIL. Lei nº 13.709, de 14 de agosto de 2018. Lei Geral de Proteção de Dados 
+Pessoais (LGPD). Brasília, DF: Presidência da República, 2018. Disponível em: 
+https://www.planalto.gov.br/ccivil_03/ato2015-2018/2018/lei/l13709.htm. Acesso em: 
+25 jun. 2026. 
+REACT. React. s.l.: React, s.d. Disponível em: https://react.dev. Acesso em: 25 jun. 
+2026. 
+VITE. Vite. s.l.: Vite, s.d. Disponível em: https://vite.dev. Acesso em: 25 jun. 2026. 
+NODE.JS. Node.js. s.l.: Node.js, s.d. Disponível em: https://nodejs.org. Acesso em: 
+25 jun. 2026. 
+EXPRESS. Express. s.l.: Express, s.d. Disponível em: https://expressjs.com. Acesso 
+em: 25 jun. 2026. 
+MONGODB. MongoDB. s.l.: MongoDB, s.d. Disponível em: 
+https://www.mongodb.com. Acesso em: 25 jun. 2026. 
+MONGOOSE. Mongoose. s.l.: Mongoose, s.d. Disponível em: 
+https://mongoosejs.com. Acesso em: 25 jun. 2026. 
+  
+
+--- PDF PÁGINA 22 ---
+23 
+ 
+23 
+ 
+ANEXOS 
+Link do MVP no github: https://github.com/englucianodev/SRGOP2 
+Vídeo de demonstração do sistema: https://youtu.be/n2Es8t84OTM 
+ 
+Anexo A – Estrutura de pastas do projeto 
+  
+
+
+--- PDF PÁGINA 23 ---
+24 
+ 
+24 
+ 
+Anexo B – Banco de dados MongoDB Atlas 
+  
+
+
+--- PDF PÁGINA 24 ---
+25 
+ 
+25 
+ 
+Anexo C – Criptografia de senhas de usuários 
+ 
+ 
+Anexo D – Tela de atendimento de Ocorrência Policial 
+ 
+
+
+--- PDF PÁGINA 25 ---
+26 
+ 
+26 
+ 
+Anexo E– Cadastro de Guarnições  
+ 
+ 
+Anexo F – Cadastro de Viaturas Policiais 
+ 
+
+
+--- TEMPLATE ---
+0 'UNIVERSIDADE ESTADUAL DO MARANHÃO ' normal
+1 'NÚCLEO DE TECNOLOGIAS PARA EDUCAÇÃO' normal
+2 'CURSO SUPERIOR DE TECNOLOGIA EM XXXXXX' normal
+3 '' normal
+4 'NOME DO ALUNO/A' normal
+5 '' normal
+6 '' normal
+7 '' normal
+8 '' normal
+9 '' normal
+10 '' normal
+11 '' normal
+12 '' normal
+13 '' normal
+14 '' normal
+15 'TÍTULO DA PROPOSTA TECNOLÓGICA' normal
+16 '' normal
+17 '' normal
+18 '' normal
+19 '' normal
+20 '' normal
+21 '' normal
+22 '' normal
+23 '' normal
+24 '' normal
+25 '' normal
+26 '' normal
+27 'Local (Polo)' normal
+28 'Ano' normal
+29 '' normal
+30 'NOME DO ALUNO/A' normal
+31 '' normal
+32 '' normal
+33 '' normal
+34 '' normal
+35 '' normal
+36 '' normal
+37 '' normal
+38 'TÍTULO DA PROPOSTA TECNOLÓGIA' normal
+39 '' normal
+40 '' normal
+41 'Projeto apresentado ao Curso Superior de Tecnologia em XXXXXXXX, da Universidade Estadual do Maranhão, Núcleo de Tecnologias para Educação, como requisito parcial para integralização da Prática Profissional Supervisionada – Segunda Etapa.' normal
+42 '' normal
+43 'Docente: Prof. Titulação nome.' normal
+44 'Tutor (a): Prof. Titulação nome.' normal
+45 '' normal
+46 '' normal
+47 '' normal
+48 '' normal
+49 '' normal
+50 '' normal
+51 '' normal
+52 '' normal
+53 '' normal
+54 'Local (Polo)' normal
+55 'Ano' normal
+56 'SUMÁRIO' normal
+57 '' normal
+58 '' normal
+59 '' normal
+60 '' normal
+61 '' normal
+62 '' normal
+63 '' normal
+64 '' normal
+65 '' normal
+66 '' normal
+67 '' normal
+68 '' normal
+69 '' normal
+70 '' normal
+71 '1 INTRODUÇÃO' Heading 1
+72 '' normal
+73 'Fazer uma breve apresentação da temática principal e colocar evidente o porquê da escolha do tema, pode-se colocar impressões pessoais (sem usar a primeira pessoa do singular) que favorecerem desde a escolha do objeto de pesquisa até questões como se trabalhou, ou trabalha, no local a ser investigado, ou a escolha se deu por conta de uma observação anterior em que foi detectado um problema a ser solucionado. ' normal
+74 '' normal
+75 '' normal
+76 '' normal
+77 '' normal
+78 '' normal
+79 '' normal
+80 '' normal
+81 '' normal
+82 '' normal
+83 '' normal
+84 '' normal
+85 '' normal
+86 '' normal
+87 '' normal
+88 '' normal
+89 '' normal
+90 '' normal
+91 '' normal
+92 '' normal
+93 '' normal
+94 '' normal
+95 '' normal
+96 '' normal
+97 '' normal
+98 '' normal
+99 '' normal
+100 '' normal
+101 '2 PROBLEMA' Heading 1
+102 '' normal
+103 'O problema é a situação real que motiva a criação da solução tecnológica. Ele deve ser apresentado como uma descrição contextual, mostrando onde e como o problema acontece, quem é afetado, quais as consequências e, por fim, formulando uma pergunta-problema que guiará o projeto. ' normal
+104 '' normal
+105 '' normal
+106 '' normal
+107 '' normal
+108 '' normal
+109 '' normal
+110 '' normal
+111 '' normal
+112 '' normal
+113 '' normal
+114 '' normal
+115 '' normal
+116 '' normal
+117 '' normal
+118 '' normal
+119 '' normal
+120 '' normal
+121 '' normal
+122 '' normal
+123 '' normal
+124 '' normal
+125 '' normal
+126 '' normal
+127 '' normal
+128 '' normal
+129 '' normal
+130 '' normal
+131 '' normal
+132 '3 JUSTIFICATIVA ' Heading 1
+133 '' normal
+134 'Aqui você explica por que escolheu esse tema e qual é a importância prática e social da proposta. Argumente sobre a relevância social (o que muda para as pessoas ou comunidade?), a relevância tecnológica (que tipo de inovação ou melhoria será criada) e a relevância acadêmica (como o projeto contribui para sua formação ou para a área de conhecimento?)' normal
+135 '' normal
+136 '' normal
+137 '' normal
+138 '' normal
+139 '' normal
+140 '' normal
+141 '' normal
+142 '' normal
+143 '' normal
+144 '' normal
+145 '' normal
+146 '' normal
+147 '' normal
+148 '' normal
+149 '' normal
+150 '' normal
+151 '' normal
+152 '' normal
+153 '' normal
+154 '' normal
+155 '' normal
+156 '4 OBJETIVOS' Heading 1
+157 '' normal
+158 'São objetivos dessa proposta tecnológica' normal
+159 '' normal
+160 '4.1 Geral ' Heading 1
+161 '' normal
+162 'Descreva o propósito principal do trabalho em uma única frase, com verbo no infinitivo. (exemplo: Analisar, Desenvolver...)' normal
+163 '' normal
+164 '4.2 Específicos' Heading 1
+165 '' normal
+166 'Liste ações concretas e etapas necessárias para alcançar o objetivo geral.\nCada objetivo específico deve começar com um verbo no infinitivo' normal
+167 '' normal
+168 'Identificar...;' normal
+169 'Diagnosticar...; ' normal
+170 'Apresentar...;' normal
+171 'Levantar...;' normal
+172 'Projetar...; ' normal
+173 'Implementar...; ' normal
+174 'Elaborar...' normal
+175 '' normal
+176 '' normal
+177 '' normal
+178 '' normal
+179 '' normal
+180 '' normal
+181 '' normal
+182 '' normal
+183 '' normal
+184 '' normal
+185 '5 REFERENCIAL TEÓRICO' Heading 1
+186 '' normal
+187 'Nesta seção é apresentado um debate acerca do que o/as pesquisadore/as falam acerca do tema escolhido para a pesquisa. Privilegie o máximo de fontes diferentes (artigos, teses, dissertações, monografias e livros). Deve procurar literatura relevante e atualizada com vistas a pesquisar estratégias para melhor desenvolver a proposta tecnológica. Atentar para as citações mencionadas no desenvolvimento, as quais devem ser apresentadas de acordo com as normas da ABNT NBR 10520/2023. ' normal
+188 '' normal
+189 '' normal
+190 '' normal
+191 '' normal
+192 '' normal
+193 '' normal
+194 '' normal
+195 '' normal
+196 '' normal
+197 '' normal
+198 '' normal
+199 '' normal
+200 '' normal
+201 '' normal
+202 '' normal
+203 '' normal
+204 '' normal
+205 '' normal
+206 '6 METODOLOGIA' Heading 1
+207 '' normal
+208 'Nesta seção é apresentado o método e delimitada a metodologia (quanto a abordagem: quantitativa ou qualitativa; quanto aos objetivos: explicativa, descritiva ou exploratória; e, quanto aos procedimentos (estudo de caso, pesquisa de campo, etc), além de especificar, caso utilize, qual o instrumento de coleta de dados que foi utilizado para obtenção das informações.' normal
+209 '' normal
+210 '' normal
+211 '' normal
+212 '' normal
+213 '' normal
+214 '' normal
+215 '' normal
+216 '' normal
+217 '' normal
+218 '' normal
+219 '' normal
+220 '' normal
+221 '' normal
+222 '' normal
+223 '' normal
+224 '' normal
+225 '' normal
+226 '' normal
+227 '' normal
+228 '' normal
+229 '' normal
+230 '' normal
+231 '' normal
+232 '' normal
+233 '' normal
+234 '' normal
+235 '' normal
+236 '7 PROPOSTA TECNOLÓGICA' Heading 1
+237 '' normal
+238 'Nesta seção serão apresentados os resultados obtidos e as soluções para o problema detectado de acordo com a natureza da proposta (diagnóstico, software, patente) devendo ocorrer detalhamento acerca da medida escolhida e de como sua aplicabilidade no local de investigação resultaria em otimização nos produtos e serviços disponibilizados. Explique o que você espera alcançar com o desenvolvimento da proposta. Fale dos benefícios práticos, melhorias e impacto tecnológico.' normal
+239 '' normal
+240 '' normal
+241 '' normal
+242 '' normal
+243 '' normal
+244 '' normal
+245 '' normal
+246 '' normal
+247 '' normal
+248 '' normal
+249 '' normal
+250 '' normal
+251 '' normal
+252 '' normal
+253 '' normal
+254 '' normal
+255 '' normal
+256 '' normal
+257 '8 CRONOGRAMA' Heading 1
+258 '' normal
+259 '' normal
+260 '' normal
+261 '' normal
+262 '' normal
+263 '' normal
+264 '' normal
+265 '' normal
+266 '' normal
+267 '' normal
+268 '' normal
+269 '' normal
+270 '' normal
+271 'REFERÊNCIAS' Heading 1
+272 '' normal
+273 'Nas referências devem citar os autores que foram citados (direta ou indiretamente) na fundamentação teórica da proposta pedagógica e devem ser apresentadas com a seguinte formatação:' normal
+274 'Verificar ABNT NBR 10520/2023 – Citações para organização das referências;' normal
+275 'Alinhamento de texto à esquerda;' normal
+276 'Espacejamento simples entre linhas;' normal
+277 'Fonte tamanho 12 (times new roman ou arial)' normal
+278 'Ordenadas alfabeticamente e não numeradas' normal
+279 'Espaço de uma linha em branco entre cada referência (espaço simples);' normal
+280 'Inseridas logo após o tópico consideração final.' normal
+281 'O título REFERÊNCIA não possui indicativo numérico, centralizado, CAIXA ALTA e negrito. ' normal
+282 '' normal
+283 '' normal
+284 '' normal
+285 '' normal
+286 '' normal
+287 '' normal
+288 '' normal
+TABLE [['', 'Ano', 'Ano', 'Ano', 'Ano', 'Ano', 'Ano', 'Ano'], ['Atividades', 'mês', 'mês', 'mês', 'mês', 'mês', 'mês', 'mês'], ['Levantamento bibliográfico (artigos, monografias, teses, dissertações, livros, etc)', 'X', '', '', '', '', '', ''], ['Elaboração do Projeto de Intervenção', 'X', 'X', '', '', '', '', ''], ['Pesquisa de campo, diagnóstico da organização ', '', '', 'X', 'X', '', '', ''], ['Aplicação do instrumento de coleta de dados', '', '', 'X', 'X', '', '', ''], ['Análise dos Dados', '', '', '', 'X', 'X', '', ''], ['Entrega do projeto de intervenção ', '', '', '', '', '', 'X', ''], ['Elaboração da proposta tecnológica', '', '', '', '', '', 'X', ''], ['Apresentação da proposta tecnológica para banca examinadora', '', '', '', '', '', '', 'X']]
+SECTION 21.00086111111111 29.70036111111111 3.000375 2.00025 3.000375 2.00025
+SECTION 21.00086111111111 29.70036111111111 3.000375 2.00025 3.000375 2.00025

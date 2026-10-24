@@ -1,0 +1,19 @@
+{
+  "word/header1.xml": "9b04ff4376aa4320961b2a74cdd62a82d54b5e0ba2c998261dc7bd80caabea28",
+  "word/numbering.xml": "f4f9ff6245be907f36b3439cfa36a4202480c7d42faee4e39bdb1fd5b6a7774e",
+  "word/settings.xml": "26f2853fde05b88d4b0a9da0bb016d56a896901f60c9272dddf33c3f3fa61e4a",
+  "word/fontTable.xml": "23adf93802341c64a36f8ba65302a5ad5e8f70a7e86ee9f64d47c983bdfe0241",
+  "word/_rels/fontTable.xml.rels": "6f500acf3de0bcc672d01923dda818ab2675a5892bdf740eed3db4fc8194d6ef",
+  "word/styles.xml": "88e998eb77d51cfe694dc3dd02121e28ffcaccc4087d8919a4f93ebb9dd7025a",
+  "customXML/itemProps1.xml": "fc2e321bb5ca54d5f2b99b99f91d681d004417098918a318be88fe525218c9a3",
+  "customXML/item1.xml": "b1e028d5fe34e68f6f54de7b9b6cf6ec541313a0ca02c15291d74fc7395d62fa",
+  "customXML/_rels/item1.xml.rels": "26ac718f80df621ee703e3c0f143a63034967c5fe65fbfdcefbf96419235355e",
+  "word/document.xml": "004a5099a7de8665a71dce83ae98bd8192554cd078064f23a27992a6b5810397",
+  "word/_rels/document.xml.rels": "95b325b3b105230d30225fb988a050d1b23e85fe96b8b9acd5cc4ba01bd785bd",
+  "_rels/.rels": "1cc87395d4a229f21c23af406724de12dd9454071925f983e4b648a7b2be8cc5",
+  "word/fonts/NotoSansSymbols-regular.ttf": "3c9c40311ae6012f7d3c4a4ff98952b2c7bbc0d4c89a93ba22986ff1f1884af5",
+  "word/fonts/NotoSansSymbols-bold.ttf": "afc2a6b7050df884f5deb2618ebbdecb9fa2f163d3ca66ca75f8b069febc6741",
+  "word/theme/theme1.xml": "b2295d3198893d2c03f5e584c749a15751b798aefdcd9bee2889f13903d68cb2",
+  "word/media/image1.png": "18d840af2c50eff9a5241d4b50833a596e6b71af0cee87cf2b3435345f2f7aba",
+  "[Content_Types].xml": "f15008bc32ce79ac4960f1477be4b29d9a3978e3cf711965a76309ac6b426aca"
+}
