@@ -22,7 +22,37 @@ const personal = {
     .refine((value) => !value || /^[+\d().\s-]{8,30}$/.test(value), 'Informe um telefone válido.')
     .optional(),
 };
+const condition = z
+  .object({ state: z.enum(['S/A', 'C/A']), observation: text(0, 1000).default('') })
+  .strict()
+  .refine((v) => v.state !== 'C/A' || v.observation.length >= 3, {
+    message: 'Descreva a alteração observada (mínimo de três caracteres).',
+    path: ['observation'],
+  });
+export const inspectionSchema = z
+  .object({
+    mileage: z.number().int().min(0).max(100000000),
+    body: condition,
+    electrical: condition,
+    suspension: condition,
+    tires: condition,
+    brakes: condition,
+    engine: condition,
+  })
+  .strict();
 export const schemas = {
+  inspection: inspectionSchema,
+  emergency: z
+    .object({
+      latitude: z.number().min(-90).max(90).optional(),
+      longitude: z.number().min(-180).max(180).optional(),
+      accuracy: z.number().min(0).optional(),
+    })
+    .strict()
+    .refine((v) => (v.latitude === undefined) === (v.longitude === undefined), {
+      message: 'Informe as duas coordenadas.',
+    }),
+  motorcycleLeave: z.object({ checklist: inspectionSchema.optional() }).strict(),
   account: z
     .object({
       name: text(3, 120),
@@ -92,7 +122,13 @@ export const schemas = {
   note: z.object({ text: text(3, 3000) }).strict(),
   support: z.object({ targetCrew: id, reason: text(5, 1000) }).strict(),
   crew: z.object({ name: text(2, 100), city: id, vehicle: id.nullable().optional() }).strict(),
-  join: z.object({ driver: z.boolean() }).strict(),
+  join: z
+    .object({
+      driver: z.boolean(),
+      dutyPeriod: z.enum(['Manhã', 'Tarde', 'Noite']).optional(),
+      checklist: inspectionSchema.optional(),
+    })
+    .strict(),
   member: z
     .object({ member: id, action: z.enum(['Saída', 'Motorista']), reason: text(5, 1000) })
     .strict(),
@@ -118,6 +154,11 @@ export const schemas = {
   vehicle: z
     .object({
       prefix: text(2, 40),
+      brand: text(1, 60).optional(),
+      model: text(1, 80).optional(),
+      year: z.number().int().min(1900).max(2100).optional(),
+      type: z.enum(['Motocicleta', 'SUV', 'Caminhonete']).optional(),
+      provisional: z.boolean().optional(),
       plate: text(7, 10).regex(/^[A-Za-z0-9-]+$/),
       city: id,
       mileage: z.number().min(0),

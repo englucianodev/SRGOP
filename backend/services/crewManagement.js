@@ -1,4 +1,15 @@
-import { Crew, User, Vehicle, Attendance, CrewShift, CrewMessage } from '../models/index.js';
+import { activeDuty, onDuty } from '../utils/duty.js';
+import {
+  Crew,
+  User,
+  Vehicle,
+  Attendance,
+  CrewShift,
+  CrewMessage,
+  VehicleHandover,
+} from '../models/index.js';
+import { requireDriverReturn, refreshInspectionHold } from './vehicleInspections.js';
+import { roundHour } from '../utils/duty.js';
 import { transaction } from './operations.js';
 import { requireValue } from '../utils/errors.js';
 import { audit } from './audit.js';
@@ -8,7 +19,7 @@ export async function manageMember(actor, crewId, input) {
   const result = await transaction(async (session) => {
     const crew = await Crew.findById(crewId).session(session);
     requireValue(crew, 'Guarnição não encontrada.', 404);
-    requireValue(crew.shiftEnd && +crew.shiftEnd > Date.now(), 'O turno não está ativo.', 409);
+    requireValue(onDuty(crew), 'O turno não está ativo.', 409);
     requireValue(
       crew.members.some((id) => String(id) === input.member),
       'O usuário não integra esta guarnição.',
@@ -16,7 +27,29 @@ export async function manageMember(actor, crewId, input) {
     );
     const affected = [...crew.members];
     if (input.action === 'Motorista') {
+      requireValue(String(crew.driver) !== input.member, 'O integrante já é o motorista.', 409);
+      await requireDriverReturn(crew, input.reason, session);
       crew.driver = input.member;
+      if (crew.vehicle) {
+        await VehicleHandover.create(
+          [
+            {
+              crew: crew._id,
+              shift: crew.shift,
+              vehicle: crew.vehicle,
+              driver: input.member,
+              pendingIntake: true,
+            },
+          ],
+          { session },
+        );
+        crew.inspectionBlocked = true;
+        await Vehicle.updateOne(
+          { _id: crew.vehicle },
+          { inspectionHold: true, status: 'Indisponível' },
+          { session },
+        );
+      }
       if (crew.vehicle)
         await Vehicle.updateOne({ _id: crew.vehicle }, { lastDriver: input.member }, { session });
     } else {
@@ -32,6 +65,41 @@ export async function manageMember(actor, crewId, input) {
         'A guarnição está designada a uma ocorrência. Não é possível retirar o último integrante.',
         409,
       );
+      if (String(crew.driver) === input.member && crew.vehicle) {
+        if (String(actor._id) === input.member && input.checklist) {
+          const record = await VehicleHandover.findOne({
+            crew: crew._id,
+            driver: actor._id,
+            closedAt: null,
+          }).session(session);
+          requireValue(
+            record && !record.pendingIntake,
+            'Registre o recebimento da viatura antes da saída.',
+            409,
+          );
+          requireValue(
+            await Vehicle.findOneAndUpdate(
+              { _id: crew.vehicle, mileage: { $lte: input.checklist.mileage } },
+              { mileage: input.checklist.mileage },
+              { session },
+            ),
+            'O KM atual não pode diminuir.',
+            409,
+          );
+          record.delivery = input.checklist;
+          record.closedAt = new Date();
+          record.pendingReturn = false;
+          await record.save({ session });
+          await audit(
+            actor,
+            'Entrega de viatura',
+            'VehicleHandover',
+            record._id,
+            `${input.checklist.mileage} km`,
+            session,
+          );
+        } else await requireDriverReturn(crew, input.reason, session);
+      }
       crew.members.pull(input.member);
       if (String(crew.location?.updatedBy) === input.member) crew.location.sharing = false;
       if (String(crew.driver) === input.member) crew.driver = null;
@@ -43,18 +111,24 @@ export async function manageMember(actor, crewId, input) {
         crew.endReason = input.reason;
         await CrewShift.updateOne(
           { _id: crew.shift },
-          { end: crew.shiftEnd, endedBy: actor._id, reason: input.reason },
+          {
+            end: crew.shiftEnd,
+            roundedEnd: crew.shiftMode === 'Motocicleta' ? roundHour(crew.shiftEnd) : undefined,
+            endedBy: actor._id,
+            reason: input.reason,
+          },
           { session },
         );
         if (crew.vehicle)
           await Vehicle.updateOne(
             { _id: crew.vehicle, status: 'Em operação' },
-            { status: 'Disponível' },
+            { status: crew.inspectionBlocked ? 'Indisponível' : 'Disponível' },
             { session },
           );
       }
     }
     await crew.save({ session });
+    if (crew.vehicle) await refreshInspectionHold(crew.vehicle, session);
     await CrewShift.updateOne(
       { _id: crew.shift },
       {
@@ -65,6 +139,7 @@ export async function manageMember(actor, crewId, input) {
             actor: actor._id,
             actorName: actor.name,
             action: input.action,
+            roundedAt: crew.shiftMode === 'Motocicleta' ? roundHour(new Date()) : undefined,
             reason: input.reason,
           },
         },
@@ -90,7 +165,7 @@ export async function setAvailability(actor, crewId, input) {
   const crew = await transaction(async (session) => {
     const crew = await Crew.findOne({
       _id: crewId,
-      shiftEnd: { $gt: new Date() },
+      ...activeDuty(),
       currentOccurrence: null,
       'members.0': { $exists: true },
     }).session(session);
@@ -119,7 +194,7 @@ export async function sendCrewMessage(actor, input) {
   const message = await transaction(async (session) => {
     const target = await Crew.findOne({
       _id: input.targetCrew,
-      shiftEnd: { $gt: new Date() },
+      ...activeDuty(),
       'members.0': { $exists: true },
     }).session(session);
     requireValue(
@@ -130,7 +205,7 @@ export async function sendCrewMessage(actor, input) {
     );
     const source = await Crew.findOne({
       members: actor._id,
-      shiftEnd: { $gt: new Date() },
+      ...activeDuty(),
     }).session(session);
     requireValue(source, 'Ingresse em uma guarnição para enviar mensagens.', 403);
     const participants = [

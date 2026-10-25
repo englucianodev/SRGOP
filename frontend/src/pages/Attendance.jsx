@@ -1,3 +1,4 @@
+import { isOnDuty, dutyClock } from '../utils/duty';
 import { useState } from 'react';
 import {
   Radio,
@@ -295,7 +296,7 @@ export default function Attendance() {
                     (c) =>
                       c.status === 'Disponível' &&
                       c._id !== objectId(action.row.crew) &&
-                      +new Date(c.shiftEnd) > app.now,
+                      isOnDuty(c, app.now),
                   )
                   .sort((a, b) => distance(a, action.row) - distance(b, action.row))
                   .map((c) => (

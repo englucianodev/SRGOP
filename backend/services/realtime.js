@@ -1,3 +1,4 @@
+import { activeDuty, onDuty } from '../utils/duty.js';
 import { Server } from 'socket.io';
 import { authenticateToken } from '../middlewares/auth.js';
 import { Notification, Crew, User, ChatAccess } from '../models/index.js';
@@ -51,7 +52,7 @@ export function changed(kind = 'data', users = []) {
 export async function crewChatChanged(chat) {
   const crews = await Crew.find({
     $or: chat.memberships.map((m) => ({ _id: m.crew, shift: m.shift })),
-    shiftEnd: { $gt: new Date() },
+    ...activeDuty(),
   }).select('members');
   const users = new Set(crews.flatMap((c) => c.members.map(String)));
   // No contents, sender, preview or room metadata is broadcast to the command room.
@@ -86,7 +87,7 @@ export async function queueCrewNotifications(
   message = 'Nova ocorrência encaminhada à sua guarnição.',
 ) {
   const crew = await Crew.findById(crewId).session(session);
-  if (!crew || !crew.shiftEnd || +crew.shiftEnd <= Date.now()) return [];
+  if (!onDuty(crew)) return [];
   const members = await User.find({ _id: { $in: crew.members }, active: true, crew: crew._id })
     .select('_id')
     .session(session);
@@ -104,7 +105,7 @@ export async function queueCrewNotifications(
 export function deliverNotifications(rows) {
   for (const row of rows) {
     io?.to(`user:${row.user}`).emit('notification', row);
-    if (['chat', 'pendente'].includes(row.kind)) continue;
+    if (['chat', 'pendente', 'automatico', 'urgencia'].includes(row.kind)) continue;
     io?.to(`user:${row.user}`).emit('dispatch:new', {
       occurrenceId: row.occurrence,
       kind: row.kind,
@@ -121,4 +122,9 @@ export function attendanceChanged(occurrence) {
 }
 export function serviceChanged() {
   io?.emit('service:changed');
+}
+export function emergencyChanged(row) {
+  row.recipients.forEach((id) =>
+    io?.to(`user:${id}`).emit('emergency:changed', { emergencyId: String(row._id) }),
+  );
 }

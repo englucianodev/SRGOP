@@ -1,7 +1,7 @@
 import { DailyOfficer, User, Notification, Occurrence } from '../models/index.js';
 import { serviceWindow } from '../utils/time.js';
 import { deliverNotifications } from './realtime.js';
-export async function queuePendingDispatch(occurrence, session, officerId) {
+export async function queuePendingDispatch(occurrence, session, officerId, kind = 'pendente') {
   const cpu =
     officerId ||
     (await DailyOfficer.findOne({ day: serviceWindow().day }).session(session || null))?.officer;
@@ -12,14 +12,20 @@ export async function queuePendingDispatch(occurrence, session, officerId) {
     users = await User.find({ role: 'Administrativo', active: true }).session(session || null);
   const notifications = [];
   for (const user of users) {
-    const filter = { user: user._id, occurrence: occurrence._id, kind: 'pendente' };
+    const filter = { user: user._id, occurrence: occurrence._id, kind };
     const result = await Notification.updateOne(
       filter,
       {
         $setOnInsert: {
           ...filter,
-          title: 'Ocorrência aguardando despacho',
-          message: `${occurrence.protocol}: providencie o despacho.${!cpu ? ' CPU do serviço ainda não definido.' : ''}`,
+          title:
+            kind === 'automatico'
+              ? 'Atendimento iniciado automaticamente'
+              : 'Ocorrência aguardando despacho',
+          message:
+            kind === 'automatico'
+              ? `${occurrence.protocol}: a guarnição iniciou o atendimento sem despacho.`
+              : `${occurrence.protocol}: providencie o despacho.${!cpu ? ' CPU do serviço ainda não definido.' : ''}`,
         },
       },
       { upsert: true, session },

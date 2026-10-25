@@ -1,5 +1,5 @@
 import jwt from 'jsonwebtoken';
-import { Session, User, SystemSetting, Attendance } from '../models/index.js';
+import { Session, User, SystemSetting, Attendance, VehicleHandover } from '../models/index.js';
 import { AppError, asyncRoute } from '../utils/errors.js';
 import { audit } from '../services/audit.js';
 export async function authenticateToken(token) {
@@ -49,14 +49,32 @@ export const allow =
       ? next()
       : next(new AppError('Seu perfil não tem permissão para esta ação.', 403, 'Autorização'));
 export const essentialOnly = asyncRoute(async (req, res, next) => {
+  if (
+    req.method !== 'GET' &&
+    !/^\/(emergencies|vehicle-checklists)(\/|$)/.test(req.path) &&
+    (await VehicleHandover.exists({
+      driver: req.user._id,
+      closedAt: null,
+      $or: [{ pendingReturn: true }, { pendingIntake: true }],
+    }))
+  )
+    throw new AppError(
+      'Conclua o checklist obrigatório da viatura antes de continuar.',
+      409,
+      'Checklist de viatura',
+    );
   const attending = await Attendance.exists({ acceptedBy: req.user._id, status: 'Em atendimento' });
   const essentialRead =
     req.method === 'GET' &&
-    /^\/(attendances|occurrences|attachments|crews|crew-messages|crew-chats|notifications|dashboard|cities|settings)(\/|$)/.test(
+    /^\/(attendances|occurrences|attachments|crews|crew-messages|crew-chats|notifications|dashboard|cities|settings|emergencies|vehicle-checklists)(\/|$)/.test(
       req.path,
     );
   const essentialWrite =
-    /^\/(attendances|occurrences|notifications|crew-messages|crew-chats)(\/|$)/.test(req.path) ||
+    /^\/(attendances|occurrences|notifications|crew-messages|crew-chats|emergencies|vehicle-checklists)(\/|$)/.test(
+      req.path,
+    ) ||
+    (req.method === 'POST' && /^\/crews\/[^/]+\/leave$/.test(req.path)) ||
+    (req.method === 'POST' && /^\/crews\/[^/]+\/driver-return$/.test(req.path)) ||
     (req.method === 'PATCH' && /^\/crews\/[^/]+\/gps$/.test(req.path)) ||
     (req.method === 'PATCH' && /^\/vehicles\/[^/]+\/location$/.test(req.path));
   if (attending && !essentialRead && !essentialWrite)

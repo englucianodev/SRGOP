@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Pencil, Settings, ShieldCheck } from 'lucide-react';
+import { Plus, Pencil, Settings, ShieldCheck, Trash2 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { useData } from '../hooks/useData';
 import { api } from '../services/api';
@@ -15,6 +15,7 @@ import {
   Select,
   Textarea,
   SearchBox,
+  Confirm,
 } from '../components/UI';
 export default function Administration() {
   const app = useApp();
@@ -28,6 +29,7 @@ export default function Administration() {
   const [reason, setReason] = useState('');
   const [cpuOpen, setCpuOpen] = useState(false);
   const [search, setSearch] = useState('');
+  const [remove, setRemove] = useState(null);
   function edit(c) {
     setForm({
       name: c?.name || '',
@@ -116,6 +118,10 @@ export default function Administration() {
                       <Pencil size={15} />
                       Alterar
                     </Button>
+                    <Button variant="danger-ghost" onClick={() => setRemove(c)}>
+                      <Trash2 size={15} />
+                      Excluir
+                    </Button>
                   </td>
                 </tr>
               ))}
@@ -199,6 +205,19 @@ export default function Administration() {
           </table>
         </div>
       </Panel>
+      {remove && (
+        <Confirm
+          title="Excluir município atendido"
+          message={`Excluir ${remove.name} da lista de municípios atendidos? Os registros históricos serão preservados.`}
+          onClose={() => setRemove(null)}
+          onConfirm={() =>
+            app.run(async () => {
+              await api.delete(`/cities/${remove._id}`);
+              setRemove(null);
+            }, 'Município excluído dos atendidos.')
+          }
+        />
+      )}
       {editing && (
         <Modal
           title={editing === 'new' ? 'Cadastrar município' : 'Alterar município'}

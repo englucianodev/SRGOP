@@ -49,7 +49,12 @@ export default function Resources({ type }) {
           }
         : {
             prefix: r?.prefix || '',
-            plate: r?.plate || '',
+            plate: r?.provisional ? '' : r?.plate || '',
+            brand: r?.brand || 'Chevrolet',
+            model: r?.model || 'S10',
+            year: r?.year || '',
+            type: r?.type || 'Caminhonete',
+            provisional: false,
             city: objectId(r?.city),
             mileage: r?.mileage || 0,
             lastMaintenance: r?.lastMaintenance ? localInput(r.lastMaintenance).slice(0, 10) : '',
@@ -71,6 +76,8 @@ export default function Resources({ type }) {
         const body = { ...form };
         if (isUser && !body.password) delete body.password;
         if (!isUser) {
+          if (body.year === '') delete body.year;
+          else body.year = Number(body.year);
           for (const k of ['lastMaintenance', 'nextMaintenance'])
             body[k] = body[k] ? new Date(`${body[k]}T12:00:00-03:00`).toISOString() : null;
           for (const k of ['latitude', 'longitude'])
@@ -96,10 +103,27 @@ export default function Resources({ type }) {
         }
       >
         {admin && (
-          <Button onClick={() => edit()}>
-            <Plus size={17} />
-            {isUser ? 'Cadastrar usuário' : 'Cadastrar viatura'}
-          </Button>
+          <>
+            {!isUser && (
+              <Button
+                variant="secondary"
+                onClick={() =>
+                  app.run(async () => {
+                    const r = await api.post('/vehicles/provision-defaults');
+                    app.setToast(
+                      `${r.data.created} S10 provisória(s) cadastrada(s). Complete os dados reais antes do serviço.`,
+                    );
+                  })
+                }
+              >
+                Cadastrar S10 por município
+              </Button>
+            )}
+            <Button onClick={() => edit()}>
+              <Plus size={17} />
+              {isUser ? 'Cadastrar usuário' : 'Cadastrar viatura'}
+            </Button>
+          </>
         )}
       </PageTitle>
       {!isUser && (
@@ -161,7 +185,18 @@ export default function Resources({ type }) {
                   <tr key={r._id}>
                     <td>
                       <strong className="cell-title">{isUser ? r.name : r.prefix}</strong>
-                      <span className="cell-sub">{isUser ? r.email : r.plate}</span>
+                      <span className="cell-sub">
+                        {isUser
+                          ? r.email
+                          : r.provisional
+                            ? 'Cadastro provisório — placa e KM a conferir'
+                            : r.plate}
+                      </span>
+                      {!isUser && (
+                        <small className="cell-sub">
+                          {r.brand} {r.model} · {r.year || 'Ano não informado'} · {r.type}
+                        </small>
+                      )}
                     </td>
                     <td>{r.city?.name}</td>
                     <td>
@@ -272,6 +307,39 @@ export default function Resources({ type }) {
                 </>
               ) : (
                 <>
+                  <Input
+                    label="Marca"
+                    required
+                    maxLength={60}
+                    value={form.brand}
+                    onChange={(e) => set('brand', e.target.value)}
+                  />
+                  <Input
+                    label="Modelo"
+                    required
+                    maxLength={80}
+                    value={form.model}
+                    onChange={(e) => set('model', e.target.value)}
+                  />
+                  <Input
+                    label="Ano"
+                    required
+                    type="number"
+                    min={1900}
+                    max={2100}
+                    step="1"
+                    value={form.year}
+                    onChange={(e) => set('year', e.target.value)}
+                  />
+                  <Select
+                    label="Tipo de viatura"
+                    value={form.type}
+                    onChange={(e) => set('type', e.target.value)}
+                  >
+                    {['Motocicleta', 'SUV', 'Caminhonete'].map((value) => (
+                      <option key={value}>{value}</option>
+                    ))}
+                  </Select>
                   <Input
                     label="Prefixo"
                     required

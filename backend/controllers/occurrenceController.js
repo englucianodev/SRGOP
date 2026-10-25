@@ -1,3 +1,4 @@
+import { activeDuty, onDuty } from '../utils/duty.js';
 import { randomUUID } from 'node:crypto';
 import {
   Occurrence,
@@ -134,8 +135,9 @@ export async function create(req, res) {
           _id: req.user.crew,
           members: req.user._id,
           city: req.input.city,
-          shiftEnd: { $gt: new Date() },
+          ...activeDuty(),
           status: 'Disponível',
+          inspectionBlocked: { $ne: true },
           currentOccurrence: null,
         },
         { $set: { status: 'Em atendimento', currentOccurrence: created._id } },
@@ -182,8 +184,12 @@ export async function create(req, res) {
       }
     }
     await audit(req.user, 'Cadastro', 'Occurrence', created._id, created.protocol, session);
-    const notifications =
-      created.status === 'Em aberto' ? await queuePendingDispatch(created, session) : [];
+    const notifications = await queuePendingDispatch(
+      created,
+      session,
+      undefined,
+      created.status === 'Em aberto' ? 'pendente' : 'automatico',
+    );
     return { created, notifications };
   });
   changed('occurrences');
@@ -353,7 +359,8 @@ export async function support(req, res) {
       await Crew.exists({
         _id: req.input.targetCrew,
         status: 'Disponível',
-        shiftEnd: { $gt: new Date() },
+        inspectionBlocked: { $ne: true },
+        ...activeDuty(),
       }).session(session),
       'Guarnição não está disponível.',
       409,

@@ -1,3 +1,4 @@
+import { isOnDuty, dutyClock } from '../utils/duty';
 import { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Send, MessageSquare, Plus, ShieldCheck } from 'lucide-react';
@@ -26,7 +27,7 @@ export default function CrewCommunication({ crews }) {
   const end = useRef(null);
   const generation = useRef(0);
   const historyLoaded = useRef(false);
-  const active = crews.filter((c) => c.members.length && +new Date(c.shiftEnd) > app.now);
+  const active = crews.filter((c) => c.members.length && isOnDuty(c, app.now));
   const mine = active.find((c) => c.members.some((m) => m._id === app.user._id));
   const chat = chats.find((c) => c._id === selected);
   const authorized = !admin || (grant?.chat === selected && grant.expiresAt > app.now);

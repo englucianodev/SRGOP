@@ -1,3 +1,4 @@
+import { isOnDuty, dutyClock } from '../utils/duty';
 import { useState } from 'react';
 import { Send, Eye, Radio } from 'lucide-react';
 import { useApp } from '../context/AppContext';
@@ -31,7 +32,8 @@ export default function Dispatches() {
   const { data: crews } = useData('/crews', []);
   const { data: history } = useData('/dispatches', []);
   const available = crews.filter(
-    (c) => c.status === 'Disponível' && +new Date(c.shiftEnd) > app.now && c.members.length,
+    (c) =>
+      c.status === 'Disponível' && !c.inspectionBlocked && isOnDuty(c, app.now) && c.members.length,
   );
   async function send(e) {
     e.preventDefault();

@@ -3,6 +3,7 @@ import { Crew, CrewShift, Attendance, SupportRequest } from '../models/index.js'
 import { id } from '../middlewares/validation.js';
 import { requireValue } from '../utils/errors.js';
 import { dayKey, dayRange } from '../utils/time.js';
+import { roundHour } from '../utils/duty.js';
 
 const key = (value) => String(value?._id || value || '');
 const time = (value) => +new Date(value);
@@ -12,7 +13,8 @@ const limit = (rows, maximum, label) =>
     `O relatório excede ${maximum} ${label}. Reduza o período ou selecione menos guarnições.`,
     422,
   );
-const endOfShift = (shift, now) => Math.min(time(shift.end || shift.plannedEnd), now);
+const endOfShift = (shift, now) =>
+  Math.min(time(shift.end || shift.plannedEnd || new Date(now)), now);
 function daysBetween(start, end) {
   const days = [];
   if (end <= start) return days;
@@ -59,6 +61,8 @@ export function shiftComposition(shift, now) {
           name,
           joinedAt: new Date(joined),
           leftAt: new Date(leftAt),
+          roundedJoinedAt: shift.shiftMode === 'Motocicleta' ? roundHour(joined) : undefined,
+          roundedLeftAt: shift.shiftMode === 'Motocicleta' ? roundHour(leftAt) : undefined,
           estimated,
         });
       joined = null;
@@ -203,6 +207,7 @@ export async function crewReports(req, res) {
       $or: [
         { end: { $gt: new Date(earliest) } },
         { end: null, plannedEnd: { $gt: new Date(earliest) } },
+        { end: null, shiftMode: 'Motocicleta' },
         { _id: { $in: linkedShifts } },
       ],
     }),
@@ -222,6 +227,10 @@ export async function crewReports(req, res) {
       city: s.cityName || s.city?.name || null,
       vehicle: s.vehiclePrefix || null,
       start: s.start,
+      shiftMode: s.shiftMode,
+      dutyPeriod: s.dutyPeriod,
+      roundedStart: s.roundedStart,
+      roundedEnd: s.roundedEnd,
       plannedEnd: s.plannedEnd,
       end: s.end || null,
       effectiveEnd: new Date(endOfShift(s, now)),
@@ -235,6 +244,7 @@ export async function crewReports(req, res) {
           actor: c.actorName || c.actor?.name || 'Sistema',
           reason: c.reason || '',
           at: c.at,
+          roundedAt: c.roundedAt,
         })),
       attendances: [],
     };
@@ -331,6 +341,10 @@ export async function crewReports(req, res) {
       'Situação ocorrência',
       'Responsável / autorizador do apoio',
       'Integrantes no início',
+      'Modalidade',
+      'Turno motocicleta',
+      'Entrada arredondada',
+      'Saída arredondada',
     ];
     const lines = [header];
     const addServices = (crew, shift, rows) =>
@@ -388,6 +402,20 @@ export async function crewReports(req, res) {
         addServices(crew, shift, shift.attendances);
       }
       addServices(crew, null, crew.unmatchedAttendances);
+    }
+    const shiftsById = new Map(normalized.map((shift) => [shift._id, shift]));
+    for (const line of lines.slice(1)) {
+      const shift = shiftsById.get(line[3]);
+      if (shift) {
+        line[19] = shift.shiftMode;
+        line[20] = shift.dutyPeriod;
+        line[21] = shift.roundedStart;
+        line[22] = shift.roundedEnd;
+        if (line[0] === 'Integrante' && shift.shiftMode === 'Motocicleta') {
+          line[21] = roundHour(line[8]);
+          line[22] = roundHour(line[9]);
+        }
+      }
     }
     const escape = (value) =>
       `"${String(value instanceof Date ? value.toISOString() : (value ?? ''))

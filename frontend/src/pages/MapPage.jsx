@@ -9,6 +9,10 @@ import OperationalMap from '../components/OperationalMap';
 export default function MapPage() {
   const app = useApp();
   const [query] = useSearchParams();
+  const emergencyId = /^[a-f\d]{24}$/i.test(query.get('emergency') || '')
+    ? query.get('emergency')
+    : '';
+  const { data: emergency } = useData(emergencyId ? `/emergencies/${emergencyId}` : null);
   const requestedCrew = /^[a-f\d]{24}$/i.test(query.get('crew') || '') ? query.get('crew') : '';
   const [filter, setFilter] = useState({ crew: requestedCrew });
   useEffect(() => {
@@ -42,6 +46,17 @@ export default function MapPage() {
         </span>
       </PageTitle>
       <Panel>
+        {emergencyId && emergency && (
+          <div className="urgency-map-note">
+            <strong>Urgência UU: {emergency.actorName}</strong> · {emergency.crewName} ·{' '}
+            {emergency.cityName}
+            <p>
+              {Number.isFinite(emergency.latitude)
+                ? `Última posição disponível, registrada em ${new Date(emergency.locatedAt).toLocaleString('pt-BR')}.`
+                : 'GPS indisponível: consulte o município informado e mantenha contato com a central.'}
+            </p>
+          </div>
+        )}
         <div className="filter-fields padded">
           <Select
             label="Município"
@@ -93,6 +108,7 @@ export default function MapPage() {
           occurrences={occurrences.items}
           vehicles={filteredVehicles}
           focusCrew={filter.crew}
+          emergency={emergencyId ? emergency : null}
           crews={crews.filter(
             (c) =>
               (!filter.city || c.city?._id === filter.city) &&

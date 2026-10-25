@@ -232,6 +232,15 @@ export default function CrewTraceReport() {
               {crew.shifts.map((shift) => (
                 <article key={shift._id} className="trace-shift">
                   <h3>Turno de {dateTime(shift.start)}</h3>
+                  {shift.shiftMode === 'Motocicleta' && (
+                    <p>
+                      <strong>Motocicleta · {shift.dutyPeriod}</strong>
+                      <br />
+                      Entrada arredondada: {dateTime(shift.roundedStart)} · Saída arredondada:{' '}
+                      {dateTime(shift.roundedEnd)}. Os demais horários abaixo são os registros
+                      reais.
+                    </p>
+                  )}
                   <p>
                     <strong>Equipe no turno:</strong> {shift.crewName} ·{' '}
                     {shift.city || 'Município do turno não registrado'}
@@ -263,8 +272,14 @@ export default function CrewTraceReport() {
                           {shift.members.map((m, index) => (
                             <tr key={`${m.memberId}-${index}`}>
                               <td>{m.name}</td>
-                              <td>{dateTime(m.joinedAt)}</td>
-                              <td>{dateTime(m.leftAt)}</td>
+                              <td>
+                                {dateTime(m.roundedJoinedAt || m.joinedAt)}
+                                {m.roundedJoinedAt && <small>Real: {dateTime(m.joinedAt)}</small>}
+                              </td>
+                              <td>
+                                {dateTime(m.roundedLeftAt || m.leftAt)}
+                                {m.roundedLeftAt && <small>Real: {dateTime(m.leftAt)}</small>}
+                              </td>
                               <td>
                                 {m.estimated
                                   ? 'Intervalo estimado; registro antigo sem ingresso'

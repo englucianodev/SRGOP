@@ -21,6 +21,7 @@ import {
 } from '../models/index.js';
 import { connectDatabase } from '../config/database.js';
 import { expireShifts } from '../services/operations.js';
+import { inspected } from './inspection-fixture.js';
 let mongo,
   app,
   city,
@@ -38,7 +39,27 @@ let mongo,
   occurrence;
 const password = 'TesteSeguro!2026';
 const origin = 'http://localhost:5173';
-const post = (agent, url, body = {}) => agent.post(`/api${url}`).set('Origin', origin).send(body);
+// Existing workflow fixtures now explicitly satisfy the new mandatory vehicle handovers.
+// The inspection-specific suite sends raw requests to verify that missing inspections are blocked.
+const post = async (agent, url, body = {}) => {
+  if (!url.startsWith('/auth/')) {
+    const pending = await agent.get('/api/vehicle-checklists/pending');
+    if (pending.status === 200)
+      for (const record of pending.body) {
+        const response = await agent
+          .post(`/api/vehicle-checklists/${record._id}`)
+          .set('Origin', origin)
+          .send(inspected(record.vehicle.mileage));
+        assert.equal(response.status, 200, JSON.stringify(response.body));
+      }
+  }
+  if (/\/crews\/[^/]+\/join$/.test(url) && body.driver) {
+    const crew = await Crew.findById(url.split('/')[2]);
+    const vehicle = crew?.vehicle ? await Vehicle.findById(crew.vehicle) : null;
+    if (vehicle) body = { ...body, checklist: inspected(vehicle.mileage) };
+  }
+  return agent.post(`/api${url}`).set('Origin', origin).send(body);
+};
 const put = (agent, url, body) => agent.put(`/api${url}`).set('Origin', origin).send(body);
 before(async () => {
   process.env.JWT_SECRET = 'uma_chave_de_testes_com_mais_de_32_caracteres_e_segura';

@@ -31,6 +31,7 @@ import { api } from '../services/api';
 import GpsControl from './GpsControl';
 import ProfileMenu from './ProfileMenu';
 import ServiceCpu from './ServiceCpu';
+import OperationalSafety from './OperationalSafety';
 const links = [
   ['/dashboard', 'Dashboard', LayoutDashboard, 'all'],
   ['/ocorrencias', 'Ocorrências', FileText, 'all'],
@@ -236,6 +237,7 @@ export default function Layout() {
           </div>
         )}
         <main id="main-content" tabIndex={-1}>
+          <OperationalSafety />
           {app.user.role === 'Praça' && <ServiceCpu />}
           <GpsControl />
           <Outlet />
@@ -273,6 +275,24 @@ export default function Layout() {
                 <strong>{n.title}</strong>
                 <p>{n.message}</p>
                 <small>{fmtDateTime(n.createdAt)}</small>
+                {n.kind === 'urgencia' && n.emergency && (
+                  <NavLink
+                    className="button danger"
+                    to={`/mapa?emergency=${n.emergency}`}
+                    onClick={() => setBell(false)}
+                  >
+                    Urgência UU — ver localização
+                  </NavLink>
+                )}
+                {n.kind === 'automatico' && n.occurrence && (
+                  <NavLink
+                    className="button secondary"
+                    to={`/ocorrencias?ver=${n.occurrence}`}
+                    onClick={() => setBell(false)}
+                  >
+                    Ver atendimento automático
+                  </NavLink>
+                )}
                 {n.kind === 'pendente' && n.occurrence && (
                   <NavLink
                     className="button secondary"

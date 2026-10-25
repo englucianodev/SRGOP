@@ -3407,3 +3407,50 @@ select {
     display: none !important;
   }
 }
+.vehicle-checklist {
+  display: grid;
+  gap: 10px;
+}
+.urgency-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+.urgency-toolbar .button {
+  background: #b40016;
+  color: white;
+  font-weight: 800;
+  min-height: 48px;
+}
+.urgency-toolbar span {
+  color: var(--muted);
+  font-size: 12px;
+}
+.urgency-alert,
+.urgency-map-note {
+  background: #fff0f0;
+  border: 2px solid #bb001c;
+  color: #790015;
+  border-radius: 8px;
+  padding: 18px;
+}
+.urgency-alert h2 {
+  margin-top: 14px;
+}
+.urgency-status {
+  padding: 10px;
+  border: 2px solid #b40016;
+  border-radius: 8px;
+  margin-bottom: 15px;
+}
+.urgency-status .button {
+  margin-left: 8px;
+}
+@media print {
+  .urgency-toolbar,
+  .urgency-status {
+    display: none !important;
+  }
+}

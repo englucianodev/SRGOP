@@ -1,3 +1,4 @@
+import { isOnDuty, dutyClock } from '../utils/duty';
 import { Link } from 'react-router-dom';
 import { Plus, Shield, Radio, ArrowRight, Clock3 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
@@ -37,8 +38,8 @@ export default function FieldDashboard({ data }) {
           </p>
           {crew && (
             <p>
-              <Clock3 size={15} /> {duration((+new Date(crew.shiftEnd) - app.now) / 1000)} restantes
-              no turno
+              <Clock3 size={15} /> {dutyClock(crew, app.now)}{' '}
+              {crew.shiftMode === 'Motocicleta' ? '' : 'restantes no turno'}
             </p>
           )}
         </div>

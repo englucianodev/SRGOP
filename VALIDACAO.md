@@ -1,5 +1,16 @@
 # Validação e impasses — SRGOP
 
+## Frota, checklists, motocicletas e Urgência UU — 25/10/2026
+
+- Exclusão administrativa de município preserva referências históricas e recusa serviços ativos. Viaturas incluem marca, modelo, ano e tipo. Provisionamento repetível criou 10 S10 provisórias no banco configurado, complementando 5 existentes nos 15 municípios ativos; a segunda execução criou zero registros. Novos cadastros estão indisponíveis, aguardando dados reais.
+- Checklists de recebimento e entrega exigem seis condições, observação em C/A e KM não decrescente. Entrega pendente após encerramento automático reaparece no próximo acesso, bloqueia novas operações e mantém a viatura retida. Troca de motorista preserva a sequência entrega/recebimento.
+- Motocicletas exigem turno Manhã/Tarde/Noite e saída real, sem vencimento automático em 24h. Histórico e relatórios mantêm horários reais e arredondados à hora mais próxima, inclusive por integrante. CPU recebe aviso de ocorrência com atendimento automático.
+- Urgência UU exige serviço ativo e registra solicitante, guarnição, cidade e posição disponível. Notificações persistentes de prioridade máxima alcançam equipes em serviço e CPU; ciência individual não encerra a urgência. Encerramento justificado e auditado. Som repetido depende de navegador aberto, conectado e com áudio autorizado.
+
+Validação: **60 testes aprovados, zero falhas**, com MongoDB temporário e Socket.IO real. Compilação de produção e formatação aprovadas. Os testes verificam autorização, entrega de eventos, ausência de alerta a usuários fora de serviço, concorrência, KM, retenção de viaturas e horários. O provisionamento autorizado foi a única alteração de dados persistentes nesta atualização; os testes usam banco temporário.
+
+Chrome headless: urgência recebida em outra sessão com geração dos tons, identificação, ciência e acesso ao mapa; entrega obrigatória após expiração, Escape sem fechar o formulário, C/A com observação e atualização do KM; ingresso e saída de motocicleta com turno e checklist; viewport móvel de 390 × 844 sem rolagem horizontal e sem erros JavaScript. Os cenários foram separados na cota de requisições, mantendo o limitador da aplicação. A geração de áudio foi verificada por osciladores, sem avaliação auditiva em aparelho físico.
+
 ## Minha conta, identificação e serviço das 8h — 25/10/2026
 
 - Página pessoal fora do menu lateral, acessível pelo menu do perfil via hover/clique/teclado, com Minha conta e Sair. Inclui nome de guerra, treze postos/graduações, número/barra, matrícula e telefone, também disponíveis no cadastro e na administração. Praça é identificada por posto e nome de guerra.
@@ -72,7 +83,7 @@ As verificações visuais mencionadas nas seções seguintes são registros hist
 
 Código organizado em `frontend` e `backend`, com banco MongoDB, API, permissões no servidor, interface por perfil e dados demonstrativos. Instruções de instalação, variáveis e deploy estão no [README](README.md).
 
-Última execução da suíte: **50 testes aprovados, zero falhas**. Build de produção do frontend concluído com sucesso. Essas verificações não substituem homologação com os usuários do batalhão nem testes de carga em infraestrutura de produção.
+Última execução da suíte: **60 testes aprovados, zero falhas**. Build de produção do frontend concluído com sucesso. Essas verificações não substituem homologação com os usuários do batalhão nem testes de carga em infraestrutura de produção.
 
 ## Verificações automatizadas
 

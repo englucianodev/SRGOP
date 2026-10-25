@@ -1,3 +1,4 @@
+import { isOnDuty, dutyClock } from '../utils/duty';
 import { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { api } from '../services/api';
@@ -14,7 +15,7 @@ export default function CrewManagement({ crew }) {
     app.user.role === 'Praça' ||
     app.activeAttendance ||
     !crew.members.length ||
-    +new Date(crew.shiftEnd) <= app.now
+    !isOnDuty(crew, app.now)
   )
     return null;
   async function save(e) {

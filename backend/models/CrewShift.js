@@ -6,6 +6,10 @@ export default mongoose.model(
       crew: { type: mongoose.Schema.Types.ObjectId, ref: 'Crew', required: true, index: true },
       crewName: String,
       dutyDay: String,
+      shiftMode: { type: String, enum: ['Regular', 'Motocicleta'], default: 'Regular' },
+      dutyPeriod: String,
+      roundedStart: Date,
+      roundedEnd: Date,
       city: { type: mongoose.Schema.Types.ObjectId, ref: 'City' },
       cityName: String,
       vehicle: { type: mongoose.Schema.Types.ObjectId, ref: 'Vehicle' },
@@ -20,10 +24,16 @@ export default mongoose.model(
           action: { type: String, enum: ['Ingresso', 'Saída', 'Motorista'], required: true },
           reason: String,
           at: { type: Date, default: Date.now },
+          roundedAt: Date,
         },
       ],
       start: { type: Date, required: true },
-      plannedEnd: { type: Date, required: true },
+      plannedEnd: {
+        type: Date,
+        required: function () {
+          return this.shiftMode !== 'Motocicleta';
+        },
+      },
       end: Date,
       endedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
       reason: String,

@@ -1,3 +1,4 @@
+import { isOnDuty, dutyClock } from '../utils/duty';
 import { Link } from 'react-router-dom';
 import {
   ArrowUpRight,
@@ -30,7 +31,7 @@ export default function Dashboard() {
   const total = data.counts.reduce((s, r) => s + r.count, 0);
   const closed = data.counts.find((r) => r._id === 'Encerrada')?.count || 0;
   const inService = data.crews.filter(
-    (c) => c.status !== 'Fora de serviço' && +new Date(c.shiftEnd) > app.now,
+    (c) => c.status !== 'Fora de serviço' && isOnDuty(c, app.now),
   );
   const myCrew = data.crews.find((c) => c.members.some((m) => m._id === app.user._id));
   const modules = app.settings?.modules || [];
@@ -96,7 +97,7 @@ export default function Dashboard() {
             <h2>{myCrew ? myCrew.name : 'Pronto para iniciar o serviço?'}</h2>
             <p>
               {myCrew
-                ? `${myCrew.city?.name} · ${myCrew.vehicle?.prefix || 'Sem viatura'} · ${duration((+new Date(myCrew.shiftEnd) - app.now) / 1000)} restantes`
+                ? `${myCrew.city?.name} · ${myCrew.vehicle?.prefix || 'Sem viatura'} · ${dutyClock(myCrew, app.now)} restantes`
                 : 'Ingresse em uma guarnição para receber os despachos da central.'}
             </p>
           </div>
@@ -333,9 +334,7 @@ export default function Dashboard() {
                   </small>
                   <Badge>{c.status}</Badge>
                 </div>
-                <span className="tabular">
-                  {duration((+new Date(c.shiftEnd) - app.now) / 1000)}
-                </span>
+                <span className="tabular">{dutyClock(c, app.now)}</span>
               </div>
             ))}
           </div>

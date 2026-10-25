@@ -1,3 +1,4 @@
+import { activeDuty, onDuty } from '../utils/duty.js';
 import bcrypt from 'bcryptjs';
 import {
   User,
@@ -14,6 +15,7 @@ import {
   Attendance,
   CrewShift,
   Dispatch,
+  VehicleHandover,
 } from '../models/index.js';
 import { requireValue } from '../utils/errors.js';
 import { audit } from '../services/audit.js';
@@ -116,7 +118,10 @@ export async function listCrews(req, res) {
   res.json(
     await Crew.find()
       .populate('city', 'name latitude longitude')
-      .populate('vehicle', 'prefix plate latitude longitude')
+      .populate(
+        'vehicle',
+        'prefix plate latitude longitude brand model year type mileage provisional',
+      )
       .populate('members driver', 'name role')
       .sort({ name: 1 }),
   );
@@ -205,6 +210,21 @@ export async function saveVehicle(req, res) {
       : new Vehicle();
     requireValue(row, 'Viatura não encontrada.', 404);
     requireValue(
+      !(await VehicleHandover.exists({
+        vehicle: row._id,
+        closedAt: null,
+        $or: [{ pendingReturn: true }, { pendingIntake: true }],
+      }).session(session)),
+      'Finalize os checklists pendentes antes de editar a viatura.',
+      409,
+    );
+    if (row.provisional && req.input.provisional === false)
+      requireValue(
+        req.input.year && !req.input.plate.startsWith('P-'),
+        'Informe ano e placa reais para concluir o cadastro provisório.',
+        422,
+      );
+    requireValue(
       !req.params.id || req.input.mileage >= row.mileage,
       'A quilometragem não pode diminuir.',
       422,
@@ -240,6 +260,11 @@ export async function removeVehicle(req, res) {
     requireValue(row, 'Viatura não encontrada.', 404);
     requireValue(!row.crew, 'Desassocie a viatura antes de excluir.', 409);
     requireValue(
+      !(await VehicleHandover.exists({ vehicle: row._id }).session(session)),
+      'A viatura possui checklists históricos; mantenha o cadastro indisponível.',
+      409,
+    );
+    requireValue(
       !(await Occurrence.exists({ vehicle: row._id }).session(session)),
       'Viatura possui histórico. Use o status Indisponível.',
       409,
@@ -260,7 +285,7 @@ export async function location(req, res) {
         (await Crew.exists({
           _id: row.crew,
           members: req.user._id,
-          shiftEnd: { $gt: new Date() },
+          ...activeDuty(),
         }))),
     'Somente a guarnição ativa pode atualizar a localização desta viatura.',
     403,
@@ -286,6 +311,27 @@ export async function saveCity(req, res) {
   await audit(req.user, req.params.id ? 'Edição' : 'Cadastro', 'City', row._id, row.name);
   changed('cities');
   res.json(row);
+}
+export async function removeCity(req, res) {
+  await transaction(async (session) => {
+    const city = await City.findOne({ _id: req.params.id, deleted: { $ne: true } }).session(
+      session,
+    );
+    requireValue(city, 'Município não encontrado.', 404);
+    requireValue(
+      !(await Crew.exists({ city: city._id, ...activeDuty() }).session(session)),
+      'Encerre os serviços deste município antes de excluí-lo.',
+      409,
+    );
+    city.active = false;
+    city.set('deleted', true);
+    await city.save({ session });
+    await audit(req.user, 'Exclusão de município atendido', 'City', city._id, city.name, session);
+  });
+  changed('cities');
+  res.json({
+    message: 'Município excluído dos atendidos. Os vínculos históricos foram preservados.',
+  });
 }
 export async function settings(req, res) {
   res.json(await SystemSetting.findOne({ key: 'general' }));

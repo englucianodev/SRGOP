@@ -4,6 +4,8 @@ export { default as City } from './City.js';
 export { default as Occurrence } from './Occurrence.js';
 export { default as Crew } from './Crew.js';
 export { default as Vehicle } from './Vehicle.js';
+export { default as VehicleHandover } from './VehicleHandover.js';
+export { default as Emergency } from './Emergency.js';
 export { default as Dispatch } from './Dispatch.js';
 export { default as Attendance } from './Attendance.js';
 export { default as DailyOfficer } from './DailyOfficer.js';

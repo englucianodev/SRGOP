@@ -1,3 +1,4 @@
+import { activeDuty, onDuty, roundHour } from '../utils/duty.js';
 import mongoose from 'mongoose';
 import {
   Occurrence,
@@ -9,9 +10,11 @@ import {
   CrewShift,
   SupportRequest,
   City,
+  VehicleHandover,
 } from '../models/index.js';
 import { requireValue } from '../utils/errors.js';
 import { serviceWindow } from '../utils/time.js';
+import { recordIntake, requireDriverReturn } from './vehicleInspections.js';
 import { audit } from './audit.js';
 import {
   changed,
@@ -37,7 +40,7 @@ export async function canAttend(user, row, session) {
   const crew = await Crew.findOne({
     _id: row.crew,
     members: user._id,
-    shiftEnd: { $gt: new Date() },
+    ...activeDuty(),
   }).session(session || null);
   requireValue(
     crew || String(row.acceptedBy) === String(user._id),
@@ -65,7 +68,8 @@ export async function dispatchOccurrence(actor, input) {
       {
         _id: input.crew,
         status: 'Disponível',
-        shiftEnd: { $gt: new Date() },
+        inspectionBlocked: { $ne: true },
+        ...activeDuty(),
         'members.0': { $exists: true },
         currentOccurrence: null,
       },
@@ -117,8 +121,7 @@ async function releaseCrew(crewId, occurrenceId, session) {
   );
   if (!crew) return;
   crew.currentOccurrence = null;
-  crew.status =
-    +crew.shiftEnd > Date.now() && crew.members.length ? 'Disponível' : 'Fora de serviço';
+  crew.status = onDuty(crew) ? 'Disponível' : 'Fora de serviço';
   await crew.save({ session });
 }
 export async function acceptOccurrence(actor, id) {
@@ -135,7 +138,7 @@ export async function acceptOccurrence(actor, id) {
       {
         _id: row.crew,
         currentOccurrence: row._id,
-        shiftEnd: { $gt: new Date() },
+        ...activeDuty(),
         'members.0': { $exists: true },
       },
       { $set: { updatedAt: new Date() } },
@@ -248,8 +251,17 @@ export async function closeOccurrence(actor, id, input) {
   attendanceChanged({ ...row.occurrence.toObject(), assignedMembers: row.supportMembers });
   return row.occurrence;
 }
-export async function joinCrew(actor, id, driver) {
+export async function joinCrew(actor, id, driver, input = {}) {
   const crew = await transaction(async (session) => {
+    requireValue(
+      !(await VehicleHandover.exists({
+        driver: actor._id,
+        pendingReturn: true,
+        closedAt: null,
+      }).session(session)),
+      'Conclua o checklist de entrega pendente antes de iniciar novo serviço.',
+      409,
+    );
     const row = await Crew.findById(id).session(session);
     requireValue(row, 'Guarnição não encontrada.', 404);
     requireValue(
@@ -258,7 +270,7 @@ export async function joinCrew(actor, id, driver) {
       409,
     );
     requireValue(
-      !row.shiftEnd || +row.shiftEnd > Date.now() || row.status === 'Fora de serviço',
+      onDuty(row) || !row.members.length || row.status === 'Fora de serviço',
       'O turno expirou. Aguarde o encerramento automático.',
       409,
     );
@@ -273,21 +285,42 @@ export async function joinCrew(actor, id, driver) {
       409,
     );
     requireValue(!driver || !row.driver, 'Esta guarnição já possui motorista.', 409);
-    if (!row.shiftEnd || +row.shiftEnd <= Date.now() || row.status === 'Fora de serviço') {
+    const assignedVehicle = row.vehicle
+      ? await Vehicle.findById(row.vehicle).session(session)
+      : null;
+    const motorcycle = assignedVehicle?.type === 'Motocicleta';
+    if (motorcycle)
+      requireValue(
+        input.dutyPeriod && ['Manhã', 'Tarde', 'Noite'].includes(input.dutyPeriod),
+        'Selecione o turno da motocicleta: Manhã, Tarde ou Noite.',
+        422,
+      );
+    if (motorcycle && row.members.length)
+      requireValue(
+        input.dutyPeriod === row.dutyPeriod,
+        'Selecione o mesmo turno da equipe em serviço.',
+        409,
+      );
+    if (!onDuty(row)) {
       requireValue(
         row.members.length === 0,
         'Encerre o turno anterior antes de iniciar outro.',
         409,
       );
       const duty = serviceWindow();
-      row.shiftStart = duty.start;
+      row.shiftMode = motorcycle ? 'Motocicleta' : 'Regular';
+      row.dutyPeriod = motorcycle ? input.dutyPeriod : '';
+      row.shiftStart = motorcycle ? new Date() : duty.start;
       row.location = { sharing: false };
-      row.shiftEnd = duty.end;
+      row.shiftEnd = motorcycle ? null : duty.end;
       const [shift] = await CrewShift.create(
         [
           {
             crew: row._id,
             dutyDay: duty.day,
+            shiftMode: row.shiftMode,
+            dutyPeriod: row.dutyPeriod,
+            roundedStart: motorcycle ? roundHour(row.shiftStart) : undefined,
             crewName: row.name,
             city: row.city,
             cityName: (await City.findById(row.city).session(session))?.name,
@@ -318,6 +351,7 @@ export async function joinCrew(actor, id, driver) {
             memberName: actor.name,
             actorName: actor.name,
             action: 'Ingresso',
+            roundedAt: motorcycle ? roundHour(new Date()) : undefined,
           },
         },
       },
@@ -330,6 +364,12 @@ export async function joinCrew(actor, id, driver) {
         { session },
       );
       requireValue(vehicle, 'A viatura associada está indisponível ou em manutenção.', 409);
+      requireValue(
+        !vehicle.provisional && !vehicle.inspectionHold,
+        'Complete o cadastro da viatura e as entregas pendentes antes do serviço.',
+        409,
+      );
+      if (driver) await recordIntake(actor, row, input.checklist, session);
     }
     await audit(
       actor,
@@ -353,9 +393,18 @@ export async function endShift(id, actor, reason = 'Encerramento automático às
       'Turno já encerrado.',
       409,
     );
-    if (!actor) requireValue(+crew.shiftEnd <= Date.now(), 'Este turno já foi renovado.', 409);
+    if (!actor)
+      requireValue(
+        crew.shiftMode !== 'Motocicleta' && crew.shiftEnd && +crew.shiftEnd <= Date.now(),
+        'Este turno não tem encerramento automático ou já foi renovado.',
+        409,
+      );
     const members = [...crew.members];
-    const endedAt = +crew.shiftEnd <= Date.now() ? crew.shiftEnd : new Date();
+    const endedAt =
+      crew.shiftMode !== 'Motocicleta' && crew.shiftEnd && +crew.shiftEnd <= Date.now()
+        ? crew.shiftEnd
+        : new Date();
+    await requireDriverReturn(crew, reason, session);
     const pending = await Occurrence.findOne({ crew: id, status: 'Despachada' }).session(session);
     if (pending) {
       pending.status = 'Em aberto';
@@ -372,7 +421,7 @@ export async function endShift(id, actor, reason = 'Encerramento automático às
     if (crew.vehicle)
       await Vehicle.updateOne(
         { _id: crew.vehicle, status: 'Em operação' },
-        { status: 'Disponível' },
+        { status: crew.inspectionBlocked ? 'Indisponível' : 'Disponível' },
         { session },
       );
     const memberNames = await User.find({ _id: { $in: members } })
@@ -381,7 +430,12 @@ export async function endShift(id, actor, reason = 'Encerramento automático às
     await CrewShift.updateOne(
       { _id: crew.shift, end: null },
       {
-        $set: { end: endedAt, endedBy: actor?._id, reason },
+        $set: {
+          end: endedAt,
+          roundedEnd: crew.shiftMode === 'Motocicleta' ? roundHour(endedAt) : undefined,
+          endedBy: actor?._id,
+          reason,
+        },
         $push: {
           changes: {
             $each: members.map((member) => ({
@@ -424,6 +478,7 @@ export async function endShift(id, actor, reason = 'Encerramento automático às
 }
 export async function expireShifts() {
   const rows = await Crew.find({
+    shiftMode: { $ne: 'Motocicleta' },
     shiftEnd: { $lte: new Date() },
     $or: [{ status: { $ne: 'Fora de serviço' } }, { 'members.0': { $exists: true } }],
   }).select('_id');
@@ -444,7 +499,7 @@ export async function alignActiveShifts() {
     await transaction(async (session) => {
       const crew = await Crew.findById(row._id).session(session);
       const shift = crew?.shift ? await CrewShift.findById(crew.shift).session(session) : null;
-      if (!crew || shift?.dutyDay || shift?.end) return;
+      if (!crew || crew.shiftMode === 'Motocicleta' || shift?.dutyDay || shift?.end) return;
       const duty = serviceWindow(new Date(shift?.start || crew.shiftStart || Date.now()));
       crew.shiftStart = duty.start;
       crew.shiftEnd = duty.end;
@@ -469,8 +524,9 @@ export async function authorizeSupport(actor, id, approved) {
         {
           _id: support.targetCrew,
           status: 'Disponível',
+          inspectionBlocked: { $ne: true },
           currentOccurrence: null,
-          shiftEnd: { $gt: new Date() },
+          ...activeDuty(),
           'members.0': { $exists: true },
         },
         { status: 'Em atendimento', currentOccurrence: occurrence._id },

@@ -541,6 +541,18 @@ Faça a carga inicial de demonstração somente em banco de homologação. Para 
 
 **Não foi realizado deploy externo automaticamente**: a entrega inclui código e configurações prontos para essas plataformas. Domínios, projeto de hospedagem e credenciais de banco devem ser configurados no ambiente escolhido.
 
+## Viaturas, checklists e Urgência UU
+
+Em Administrativo, o botão Excluir retira o município da lista de atendimento preservando o histórico. Encerre os serviços ativos daquele município antes da exclusão.
+
+O cadastro de viaturas inclui marca, modelo, ano e tipo (Motocicleta, SUV ou Caminhonete). Para completar a frota dos municípios ativos, execute `npm run provision:fleet` em `backend` ou use o botão administrativo na página de recursos. O comando pode ser repetido sem duplicar as S10 existentes. Novos registros são Chevrolet S10 provisórias e indisponíveis: informe prefixo, placa, ano e quilometragem reais antes de liberar. Os identificadores técnicos dos provisórios não representam placas reais, e o KM zero inicial não é uma leitura confirmada.
+
+Ao ingressar como motorista, registre o recebimento da viatura: seis itens S/A ou C/A e quilometragem obrigatória. C/A exige observação. O KM nunca pode ser inferior ao último registrado. A entrega também é obrigatória; encerramento automático gera uma pendência apresentada no próximo acesso. Uma entrega pendente impede a liberação da viatura, e a troca de motorista exige entrega anterior seguida de recebimento pelo novo condutor.
+
+O serviço regular permanece das 8h às 8h seguintes. Nas motocicletas, escolha Manhã, Tarde ou Noite no ingresso e registre a saída real. Não há encerramento automático após 24 horas. Os relatórios preservam os horários reais e exibem também entrada e saída arredondadas para a hora mais próxima (30 minutos arredondam para a hora seguinte).
+
+O CPU recebe aviso também das ocorrências iniciadas automaticamente. O botão Urgência UU está disponível para quem está de serviço e gera alerta de prioridade máxima para os policiais em serviço e o CPU. O alerta identifica solicitante e cidade e oferece acesso ao mapa com posição atual ou última posição disponível; sem GPS, informa a ausência de coordenadas. Dar ciência silencia o alerta para aquele usuário, sem encerrar o pedido de apoio. O solicitante ou a central pode encerrá-lo com justificativa. O som de emergência se repete mesmo se o som comum estiver desativado, sujeito à permissão de áudio do navegador. Alertas em tempo real exigem a aplicação aberta e conectada; não há push para aplicação fechada.
+
 ## Solução de problemas
 
 - **Transaction numbers are only allowed…**: MongoDB está standalone. Use o Compose fornecido, inicialize `rs0` ou utilize Atlas.

@@ -7,6 +7,7 @@ export default mongoose.model(
       latitude: { type: Number, required: true, min: -90, max: 90 },
       longitude: { type: Number, required: true, min: -180, max: 180 },
       active: { type: Boolean, default: true },
+      deleted: { type: Boolean, default: false },
     },
     { timestamps: true },
   ),

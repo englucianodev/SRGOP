@@ -1,3 +1,4 @@
+import { activeDuty, onDuty } from '../utils/duty.js';
 import { Router } from 'express';
 import multer from 'multer';
 import rateLimit from 'express-rate-limit';
@@ -10,6 +11,8 @@ import * as occurrence from '../controllers/occurrenceController.js';
 import * as resource from '../controllers/resourceController.js';
 import * as chat from '../controllers/chatController.js';
 import * as gps from '../controllers/gpsController.js';
+import * as inspections from '../controllers/inspectionController.js';
+import * as emergency from '../controllers/emergencyController.js';
 import { reports } from '../controllers/reportController.js';
 import { crewReports } from '../controllers/crewReportController.js';
 import {
@@ -23,6 +26,9 @@ import {
 } from '../services/operations.js';
 import { City, Occurrence, Dispatch, SupportRequest, Crew, CrewMessage } from '../models/index.js';
 import { manageMember, setAvailability, sendCrewMessage } from '../services/crewManagement.js';
+import { provisionDefaultFleet } from '../services/defaultFleet.js';
+import { requireDriverReturn } from '../services/vehicleInspections.js';
+import { transaction } from '../services/operations.js';
 const router = Router();
 const management = allow('Administrativo', 'Oficial');
 const admin = allow('Administrativo');
@@ -66,16 +72,24 @@ router.put(
 );
 router.delete('/auth/me/photo', a(account.removePhoto));
 router.get('/service-cpu', a(resource.cpu));
+router.get('/vehicle-checklists/pending', a(inspections.pending));
+router.post('/vehicle-checklists/:id', v(s.inspection), a(inspections.complete));
 router.post('/auth/activity', a(authentication.activity));
 router.post('/auth/logout', a(authentication.logout));
 router.use(essentialOnly);
 router.get('/dashboard', a(resource.dashboard));
 router.get(
   '/cities',
-  a(async (req, res) => res.json(await City.find().sort({ name: 1 }))),
+  a(async (req, res) => res.json(await City.find({ deleted: { $ne: true } }).sort({ name: 1 }))),
 );
 router.post('/cities', admin, v(s.city), a(resource.saveCity));
 router.put('/cities/:id', admin, v(s.city), a(resource.saveCity));
+router.delete('/cities/:id', admin, a(resource.removeCity));
+router.get('/emergencies', a(emergency.list));
+router.post('/emergencies', v(s.emergency), a(emergency.create));
+router.get('/emergencies/:id', a(emergency.detail));
+router.post('/emergencies/:id/acknowledge', a(emergency.acknowledge));
+router.post('/emergencies/:id/resolve', v(s.reason), a(emergency.resolve));
 router.get('/users', management, a(resource.listUsers));
 router.post('/users', admin, v(s.user), a(resource.saveUser));
 router.put('/users/:id', admin, v(s.user), a(resource.saveUser));
@@ -118,9 +132,7 @@ router.get(
   '/attendances',
   a(async (req, res) => {
     const mine = req.user.role === 'Praça';
-    const crew = req.user.crew
-      ? await Crew.findOne({ _id: req.user.crew, shiftEnd: { $gt: new Date() } })
-      : null;
+    const crew = req.user.crew ? await Crew.findOne({ _id: req.user.crew, ...activeDuty() }) : null;
     const supports = crew
       ? await SupportRequest.find({ targetCrew: crew._id, status: 'Autorizado' }).select(
           'occurrence',
@@ -200,7 +212,56 @@ router.delete('/crews/:id', admin, a(resource.removeCrew));
 router.post(
   '/crews/:id/join',
   v(s.join),
-  a(async (req, res) => res.json(await joinCrew(req.user, req.params.id, req.input.driver))),
+  a(async (req, res) =>
+    res.json(await joinCrew(req.user, req.params.id, req.input.driver, req.input)),
+  ),
+);
+router.post(
+  '/crews/:id/leave',
+  v(s.motorcycleLeave),
+  a(async (req, res) => {
+    const crew = await Crew.findOne({
+      _id: req.params.id,
+      members: req.user._id,
+      shiftMode: 'Motocicleta',
+      ...activeDuty(),
+    });
+    requireValue(
+      crew,
+      'Somente integrantes em serviço de motocicleta podem encerrar o próprio serviço.',
+      403,
+    );
+    requireValue(
+      String(crew.driver) !== String(req.user._id) || !crew.vehicle || req.input.checklist,
+      'O motorista deve preencher o checklist de entrega.',
+      422,
+    );
+    res.json(
+      await manageMember(req.user, crew._id, {
+        member: String(req.user._id),
+        action: 'Saída',
+        reason: 'Encerramento voluntário do serviço de motocicleta.',
+        checklist: req.input.checklist,
+      }),
+    );
+  }),
+);
+router.post(
+  '/crews/:id/driver-return',
+  a(async (req, res) => {
+    await transaction(async (session) => {
+      const crew = await Crew.findOne({
+        _id: req.params.id,
+        driver: req.user._id,
+        members: req.user._id,
+        ...activeDuty(),
+      }).session(session);
+      requireValue(crew, 'Somente o motorista em serviço pode registrar a entrega.', 403);
+      await requireDriverReturn(crew, 'Entrega solicitada pelo motorista.', session);
+      await crew.save({ session });
+    });
+    res.json({ message: 'Preencha o checklist obrigatório de entrega.' });
+  }),
 );
 router.post(
   '/crews/:id/end-shift',
@@ -228,7 +289,7 @@ router.get(
       'A consulta administrativa exige justificativa. Utilize o chat com acesso auditado.',
       403,
     );
-    const crew = await Crew.findOne({ members: req.user._id, shiftEnd: { $gt: new Date() } });
+    const crew = await Crew.findOne({ members: req.user._id, ...activeDuty() });
     res.json(
       await CrewMessage.find(
         crew
@@ -251,6 +312,12 @@ router.post(
   a(async (req, res) => res.status(201).json(await sendCrewMessage(req.user, req.input))),
 );
 router.get('/vehicles', management, a(resource.listVehicles));
+router.post(
+  '/vehicles/provision-defaults',
+  admin,
+  a(async (req, res) => res.json(await provisionDefaultFleet(req.user))),
+);
+router.get('/vehicles/:id/checklists', management, a(inspections.history));
 router.post('/vehicles', admin, v(s.vehicle), a(resource.saveVehicle));
 router.put('/vehicles/:id', admin, v(s.vehicle), a(resource.saveVehicle));
 router.delete('/vehicles/:id', admin, a(resource.removeVehicle));

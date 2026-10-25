@@ -192,6 +192,7 @@ export function AppProvider({ children }) {
     });
     socket.on('data:changed', scheduleRefresh);
     socket.on('service:changed', scheduleRefresh);
+    socket.on('emergency:changed', scheduleRefresh);
     socket.on('chat:changed', () => {
       clearTimeout(chatTimer);
       chatTimer = setTimeout(() => setChatRevision((v) => v + 1), 150);
@@ -200,7 +201,12 @@ export function AppProvider({ children }) {
       window.dispatchEvent(new CustomEvent('srgop:crew-location', { detail: position }));
     });
     socket.on('notification', (n) => {
-      if (['chat', 'pendente'].includes(n.kind)) {
+      if (n.kind === 'urgencia') {
+        setNotificationRevision((v) => v + 1);
+        scheduleRefresh();
+        return;
+      }
+      if (['chat', 'pendente', 'automatico'].includes(n.kind)) {
         setNotificationRevision((v) => v + 1);
         if (heardNotifications.current.has(n._id)) return;
         heardNotifications.current.add(n._id);

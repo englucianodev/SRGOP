@@ -1,5 +1,8 @@
+import { isOnDuty, dutyClock } from '../utils/duty';
 import { useState } from 'react';
 import CrewManagement from '../components/CrewManagement';
+import JoinCrewDialog from '../components/JoinCrewDialog';
+import MotorcycleExit from '../components/MotorcycleExit';
 import { Link } from 'react-router-dom';
 import {
   Plus,
@@ -65,7 +68,7 @@ export default function Crews() {
     <>
       <PageTitle
         title={manager ? 'Guarnições' : 'Minha guarnição'}
-        description="Organização das equipes e serviço das 8h às 8h do dia seguinte."
+        description="Organização das equipes, serviços regulares e turnos de motocicleta."
       >
         {admin && (
           <Button onClick={() => edit()}>
@@ -87,7 +90,7 @@ export default function Crews() {
           .filter((c) => `${c.name} ${c.city?.name}`.toLowerCase().includes(search.toLowerCase()))
           .map((c) => {
             const mine = c.members.some((m) => m._id === app.user._id);
-            const active = c.status !== 'Fora de serviço' && +new Date(c.shiftEnd) > app.now;
+            const active = c.status !== 'Fora de serviço' && isOnDuty(c, app.now);
             return (
               <Panel className={`crew-card ${mine ? 'my-crew' : ''}`} key={c._id}>
                 <div className="card-top">
@@ -101,6 +104,11 @@ export default function Crews() {
                   {mine && <small> Sua guarnição</small>}
                 </h2>
                 <p className="muted">{c.city?.name}</p>
+                {c.inspectionBlocked && (
+                  <p className="form-note" role="status">
+                    Viatura retida até a conclusão dos checklists dos motoristas.
+                  </p>
+                )}
                 <div className="crew-meta">
                   <span>
                     <Car size={17} />
@@ -127,11 +135,7 @@ export default function Crews() {
                 <div className="shift-timer">
                   <Clock3 size={17} />
                   <div>
-                    <strong>
-                      {active
-                        ? duration((+new Date(c.shiftEnd) - app.now) / 1000)
-                        : 'Fora de serviço'}
-                    </strong>
+                    <strong>{active ? dutyClock(c, app.now) : 'Fora de serviço'}</strong>
                     <small>
                       {active
                         ? `Início: ${fmtDateTime(c.shiftStart)}`
@@ -159,6 +163,18 @@ export default function Crews() {
                     </Button>
                   )}
                   <CrewManagement crew={c} />
+                  {mine && c.shiftMode === 'Motocicleta' && <MotorcycleExit crew={c} />}
+                  {mine &&
+                    c.driver?._id === app.user._id &&
+                    c.vehicle &&
+                    c.shiftMode !== 'Motocicleta' && (
+                      <Button
+                        variant="secondary"
+                        onClick={() => app.run(() => api.post(`/crews/${c._id}/driver-return`))}
+                      >
+                        Entregar viatura — checklist
+                      </Button>
+                    )}
                   {!app.activeAttendance &&
                     !app.user.crew &&
                     !c.currentOccurrence &&
@@ -274,38 +290,7 @@ export default function Crews() {
           </form>
         </Modal>
       )}
-      {join && (
-        <Modal title={`Ingressar em ${join.name}`} onClose={() => setJoin(null)}>
-          <p>Você será o motorista da guarnição?</p>
-          <div className="form-actions">
-            <Button
-              variant="secondary"
-              onClick={() =>
-                app.run(async () => {
-                  await api.post(`/crews/${join._id}/join`, { driver: false });
-                  const r = await api.get('/auth/me');
-                  app.hydrate(r.data);
-                  setJoin(null);
-                }, 'Você ingressou na guarnição.')
-              }
-            >
-              Não, sou integrante
-            </Button>
-            <Button
-              onClick={() =>
-                app.run(async () => {
-                  await api.post(`/crews/${join._id}/join`, { driver: true });
-                  const r = await api.get('/auth/me');
-                  app.hydrate(r.data);
-                  setJoin(null);
-                }, 'Você ingressou como motorista.')
-              }
-            >
-              Sim, sou motorista
-            </Button>
-          </div>
-        </Modal>
-      )}
+      {join && <JoinCrewDialog key={join._id} crew={join} onClose={() => setJoin(null)} />}
       {end && (
         <Modal title="Autorizar encerramento antecipado" onClose={() => setEnd(null)}>
           <form

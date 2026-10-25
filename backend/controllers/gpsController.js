@@ -1,3 +1,4 @@
+import { activeDuty, onDuty } from '../utils/duty.js';
 import { Crew } from '../models/index.js';
 import { requireValue } from '../utils/errors.js';
 import { transaction } from '../services/operations.js';
@@ -9,7 +10,7 @@ export async function location(req, res) {
     const crew = await Crew.findOne({
       _id: req.params.id,
       members: req.user._id,
-      shiftEnd: { $gt: new Date() },
+      ...activeDuty(),
       status: { $ne: 'Fora de serviço' },
     }).session(session);
     requireValue(

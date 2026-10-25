@@ -1,3 +1,4 @@
+import { isOnDuty, dutyClock } from '../utils/duty';
 import { useEffect, useState } from 'react';
 import { Navigation } from 'lucide-react';
 import { useApp } from '../context/AppContext';
@@ -9,7 +10,7 @@ export default function GpsControl() {
   const app = useApp();
   const { data: crews } = useData('/crews', []);
   const crew = crews.find(
-    (c) => c.members.some((m) => m._id === app.user._id) && +new Date(c.shiftEnd) > app.now,
+    (c) => c.members.some((m) => m._id === app.user._id) && isOnDuty(c, app.now),
   );
   const [enabled, setEnabled] = useState(false);
   const [status, setStatus] = useState('');

@@ -1,21 +1,22 @@
+import { isOnDuty, dutyClock } from '../utils/duty';
 import { useEffect, useRef } from 'react';
 import { MapContainer, TileLayer, CircleMarker, Popup, useMap } from 'react-leaflet';
 import { Badge } from './UI';
-function FocusCrew({ crew }) {
+function FocusCrew({ crew, zoom = 16 }) {
   const map = useMap();
   const latitude = crew?.location?.latitude;
   const longitude = crew?.location?.longitude;
   useEffect(() => {
     if (Number.isFinite(latitude) && Number.isFinite(longitude))
-      map.setView([latitude, longitude], 16);
-  }, [map, crew?._id, latitude, longitude]);
+      map.setView([latitude, longitude], zoom);
+  }, [map, crew?._id, latitude, longitude, zoom]);
   return null;
 }
 function CrewMarker({ crew: c, focused }) {
   const marker = useRef(null);
   const live =
     c.members.length > 0 &&
-    +new Date(c.shiftEnd) > Date.now() &&
+    isOnDuty(c) &&
     c.location.sharing &&
     Date.now() - +new Date(c.location.locatedAt) < 60000;
   useEffect(() => {
@@ -57,6 +58,7 @@ export default function OperationalMap({
   vehicles = [],
   crews = [],
   focusCrew = '',
+  emergency = null,
   compact = false,
 }) {
   return (
@@ -67,7 +69,34 @@ export default function OperationalMap({
       className={`operational-map ${compact ? 'compact' : ''}`}
       aria-label="Mapa operacional dos municípios"
     >
-      <FocusCrew crew={crews.find((c) => c._id === focusCrew)} />
+      <FocusCrew
+        zoom={emergency && !Number.isFinite(emergency.latitude) ? 10 : 16}
+        crew={
+          emergency
+            ? {
+                _id: emergency._id,
+                location: Number.isFinite(emergency.latitude)
+                  ? emergency
+                  : cities.find((c) => c._id === emergency.city),
+              }
+            : crews.find((c) => c._id === focusCrew)
+        }
+      />
+      {emergency && Number.isFinite(emergency.latitude) && Number.isFinite(emergency.longitude) && (
+        <CircleMarker
+          center={[emergency.latitude, emergency.longitude]}
+          radius={17}
+          pathOptions={{ color: '#a90000', fillColor: '#ff1515', fillOpacity: 1, weight: 5 }}
+        >
+          <Popup>
+            <strong>URGÊNCIA UU · {emergency.actorName}</strong>
+            <p>
+              {emergency.crewName} · {emergency.cityName}
+            </p>
+            <p>Posição registrada: {new Date(emergency.locatedAt).toLocaleString('pt-BR')}</p>
+          </Popup>
+        </CircleMarker>
+      )}
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
         url={`https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png?key=${encodeURIComponent(import.meta.env.VITE_CARTO_API_KEY || 'cb1_4u0a_1_93cf66948d960a7d71de1c27')}`}
@@ -137,7 +166,7 @@ export default function OperationalMap({
       {crews
         .filter(
           (c) =>
-            ((c.members.length && +new Date(c.shiftEnd) > Date.now()) || c._id === focusCrew) &&
+            ((c.members.length && isOnDuty(c)) || c._id === focusCrew) &&
             Number.isFinite(c.location?.latitude) &&
             Number.isFinite(c.location?.longitude),
         )
