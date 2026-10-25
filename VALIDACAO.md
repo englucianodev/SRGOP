@@ -1,5 +1,14 @@
 # Validação e impasses — SRGOP
 
+## Confirmação da urgência e transferência de viaturas — 25/10/2026
+
+- Urgência UU abre confirmação antes de solicitar GPS ou enviar o alerta. Cancelar recebe foco inicial; Cancelar, Escape e Enter inicial não geram pedidos. Somente a confirmação explícita envia. Alerta recebido de outra equipe mantém prioridade sobre a confirmação local.
+- Edição de guarnição lista veículos livres de todos os municípios e permite manter, substituir ou desassociar a viatura. Transferência exige liberação do vínculo anterior, atualiza o município da viatura e limpa suas coordenadas antigas. Status provisório/manutenção permanece; vínculos, mudanças e histórico são auditados.
+- API impede vínculo duplicado, incluindo disputa concorrente e vínculo inverso inconsistente. Bloqueia transferência pelo cadastro da viatura enquanto associada, serviços ativos e entregas pendentes. Edição dos demais dados de viatura vinculada permanece permitida fora de serviço.
+- Chrome headless confirmou ausência de POST e registros de emergência ao abrir/cancelar/Escape/Enter, envio único ao confirmar, recebimento sonoro pelo CPU e associação/substituição/desassociação/transferência entre municípios pela interface. Zero erros JavaScript e sem rolagem horizontal móvel. Testes e navegador usam banco temporário; esta atualização não modifica cadastros persistentes automaticamente.
+
+Validação final: **68 testes aprovados, zero falhas**, compilação de produção e formatação aprovadas. Uma primeira execução teve `ECONNRESET` no teste concorrente de CPU; a suíte completa repetida isoladamente passou sem alteração nesse fluxo.
+
 ## KM administrativo, últimas seleções e tipos de guarnição — 25/10/2026
 
 - Administrativo pode reduzir o KM em correção específica, localização e checklist. Praça e Oficial permanecem sujeitos ao KM igual ou superior ao último registrado. Correção específica tem auditoria com valor anterior e novo e funciona durante serviço ativo.
@@ -92,7 +101,7 @@ As verificações visuais mencionadas nas seções seguintes são registros hist
 
 Código organizado em `frontend` e `backend`, com banco MongoDB, API, permissões no servidor, interface por perfil e dados demonstrativos. Instruções de instalação, variáveis e deploy estão no [README](README.md).
 
-Última execução da suíte: **65 testes aprovados, zero falhas**. Build de produção do frontend concluído com sucesso. Essas verificações não substituem homologação com os usuários do batalhão nem testes de carga em infraestrutura de produção.
+Última execução da suíte: **68 testes aprovados, zero falhas**. Build de produção do frontend concluído com sucesso. Essas verificações não substituem homologação com os usuários do batalhão nem testes de carga em infraestrutura de produção.
 
 ## Verificações automatizadas
 

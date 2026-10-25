@@ -543,6 +543,10 @@ Faça a carga inicial de demonstração somente em banco de homologação. Para 
 
 ## Viaturas, checklists e Urgência UU
 
+O botão Urgência UU abre uma confirmação com identificação da equipe e do município. O pedido só é enviado ao clicar em **Confirmar pedido de apoio urgente**; Cancelar, Escape ou Enter no foco inicial não enviam o alerta.
+
+Para administrar vínculos, abra **Guarnições → Alterar**. A lista mostra a viatura atual e as viaturas livres de todos os municípios, incluindo cadastros provisórios ou em manutenção. Para transferir uma viatura, selecione **Sem viatura / desassociar** na equipe de origem e salve; depois selecione a viatura na edição da equipe de destino e salve. O município da viatura é atualizado para o da equipe de destino. Também é possível substituir a viatura da equipe por outra livre; a anterior fica desassociada. Cada viatura só pertence a uma guarnição, e a mudança do município pelo cadastro de Viaturas é bloqueada enquanto existir vínculo. Dados da viatura associada podem ser editados no próprio cadastro, respeitando serviço ativo e checklists pendentes. As transferências preservam status de manutenção/provisório e histórico e são auditadas.
+
 Em Administrativo, o botão Excluir retira o município da lista de atendimento preservando o histórico. Encerre os serviços ativos daquele município antes da exclusão.
 
 O cadastro de viaturas inclui marca, modelo, ano e tipo (Motocicleta, SUV ou Caminhonete). Para completar a frota dos municípios ativos, execute `npm run provision:fleet` em `backend` ou use o botão administrativo na página de recursos. O comando pode ser repetido sem duplicar as S10 existentes. Novos registros são Chevrolet S10 provisórias e indisponíveis: informe prefixo, placa, ano e quilometragem reais antes de liberar. Os identificadores técnicos dos provisórios não representam placas reais, e o KM zero inicial não é uma leitura confirmada.

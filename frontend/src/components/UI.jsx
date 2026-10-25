@@ -74,6 +74,7 @@ export function Modal({ title, children, onClose, wide = false, mandatory = fals
   const id = useId();
   useEffect(() => {
     ref.current.showModal();
+    ref.current.querySelector('[data-initial-focus]')?.focus();
     const el = ref.current;
     return () => el.close();
   }, []);

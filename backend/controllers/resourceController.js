@@ -188,29 +188,92 @@ export async function saveCrew(req, res) {
     const selected = req.input.vehicle
       ? await Vehicle.findById(req.input.vehicle).session(session)
       : null;
+    requireValue(!req.input.vehicle || selected, 'Viatura não encontrada.', 404);
+    const previousVehicle = row.vehicle ? String(row.vehicle) : null;
+    const previousCity = row.city ? String(row.city) : null;
+    const changedVehicle = previousVehicle !== req.input.vehicle;
+    requireValue(
+      !previousVehicle || previousCity === req.input.city || !req.input.vehicle,
+      'Desassocie e salve a viatura antes de mudar a guarnição para outro município.',
+      409,
+    );
+    const affectedVehicles = [previousVehicle, req.input.vehicle].filter(Boolean);
+    requireValue(
+      !affectedVehicles.length ||
+        !(await VehicleHandover.exists({
+          vehicle: { $in: affectedVehicles },
+          closedAt: null,
+        }).session(session)),
+      'Conclua os checklists de recebimento e entrega antes de alterar o vínculo da viatura.',
+      409,
+    );
     const crewType =
       req.input.type || (selected?.type === 'Motocicleta' ? 'Motocicleta' : row.type);
-    requireValue(
-      !selected || String(selected.city) === req.input.city,
-      'Associe uma viatura do mesmo município.',
-      422,
-    );
     requireValue(
       !selected || (crewType === 'Motocicleta') === (selected.type === 'Motocicleta'),
       'O tipo da viatura deve corresponder ao tipo da guarnição.',
       422,
     );
     req.input.type = crewType;
-    if (row.vehicle && String(row.vehicle) !== req.input.vehicle)
-      await Vehicle.updateOne({ _id: row.vehicle, crew: row._id }, { crew: null }, { session });
-    if (req.input.vehicle && String(row.vehicle) !== req.input.vehicle) {
+    if (selected) {
+      requireValue(
+        !selected.crew || String(selected.crew) === String(row._id),
+        'Desassocie a viatura da guarnição atual antes de vinculá-la a outra.',
+        409,
+      );
+      requireValue(
+        !(await Crew.exists({ _id: { $ne: row._id }, vehicle: selected._id }).session(session)),
+        'Esta viatura já está associada a outra guarnição.',
+        409,
+      );
+      requireValue(
+        String(selected.city) === req.input.city || (!selected.crew && changedVehicle),
+        'Desassocie a viatura antes de transferi-la para outro município.',
+        409,
+      );
+    }
+    if (previousVehicle && changedVehicle) {
+      const old = await Vehicle.findOneAndUpdate(
+        { _id: previousVehicle, crew: row._id },
+        { crew: null },
+        { new: true, session },
+      );
+      requireValue(
+        old,
+        'Vínculo atual da viatura inconsistente. Revise o cadastro antes de trocar.',
+        409,
+      );
+      await audit(
+        req.user,
+        'Viatura desassociada',
+        'Vehicle',
+        old._id,
+        `${old.prefix} / ${row.name}`,
+        session,
+      );
+    }
+    if (req.input.vehicle && changedVehicle) {
       const vehicle = await Vehicle.findOneAndUpdate(
-        { _id: req.input.vehicle, $or: [{ crew: null }, { crew: row._id }], status: 'Disponível' },
-        { crew: row._id },
+        { _id: req.input.vehicle, crew: null, inspectionHold: { $ne: true } },
+        {
+          $set: { crew: row._id, city: req.input.city },
+          ...(String(selected.city) !== req.input.city
+            ? { $unset: { latitude: 1, longitude: 1, locatedAt: 1 } }
+            : {}),
+        },
         { session },
       );
       requireValue(vehicle, 'Viatura indisponível ou já vinculada a outra guarnição.', 409);
+      await audit(
+        req.user,
+        'Viatura associada',
+        'Vehicle',
+        vehicle._id,
+        `${vehicle.prefix} / ${req.input.name} / município ${selected.city} → ${req.input.city}`,
+        session,
+      );
     }
+    if (previousCity && previousCity !== req.input.city) row.location = { sharing: false };
     Object.assign(row, req.input);
     await row.save({ session });
     await audit(
@@ -272,6 +335,19 @@ export async function saveVehicle(req, res) {
       ? await Vehicle.findById(req.params.id).session(session)
       : new Vehicle();
     requireValue(row, 'Viatura não encontrada.', 404);
+    const linkedCrew = await Crew.findOne({
+      $or: [{ vehicle: row._id }, ...(row.crew ? [{ _id: row.crew }] : [])],
+    }).session(session);
+    requireValue(
+      !linkedCrew || String(row.city) === req.input.city,
+      'Desassocie a viatura da guarnição antes de alterar o município.',
+      409,
+    );
+    requireValue(
+      !linkedCrew || (req.input.type || row.type) === row.type,
+      'Desassocie a viatura antes de alterar seu tipo.',
+      409,
+    );
     requireValue(
       !(await VehicleHandover.exists({
         vehicle: row._id,

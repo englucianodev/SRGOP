@@ -293,16 +293,22 @@ export default function Crews() {
               {vehicles
                 .filter(
                   (v) =>
-                    objectId(v.city) === form.city &&
                     (form.type === 'Motocicleta') === (v.type === 'Motocicleta') &&
-                    ((!v.crew && v.status === 'Disponível') || objectId(v.crew) === editing),
+                    (!v.crew || objectId(v.crew) === editing) &&
+                    !crews.some((c) => c._id !== editing && objectId(c.vehicle) === v._id),
                 )
                 .map((v) => (
                   <option key={v._id} value={v._id}>
-                    {v.prefix} · {v.plate}
+                    {v.prefix} · {v.plate} · {v.city?.name} · {v.status}
                   </option>
                 ))}
             </Select>
+            <p className="form-note">
+              A lista inclui viaturas sem vínculo de todos os municípios e a viatura atual. Para
+              liberar uma viatura, selecione “Sem viatura / desassociar” e salve. Ao associar uma
+              viatura livre de outro município, ela será transferida para o município desta
+              guarnição. O status de manutenção ou cadastro provisório é preservado.
+            </p>
             <p className="form-note">
               Cada integrante ingressa com sua própria conta. O serviço vai das 8h às 8h do dia
               seguinte, independentemente do horário de ingresso. Antes das 8h, o ingresso pertence

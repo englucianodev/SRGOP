@@ -124,6 +124,45 @@ export default function OperationalSafety() {
     },
     [],
   );
+  const [confirmUrgency, setConfirmUrgency] = useState(null);
+  useEffect(() => {
+    setConfirmUrgency(null);
+  }, [mine?._id, alert?._id]);
+  async function sendUrgency() {
+    if (!mine || confirmUrgency !== mine._id || busy) return;
+    setConfirmUrgency(null);
+
+    setBusy(true);
+    setError('');
+    const position = await Promise.race([
+      new Promise((resolve) =>
+        navigator.geolocation
+          ? navigator.geolocation.getCurrentPosition(
+              (p) =>
+                resolve({
+                  latitude: p.coords.latitude,
+                  longitude: p.coords.longitude,
+                  accuracy: p.coords.accuracy,
+                }),
+              () => resolve({}),
+              { enableHighAccuracy: true, timeout: 1500, maximumAge: 10000 },
+            )
+          : resolve({}),
+      ),
+      new Promise((resolve) => setTimeout(() => resolve({}), 1600)),
+    ]);
+    try {
+      await api.post('/emergencies', position, { quiet: true });
+      app.refresh();
+    } catch (e) {
+      setError(
+        e.response?.data?.message ||
+          'O pedido não foi enviado. Verifique a conexão e acione a central por outro meio.',
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
   async function acknowledge(row, map = false) {
     setBusy(true);
     setError('');
@@ -146,47 +185,29 @@ export default function OperationalSafety() {
     <>
       {mine && (
         <div className="urgency-toolbar">
-          <Button
-            variant="danger"
-            busy={busy}
-            onClick={async () => {
-              setBusy(true);
-              setError('');
-              const position = await Promise.race([
-                new Promise((resolve) =>
-                  navigator.geolocation
-                    ? navigator.geolocation.getCurrentPosition(
-                        (p) =>
-                          resolve({
-                            latitude: p.coords.latitude,
-                            longitude: p.coords.longitude,
-                            accuracy: p.coords.accuracy,
-                          }),
-                        () => resolve({}),
-                        { enableHighAccuracy: true, timeout: 1500, maximumAge: 10000 },
-                      )
-                    : resolve({}),
-                ),
-                new Promise((resolve) => setTimeout(() => resolve({}), 1600)),
-              ]);
-              try {
-                await api.post('/emergencies', position, { quiet: true });
-                app.refresh();
-              } catch (e) {
-                setError(
-                  e.response?.data?.message ||
-                    'O pedido não foi enviado. Verifique a conexão e acione a central por outro meio.',
-                );
-              } finally {
-                setBusy(false);
-              }
-            }}
-          >
+          <Button variant="danger" busy={busy} onClick={() => setConfirmUrgency(mine._id)}>
             <Siren size={19} />
             Urgência UU
           </Button>
           <span>Apoio urgente para todos os policiais em serviço.</span>
         </div>
+      )}
+      {confirmUrgency === mine?._id && !alert && !pending.length && (
+        <Modal title="Confirmar Urgência UU" onClose={() => setConfirmUrgency(null)}>
+          <p>
+            Você está prestes a pedir apoio urgente para <strong>{mine.name}</strong>, em{' '}
+            <strong>{mine.city?.name}</strong>. Todos os policiais em serviço receberão um alerta
+            sonoro de prioridade máxima.
+          </p>
+          <div className="form-actions">
+            <Button variant="secondary" data-initial-focus onClick={() => setConfirmUrgency(null)}>
+              Cancelar
+            </Button>
+            <Button variant="danger" busy={busy} onClick={sendUrgency}>
+              Confirmar pedido de apoio urgente
+            </Button>
+          </div>
+        </Modal>
       )}
       {!!emergencies.length && (
         <div className="urgency-status">

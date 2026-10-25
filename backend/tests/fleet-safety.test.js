@@ -714,3 +714,131 @@ test('administrador pode reduzir KM nos checklists sem liberar redução para ou
   );
   assert.equal((await Vehicle.findById(v._id)).mileage, 50);
 });
+
+test('administrador associa, troca e transfere viaturas somente após liberar o vínculo anterior', async () => {
+  const v = await Vehicle.create({
+    prefix: 'ASSOC-1',
+    plate: 'ASC1D23',
+    city: city._id,
+    provisional: true,
+    status: 'Indisponível',
+    mileage: 100,
+    latitude: -5,
+    longitude: -44,
+  });
+  const spare = await Vehicle.create({
+    prefix: 'ASSOC-2',
+    plate: 'ASC2D34',
+    city: secondCity._id,
+    status: 'Em manutenção',
+  });
+  const a = await Crew.create({ name: 'Associação origem', city: city._id });
+  const b = await Crew.create({ name: 'Associação destino', city: secondCity._id });
+  const save = (agent, c, vehicle, cityId = c.city) =>
+    agent
+      .put(`/api/crews/${c._id}`)
+      .set('Origin', origin)
+      .send({
+        name: c.name,
+        city: String(cityId),
+        type: 'Viatura Convencional',
+        vehicle: vehicle ? String(vehicle) : null,
+      });
+  assert.equal((await save(cpu.agent, a, v._id)).status, 403);
+  assert.equal((await save(admin.agent, a, v._id)).status, 200);
+  assert.equal((await Vehicle.findById(v._id)).status, 'Indisponível');
+  assert.equal((await save(admin.agent, b, v._id)).status, 409);
+  assert.equal((await save(admin.agent, a, v._id, secondCity._id)).status, 409);
+  const edit = {
+    prefix: 'ASSOC-EDITADO',
+    plate: 'ASC1D23',
+    city: String(city._id),
+    mileage: 100,
+    status: 'Indisponível',
+    type: 'Caminhonete',
+    brand: 'Chevrolet',
+    model: 'S10',
+    year: 2024,
+  };
+  assert.equal(
+    (await admin.agent.put(`/api/vehicles/${v._id}`).set('Origin', origin).send(edit)).status,
+    200,
+  );
+  assert.equal(
+    (
+      await admin.agent
+        .put(`/api/vehicles/${v._id}`)
+        .set('Origin', origin)
+        .send({ ...edit, city: String(secondCity._id) })
+    ).status,
+    409,
+  );
+  assert.equal((await save(admin.agent, a, spare._id)).status, 200);
+  assert.equal((await Vehicle.findById(v._id)).crew, null);
+  assert.equal(String((await Vehicle.findById(spare._id)).city), String(city._id));
+  assert.equal((await Vehicle.findById(spare._id)).status, 'Em manutenção');
+  assert.equal((await save(admin.agent, b, v._id)).status, 200);
+  const moved = await Vehicle.findById(v._id);
+  assert.equal(String(moved.city), String(secondCity._id));
+  assert.equal(String(moved.crew), String(b._id));
+  assert.equal(moved.latitude, undefined);
+  assert.equal(String((await Crew.findById(b._id)).vehicle), String(v._id));
+  assert.equal((await save(admin.agent, b, null)).status, 200);
+  assert.equal((await Vehicle.findById(v._id)).crew, null);
+  assert.equal((await Crew.findById(b._id)).vehicle, null);
+});
+
+test('reserva concorrente mantém uma única guarnição por viatura e detecta vínculo inverso', async () => {
+  const v = await Vehicle.create({ prefix: 'ASSOC-RACE', plate: 'ASR1D23', city: city._id });
+  const [a, b] = await Crew.create([
+    { name: 'Reserva viatura A', city: city._id },
+    { name: 'Reserva viatura B', city: secondCity._id },
+  ]);
+  const put = (c) =>
+    admin.agent
+      .put(`/api/crews/${c._id}`)
+      .set('Origin', origin)
+      .send({
+        name: c.name,
+        city: String(c.city),
+        type: 'Viatura Convencional',
+        vehicle: String(v._id),
+      });
+  const results = await Promise.all([put(a), put(b)]);
+  assert.deepEqual(results.map((r) => r.status).sort(), [200, 409]);
+  const claimed = await Vehicle.findById(v._id);
+  assert.equal(await Crew.countDocuments({ vehicle: v._id }), 1);
+  assert.equal(String((await Crew.findById(claimed.crew)).vehicle), String(v._id));
+  await Vehicle.updateOne({ _id: v._id }, { crew: null });
+  assert.equal((await put(String(claimed.crew) === String(a._id) ? b : a)).status, 409);
+});
+
+test('entrega pendente impede desassociar ou transferir a viatura', async () => {
+  const v = await Vehicle.create({ prefix: 'ASSOC-PEND', plate: 'ASP1D23', city: city._id });
+  const c = await Crew.create({
+    name: 'Equipe entrega pendente de transferência',
+    city: city._id,
+    vehicle: v._id,
+  });
+  await Vehicle.updateOne({ _id: v._id }, { crew: c._id });
+  const shift = await CrewShift.create({
+    crew: c._id,
+    start: new Date(),
+    plannedEnd: serviceWindow().end,
+  });
+  const record = await VehicleHandover.create({
+    crew: c._id,
+    shift: shift._id,
+    vehicle: v._id,
+    driver: driver.user._id,
+    intake: inspected(0),
+    pendingReturn: true,
+  });
+  const r = await admin.agent
+    .put(`/api/crews/${c._id}`)
+    .set('Origin', origin)
+    .send({ name: c.name, city: String(c.city), vehicle: null, type: 'Viatura Convencional' });
+  assert.equal(r.status, 409);
+  assert.equal(String((await Vehicle.findById(v._id)).crew), String(c._id));
+  await record.deleteOne();
+});
