@@ -10,7 +10,10 @@ export default function MapPage() {
   const [filter, setFilter] = useState({});
   const { data: cities } = useData('/cities', []);
   const { data: crews } = useData('/crews', []);
-  const { data: vehicles } = useData('/vehicles', []);
+  const { data: vehicles } = useData(
+    app.user.role !== 'Praça' && !app.activeAttendance ? '/vehicles' : null,
+    [],
+  );
   const { data: occurrences } = useData(`/occurrences?${params({ ...filter, limit: 100 })}`, {
     items: [],
     total: 0,
@@ -25,7 +28,7 @@ export default function MapPage() {
     <>
       <PageTitle
         title="Mapa operacional"
-        description="Ocorrências e últimas posições cadastradas das viaturas."
+        description="Ocorrências e localização das guarnições em serviço."
       >
         <span className="live-label">
           <i className={`live-dot ${app.online ? '' : 'offline'}`} />
@@ -83,8 +86,17 @@ export default function MapPage() {
           cities={cities.filter((c) => !filter.city || c._id === filter.city)}
           occurrences={occurrences.items}
           vehicles={filteredVehicles}
+          crews={crews.filter(
+            (c) =>
+              (!filter.city || c.city?._id === filter.city) &&
+              (!filter.crew || c._id === filter.crew),
+          )}
         />
         <div className="map-legend">
+          <span>
+            <i className="legend-dot green" />
+            GPS de guarnições
+          </span>
           <span>
             <i className="legend-dot red" />
             Alta prioridade
@@ -109,8 +121,9 @@ export default function MapPage() {
       </Panel>
       <p className="form-note">
         Exibindo até 100 ocorrências por filtro ({occurrences.total} encontradas). Registros sem
-        coordenadas não aparecem no mapa. Posições de viaturas são atualizadas por API ou pelo
-        integrante em serviço; não há rastreamento GPS contínuo.
+        coordenadas não aparecem no mapa. Ligue o GPS para compartilhar a posição durante o serviço.
+        O compartilhamento exige permissão de localização e a aplicação aberta em HTTPS. Posições
+        sem atualização por um minuto aparecem como última posição, sem indicação de GPS ativo.
       </p>
       <div className="map-vehicles">
         {filteredVehicles.map((v) => (

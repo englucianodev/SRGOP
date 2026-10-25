@@ -16,6 +16,7 @@ import {
   attendanceChanged,
   queueCrewNotifications,
   deliverNotifications,
+  crewLocationChanged,
 } from './realtime.js';
 export const history = (actor, action, detail = '') => ({
   actor: actor._id,
@@ -267,6 +268,7 @@ export async function joinCrew(actor, id, driver) {
         409,
       );
       row.shiftStart = new Date();
+      row.location = { sharing: false };
       row.shiftEnd = new Date(+row.shiftStart + 86400000);
       const [shift] = await CrewShift.create(
         [{ crew: row._id, start: row.shiftStart, plannedEnd: row.shiftEnd }],
@@ -355,6 +357,7 @@ export async function endShift(id, actor, reason = 'Encerramento autom√°tico ap√
       { session },
     );
     crew.members = [];
+    if (crew.location) crew.location.sharing = false;
     crew.driver = null;
     crew.status = 'Fora de servi√ßo';
     crew.shiftEnd = new Date();
@@ -374,6 +377,7 @@ export async function endShift(id, actor, reason = 'Encerramento autom√°tico ap√
     return { crew, members, pending };
   });
   changed('crews', result.members);
+  crewLocationChanged(result.crew);
   if (result.pending) attendanceChanged(result.pending);
   return result.crew;
 }

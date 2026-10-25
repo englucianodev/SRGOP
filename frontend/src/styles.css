@@ -3183,3 +3183,61 @@ select {
     margin: 15mm;
   }
 }
+
+/* Operational chat and GPS controls */
+.crew-chat {
+  padding: 20px;
+}
+.crew-chat > .panel-head {
+  padding: 0 0 20px;
+}
+.chat-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+.chat-toolbar .field {
+  flex: 1;
+  min-width: 200px;
+  margin-bottom: 0;
+}
+.chat-toolbar p {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.chat-messages {
+  max-height: 440px;
+  min-height: 160px;
+  margin: 16px 0;
+}
+.gps-control {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 14px 18px;
+  margin-bottom: 20px;
+  background: var(--surface, #fff);
+  color: var(--text, #17314c);
+  border: 1px solid var(--border, #dbe2ea);
+  border-radius: 12px;
+}
+.gps-control > div {
+  flex: 1;
+  min-width: 160px;
+}
+.gps-control strong,
+.gps-control small {
+  display: block;
+}
+.gps-control small {
+  margin-top: 4px;
+}
+.legend-dot.green {
+  background: #098b62;
+}

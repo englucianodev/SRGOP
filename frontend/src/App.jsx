@@ -22,7 +22,9 @@ function Protected({ roles }) {
   if (roles && !roles.includes(user.role)) return <Denied />;
   if (
     activeAttendance &&
-    !['/dashboard', '/ocorrencias', '/atendimento', '/guarnicoes'].includes(location.pathname)
+    !['/dashboard', '/ocorrencias', '/atendimento', '/guarnicoes', '/mapa'].includes(
+      location.pathname,
+    )
   )
     return <Navigate to="/atendimento" replace />;
   return <Outlet />;
@@ -53,10 +55,10 @@ export default function App() {
             <Route path="/ocorrencias" element={<Occurrences />} />
             <Route path="/atendimento" element={<Attendance />} />
             <Route path="/guarnicoes" element={<Crews />} />
+            <Route path="/mapa" element={<MapPage />} />
             <Route element={<Protected roles={['Oficial', 'Administrativo']} />}>
               <Route path="/despachos" element={<Dispatches />} />
               <Route path="/viaturas" element={<Resources key="vehicles" type="vehicles" />} />
-              <Route path="/mapa" element={<MapPage />} />
               <Route path="/relatorios" element={<Reports />} />
               <Route path="/usuarios" element={<Resources key="users" type="users" />} />
               <Route path="/configuracoes" element={<Settings />} />

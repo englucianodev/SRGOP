@@ -288,7 +288,7 @@ export default function Dashboard() {
               </Link>
             }
           >
-            <OperationalMap cities={cities} occurrences={data.recent} compact />
+            <OperationalMap cities={cities} occurrences={data.recent} crews={data.crews} compact />
             <div className="map-legend">
               <span>
                 <i className="legend-dot red" />

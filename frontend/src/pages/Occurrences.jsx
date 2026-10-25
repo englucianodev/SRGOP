@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Plus, Eye, Pencil, Trash2, Printer, Paperclip, Save, XCircle } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { useData } from '../hooks/useData';
@@ -32,6 +32,7 @@ const fresh = () => ({
 });
 export default function Occurrences() {
   const app = useApp();
+  const navigate = useNavigate();
   const [query, setQuery] = useSearchParams();
   const [filter, setFilter] = useState({});
   const [page, setPage] = useState(1);
@@ -91,6 +92,9 @@ export default function Occurrences() {
           ? await api.post('/occurrences', body)
           : await api.put(`/occurrences/${editing}`, body);
       setEditing(r.data._id);
+      if (r.data.status === 'Em atendimento' && editing === 'new') {
+        app.setToast('Ocorrência registrada. Sua guarnição entrou em atendimento automaticamente.');
+      }
       if (file) {
         const data = new FormData();
         data.append('file', file);
@@ -98,7 +102,9 @@ export default function Occurrences() {
       }
       setEditing(null);
       setFile(null);
-    }, 'Ocorrência salva com sucesso.');
+      if (r.data.status === 'Em atendimento' && editing === 'new') navigate('/atendimento');
+      else app.setToast('Ocorrência salva com sucesso.');
+    });
     setBusy(false);
   }
   return (

@@ -24,6 +24,7 @@ import { expireShifts } from '../services/operations.js';
 let mongo,
   app,
   city,
+  dispatchCity,
   admin,
   officer,
   soldier,
@@ -49,6 +50,11 @@ before(async () => {
   await connectDatabase(mongo.getUri('srgop_test'));
   await Promise.all(Object.values(mongoose.models).map((m) => m.init()));
   city = await City.create({ name: 'Cidade teste', latitude: -5.2, longitude: -44.4 });
+  dispatchCity = await City.create({
+    name: 'Outra cidade para despacho',
+    latitude: -5.4,
+    longitude: -44.6,
+  });
   await SystemSetting.create({ key: 'general' });
   const hash = await bcrypt.hash(password, 4);
   [admin, officer, soldier, soldier2] = await User.create(
@@ -147,7 +153,7 @@ test('cadastro de viatura, guarnição, ingresso e motorista único', async () =
 });
 test('ocorrência valida entrada, protege autor e registra histórico de edição', async () => {
   const body = {
-    city: String(city._id),
+    city: String(dispatchCity._id),
     occurredAt: new Date().toISOString(),
     crimeType: 'Furto',
     address: 'Rua de teste, 100',
@@ -270,7 +276,7 @@ async function createOccurrence(
   description = 'Ocorrência de regressão para validar as regras operacionais.',
 ) {
   const r = await post(agent, '/occurrences', {
-    city: String(city._id),
+    city: String(dispatchCity._id),
     occurredAt: new Date().toISOString(),
     crimeType: 'Furto',
     address: 'Rua de regressão, 200',

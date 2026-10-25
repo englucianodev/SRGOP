@@ -1,6 +1,6 @@
 import { Server } from 'socket.io';
 import { authenticateToken } from '../middlewares/auth.js';
-import { Notification, Crew, User } from '../models/index.js';
+import { Notification, Crew, User, ChatAccess } from '../models/index.js';
 let io;
 export function configureSocket(server, origins) {
   io = new Server(server, {
@@ -47,6 +47,36 @@ export function disconnectSession(sessionId) {
 export function changed(kind = 'data', users = []) {
   io?.to('command').emit('data:changed', { kind });
   users.forEach((id) => io?.to(`user:${id}`).emit('data:changed', { kind }));
+}
+export async function crewChatChanged(chat) {
+  const crews = await Crew.find({
+    $or: chat.memberships.map((m) => ({ _id: m.crew, shift: m.shift })),
+    shiftEnd: { $gt: new Date() },
+  }).select('members');
+  const users = new Set(crews.flatMap((c) => c.members.map(String)));
+  // No contents, sender, preview or room metadata is broadcast to the command room.
+  users.forEach((id) => io?.to(`user:${id}`).emit('chat:changed', { chatId: String(chat._id) }));
+  const grants = await ChatAccess.find({ chat: chat._id, expiresAt: { $gt: new Date() } }).select(
+    'session',
+  );
+  grants.forEach((grant) =>
+    io?.to(`session:${grant.session}`).emit('chat:changed', { chatId: String(chat._id) }),
+  );
+}
+export function crewLocationChanged(crew) {
+  io?.emit('crew:location', {
+    crewId: String(crew._id),
+    shiftEnd: crew.shiftEnd,
+    status: crew.status,
+    location: {
+      latitude: crew.location?.latitude,
+      longitude: crew.location?.longitude,
+      accuracy: crew.location?.accuracy,
+      locatedAt: crew.location?.locatedAt,
+      updatedBy: crew.location?.updatedBy,
+      sharing: crew.location?.sharing,
+    },
+  });
 }
 export async function queueCrewNotifications(
   crewId,

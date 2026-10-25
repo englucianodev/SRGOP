@@ -7,6 +7,8 @@ import { asyncRoute as a, AppError, requireValue } from '../utils/errors.js';
 import * as authentication from '../controllers/authController.js';
 import * as occurrence from '../controllers/occurrenceController.js';
 import * as resource from '../controllers/resourceController.js';
+import * as chat from '../controllers/chatController.js';
+import * as gps from '../controllers/gpsController.js';
 import { reports } from '../controllers/reportController.js';
 import {
   dispatchOccurrence,
@@ -170,6 +172,13 @@ router.post(
   a(async (req, res) => res.json(await authorizeSupport(req.user, req.params.id, false))),
 );
 router.get('/crews', a(resource.listCrews));
+router.patch('/crews/:id/gps', v(s.gps), a(gps.location));
+router.get('/crew-chats', a(chat.list));
+router.post('/crew-chats', v(s.chat), a(chat.create));
+router.post('/crew-chats/:id/crews', v(s.chatCrews), a(chat.addCrews));
+router.post('/crew-chats/:id/access', admin, v(s.chatAccess), a(chat.access));
+router.get('/crew-chats/:id/messages', a(chat.messages));
+router.post('/crew-chats/:id/messages', v(s.chatText), a(chat.send));
 router.post('/crews', admin, v(s.crew), a(resource.saveCrew));
 router.put('/crews/:id', admin, v(s.crew), a(resource.saveCrew));
 router.delete('/crews/:id', admin, a(resource.removeCrew));
@@ -198,15 +207,28 @@ router.patch(
 );
 router.get(
   '/crew-messages',
-  a(async (req, res) =>
+  a(async (req, res) => {
+    requireValue(
+      req.user.role !== 'Administrativo',
+      'A consulta administrativa exige justificativa. Utilize o chat com acesso auditado.',
+      403,
+    );
+    const crew = await Crew.findOne({ members: req.user._id, shiftEnd: { $gt: new Date() } });
     res.json(
-      await CrewMessage.find(req.user.role === 'Praça' ? { participants: req.user._id } : {})
+      await CrewMessage.find(
+        crew
+          ? {
+              participants: req.user._id,
+              $or: [{ sourceCrew: crew._id }, { targetCrew: crew._id }],
+            }
+          : { _id: null },
+      )
         .populate('sender', 'name')
         .populate('sourceCrew targetCrew', 'name')
         .sort({ createdAt: -1 })
         .limit(100),
-    ),
-  ),
+    );
+  }),
 );
 router.post(
   '/crew-messages',

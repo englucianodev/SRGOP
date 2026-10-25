@@ -2,7 +2,7 @@ import { Crew, User, Vehicle, Attendance, CrewShift, CrewMessage } from '../mode
 import { transaction } from './operations.js';
 import { requireValue } from '../utils/errors.js';
 import { audit } from './audit.js';
-import { changed } from './realtime.js';
+import { changed, crewLocationChanged } from './realtime.js';
 
 export async function manageMember(actor, crewId, input) {
   const result = await transaction(async (session) => {
@@ -33,6 +33,7 @@ export async function manageMember(actor, crewId, input) {
         409,
       );
       crew.members.pull(input.member);
+      if (String(crew.location?.updatedBy) === input.member) crew.location.sharing = false;
       if (String(crew.driver) === input.member) crew.driver = null;
       await User.updateOne({ _id: input.member, crew: crew._id }, { crew: null }, { session });
       if (!crew.members.length) {
@@ -79,6 +80,7 @@ export async function manageMember(actor, crewId, input) {
     return { crew, affected };
   });
   changed('crews', result.affected);
+  crewLocationChanged(result.crew);
   return result.crew;
 }
 
@@ -128,11 +130,7 @@ export async function sendCrewMessage(actor, input) {
       members: actor._id,
       shiftEnd: { $gt: new Date() },
     }).session(session);
-    requireValue(
-      actor.role !== 'Praça' || source,
-      'Ingresse em uma guarnição para enviar mensagens.',
-      403,
-    );
+    requireValue(source, 'Ingresse em uma guarnição para enviar mensagens.', 403);
     const participants = [
       ...new Set([
         String(actor._id),

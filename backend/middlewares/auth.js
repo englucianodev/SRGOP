@@ -52,11 +52,12 @@ export const essentialOnly = asyncRoute(async (req, res, next) => {
   const attending = await Attendance.exists({ acceptedBy: req.user._id, status: 'Em atendimento' });
   const essentialRead =
     req.method === 'GET' &&
-    /^\/(attendances|occurrences|attachments|crews|crew-messages|notifications|dashboard|cities|settings)(\/|$)/.test(
+    /^\/(attendances|occurrences|attachments|crews|crew-messages|crew-chats|notifications|dashboard|cities|settings)(\/|$)/.test(
       req.path,
     );
   const essentialWrite =
-    /^\/(attendances|occurrences|notifications|crew-messages)(\/|$)/.test(req.path) ||
+    /^\/(attendances|occurrences|notifications|crew-messages|crew-chats)(\/|$)/.test(req.path) ||
+    (req.method === 'PATCH' && /^\/crews\/[^/]+\/gps$/.test(req.path)) ||
     (req.method === 'PATCH' && /^\/vehicles\/[^/]+\/location$/.test(req.path));
   if (attending && !essentialRead && !essentialWrite)
     throw new AppError(

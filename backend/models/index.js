@@ -14,3 +14,6 @@ export { default as CrewShift } from './CrewShift.js';
 export { default as SupportRequest } from './SupportRequest.js';
 export { default as Attachment } from './Attachment.js';
 export { default as CrewMessage } from './CrewMessage.js';
+export { default as CrewChat } from './CrewChat.js';
+export { default as ChatMessage } from './ChatMessage.js';
+export { default as ChatAccess } from './ChatAccess.js';

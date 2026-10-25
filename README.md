@@ -438,20 +438,27 @@ Exemplo de encerramento:
 
 O cliente não pode definir diretamente o status no formulário de ocorrência: os endpoints de negócio controlam as transições.
 
-Eventos Socket.IO: `dispatch:new`, `notification`, `attendance:changed`, `data:changed`. A conexão aceita o cookie; utilize `withCredentials: true`. Operações críticas usam HTTP, não mensagens de socket.
+Eventos Socket.IO: `dispatch:new`, `notification`, `attendance:changed`, `data:changed`, `chat:changed` e `crew:location`. A conexão aceita o cookie; utilize `withCredentials: true`. Operações críticas usam HTTP, não mensagens de socket. Eventos de chat não transportam conteúdo e são direcionados aos integrantes atuais dos turnos participantes e às sessões com consulta administrativa autorizada.
 
 ## Complementos operacionais
 
 - Praça recebe um Dashboard simplificado com sua guarnição, turno e atendimentos.
 - Oficial e Administrativo podem autorizar saída individual e troca de motorista, registrando motivo e histórico do turno (`POST /api/crews/:id/members`).
 - Administrativo altera a disponibilidade de equipes sem ocorrência reservada (`PATCH /api/crews/:id/availability`).
-- Comunicação textual persistida entre equipes ativas: `GET/POST /api/crew-messages`. Praça consulta apenas mensagens das quais participou; a central acompanha a comunicação operacional.
+- Chat persistente na tela Guarnições: crie uma conversa, escolha outras equipes em serviço e use **Adicionar guarnições** para ampliar o grupo (até vinte equipes). Cada mensagem exibe usuário, equipe e horário. Integrantes das equipes adicionadas podem ler o histórico da conversa durante o mesmo turno.
+- A API valida participação e turno em cada leitura e envio; Oficial também precisa pertencer a uma equipe participante. Saída individual e fim do turno revogam o acesso. Um novo turno não herda conversas do anterior.
+- Administrativo seleciona a conversa e informa justificativa de ao menos dez caracteres antes de consultar mensagens. A autorização dura quinze minutos, vale apenas para aquela conversa e sessão, e a justificativa e as consultas são registradas em auditoria. A autorização de consulta não permite enviar mensagens nem adicionar equipes sem ser integrante.
+- Os registros antigos de `CrewMessage` permanecem no banco, sem migração automática. O endpoint legado não concede mais leitura global a Oficial/Administrativo; novos chats usam `/api/crew-chats`.
+- Cadastro de ocorrência no município da guarnição em serviço inicia atendimento automaticamente quando o usuário não tem atendimento em andamento e a guarnição está disponível, sem ocorrência reservada. Fora dessas condições o registro permanece em aberto. A reserva, o atendimento e o histórico são gravados na mesma transação; a interface encaminha o autor para Atendimento.
+- **Ligar GPS** fica disponível durante o serviço em todas as páginas autenticadas. O navegador solicita permissão; um integrante por vez transmite a posição da equipe. Há envio limitado a uma atualização por dez segundos e consulta periódica de posição a cada quinze segundos. Desligar, sair do serviço ou encerrar a sessão interrompe o compartilhamento. Fechar a página pode impedir a última requisição de parada; por isso posições com mais de um minuto deixam de aparecer como GPS ativo. O navegador pode suspender a localização em segundo plano ou com a tela bloqueada.
+- O mapa fica disponível a todos os perfis autenticados, inclusive durante o atendimento. Marcadores de guarnições mostram última posição, precisão e horário, mesmo sem viatura associada. A atualização ocorre por Socket.IO. Não há histórico de percurso: somente a última posição é armazenada.
+- Mapa atualizado para CARTO Voyager raster, compatível com Leaflet, com a chave fornecida. A variável pública `VITE_CARTO_API_KEY` pode substituir a chave; após alterá-la, gere novo build na Vercel. A atribuição OpenStreetMap/CARTO permanece visível. GPS exige HTTPS ou localhost e permissão de localização no dispositivo.
 - Indicadores de encerramentos, armas e veículos recuperados usam a data de conclusão. A distribuição de ocorrências usa a data do fato.
 - Atividade sincronizada entre abas, recuperação de despachos pendentes ao reconectar e logout restrito à sessão encerrada.
 
 ## Testes e build
 
-A última execução aprovou **17 testes de integração**, incluindo conexões Socket.IO reais. O registro de verificações, impasses corrigidos e limitações está em [VALIDACAO.md](VALIDACAO.md).
+A última execução aprovou **28 testes de integração**, incluindo chat privado, consulta administrativa auditada, grupos, revogação de acesso, atendimento automático sob concorrência, GPS e conexões Socket.IO reais. O registro de verificações, impasses corrigidos e limitações está em [VALIDACAO.md](VALIDACAO.md).
 
 Na raiz:
 
@@ -520,7 +527,7 @@ Faça a carga inicial de demonstração somente em banco de homologação. Para 
 
 - Recuperação automática de senha por e-mail (a interface orienta procurar o Administrativo).
 - MFA e integração com identidade institucional.
-- Rastreamento GPS contínuo, histórico de posição e mapas offline.
+- Rastreamento em segundo plano com a aplicação fechada, histórico de posição e mapas offline.
 - Notificações push para aplicação fechada; atualmente os alertas em tempo real dependem de sessão e conexão abertas.
 - Antivírus de anexos e armazenamento de objetos para maiores volumes.
 - Redis/outbox para entrega resiliente de eventos e implantação com múltiplas instâncias.

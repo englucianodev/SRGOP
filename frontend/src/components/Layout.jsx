@@ -27,6 +27,7 @@ import { useData } from '../hooks/useData';
 import { initials, fmtTime, fmtDateTime } from '../utils/format';
 import { Button, Modal, Empty } from './UI';
 import { api } from '../services/api';
+import GpsControl from './GpsControl';
 const links = [
   ['/dashboard', 'Dashboard', LayoutDashboard, 'all'],
   ['/ocorrencias', 'Ocorrências', FileText, 'all'],
@@ -34,7 +35,7 @@ const links = [
   ['/atendimento', 'Atendimento', Radio, 'all'],
   ['/guarnicoes', 'Guarnições', UsersRound, 'all'],
   ['/viaturas', 'Viaturas', Car, 'management'],
-  ['/mapa', 'Mapa operacional', Map, 'management'],
+  ['/mapa', 'Mapa operacional', Map, 'all'],
   ['/relatorios', 'Relatórios', ChartNoAxesCombined, 'management'],
   ['/usuarios', 'Usuários', Users, 'management'],
   ['/administrativo', 'Administrativo', ShieldCheck, 'admin'],
@@ -90,7 +91,7 @@ export default function Layout() {
     .filter(
       (l) =>
         !app.activeAttendance ||
-        ['/dashboard', '/ocorrencias', '/atendimento', '/guarnicoes'].includes(l[0]),
+        ['/dashboard', '/ocorrencias', '/atendimento', '/guarnicoes', '/mapa'].includes(l[0]),
     );
   const title =
     links.find((l) => location.pathname.startsWith(l[0]))?.[1] || 'Central de operações';
@@ -222,6 +223,7 @@ export default function Layout() {
           </div>
         )}
         <main id="main-content" tabIndex={-1}>
+          <GpsControl />
           <Outlet />
         </main>
         <footer className="app-footer">

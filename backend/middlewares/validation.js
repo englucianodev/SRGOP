@@ -74,6 +74,21 @@ export const schemas = {
     .object({ status: z.enum(['Disponível', 'Indisponível']), reason: text(5, 1000) })
     .strict(),
   message: z.object({ targetCrew: id, text: text(1, 2000) }).strict(),
+  chat: z.object({ name: text(2, 100), crews: z.array(id).max(19) }).strict(),
+  chatCrews: z.object({ crews: z.array(id).min(1).max(19) }).strict(),
+  chatText: z.object({ text: text(1, 2000) }).strict(),
+  chatAccess: z.object({ reason: text(10, 1000) }).strict(),
+  gps: z.discriminatedUnion('enabled', [
+    z.object({ enabled: z.literal(false) }).strict(),
+    z
+      .object({
+        enabled: z.literal(true),
+        latitude: z.number().min(-90).max(90),
+        longitude: z.number().min(-180).max(180),
+        accuracy: z.number().min(0).max(100000),
+      })
+      .strict(),
+  ]),
   vehicle: z
     .object({
       prefix: text(2, 40),

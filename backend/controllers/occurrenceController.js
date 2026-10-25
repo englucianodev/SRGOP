@@ -7,11 +7,12 @@ import {
   Attendance,
   SupportRequest,
   Crew,
+  User,
 } from '../models/index.js';
 import { requireValue } from '../utils/errors.js';
 import { dayRange } from '../utils/time.js';
 import { audit } from '../services/audit.js';
-import { changed } from '../services/realtime.js';
+import { changed, attendanceChanged } from '../services/realtime.js';
 import { getOccurrence, history, transaction, canAttend } from '../services/operations.js';
 import { id as idSchema } from '../middlewares/validation.js';
 import { z } from 'zod';
@@ -119,10 +120,69 @@ export async function create(req, res) {
       ],
       { session },
     );
+    // Use the crew's service city, not the user's registration city. Reserve it in
+    // the same transaction as the occurrence and attendance to avoid double allocation.
+    await User.updateOne({ _id: req.user._id }, { $set: { updatedAt: new Date() } }, { session });
+    const attending = await Attendance.exists({
+      acceptedBy: req.user._id,
+      status: 'Em atendimento',
+    }).session(session);
+    if (!attending) {
+      const crew = await Crew.findOneAndUpdate(
+        {
+          _id: req.user.crew,
+          members: req.user._id,
+          city: req.input.city,
+          shiftEnd: { $gt: new Date() },
+          status: 'Disponível',
+          currentOccurrence: null,
+        },
+        { $set: { status: 'Em atendimento', currentOccurrence: created._id } },
+        { new: true, session },
+      );
+      if (crew) {
+        Object.assign(created, {
+          crew: crew._id,
+          vehicle: crew.vehicle,
+          assignedMembers: crew.members,
+          status: 'Em atendimento',
+          acceptedBy: req.user._id,
+          startedAt: new Date(),
+        });
+        created.history.push(
+          history(
+            req.user,
+            'Atendimento automático',
+            'Cadastro no município de serviço da guarnição.',
+          ),
+        );
+        await created.save({ session });
+        await Attendance.create(
+          [
+            {
+              occurrence: created._id,
+              crew: crew._id,
+              acceptedBy: req.user._id,
+              startedAt: created.startedAt,
+            },
+          ],
+          { session },
+        );
+        await audit(
+          req.user,
+          'Atendimento automático',
+          'Occurrence',
+          created._id,
+          crew.name,
+          session,
+        );
+      }
+    }
     await audit(req.user, 'Cadastro', 'Occurrence', created._id, created.protocol, session);
     return created;
   });
   changed('occurrences');
+  if (row.status === 'Em atendimento') attendanceChanged(row);
   res.status(201).json(row);
 }
 export async function update(req, res) {

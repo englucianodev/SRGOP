@@ -1,5 +1,20 @@
 # Validação e impasses — SRGOP
 
+## Chat, atendimento automático e GPS — 24/10/2026
+
+- Chat com grupos de até vinte guarnições, usuário remetente, horário, histórico paginado e notificações Socket.IO direcionadas. Participação exige vínculo atual com o turno da equipe; Oficial não possui acesso global. Inclusão de novas equipes e envio são serializados com as alterações de integrantes no banco.
+- Consulta administrativa por justificativa com pelo menos dez caracteres, por conversa e sessão, com duração de quinze minutos. A abertura e as leituras ficam em auditoria. Consulta não concede participação ou envio.
+- Atendimento automático ao cadastrar no município de serviço de uma equipe disponível. Reserva de guarnição e criação do atendimento na mesma transação; testes cobrem dois cadastros do mesmo usuário e cadastros de dois integrantes concorrentes.
+- GPS voluntário com permissão do navegador, um transmissor por equipe, precisão e horário no mapa, interrupção ao sair e descarte da posição anterior no início de novo turno. Falta de atualização por um minuto remove a indicação de posição ativa. Não existe coleta de histórico de percurso.
+- CARTO Voyager raster com a chave fornecida, substituível por `VITE_CARTO_API_KEY`, e atribuição preservada.
+- Atualizações de posição chegam pelo Socket.IO e alteram os dados locais do mapa sem disparar consultas gerais à API; o chat possui revisão própria. Isso evita a multiplicação de consultas quando há várias sessões abertas.
+
+Verificações: 28 testes de integração com MongoDB temporário e Socket.IO real; compilação de produção; formatação. Verificação adicional em Chrome headless com banco temporário: mensagem recebida em outra sessão, inclusão de terceira guarnição, conteúdo oculto antes da justificativa administrativa, consulta após autorização, GPS simulado, manutenção do GPS na navegação interna, desligamento, redirecionamento após atendimento automático e chat em viewport de 390 × 844 sem rolagem horizontal. Zero erros JavaScript nesse fluxo.
+
+O teste do GPS no navegador usou coordenadas simuladas, não um aparelho físico. A coleta depende de HTTPS/localhost, permissão, sessão ativa e aplicação aberta. Navegadores podem suspender coleta em segundo plano ou com tela bloqueada. Não houve deploy nem alterações no banco persistente do usuário. As novas coleções são criadas pelo Mongoose ao iniciar a API; não é necessário executar seed para habilitar os recursos.
+
+Para publicar, atualize backend e frontend juntos e faça novo build na Vercel. A chave CARTO já possui o valor fornecido como padrão; opcionalmente cadastre `VITE_CARTO_API_KEY` no ambiente de build.
+
 ## Revisão de integridade — 24/10/2026
 
 A revisão encontrou o repositório sem os fontes da aplicação: `backend` continha apenas dependências e `frontend` continha dependências e `dist`. Também faltavam os manifests, lockfiles, modelos de ambiente e configurações de desenvolvimento e implantação.
@@ -26,7 +41,7 @@ As verificações visuais mencionadas nas seções seguintes são registros hist
 
 Código organizado em `frontend` e `backend`, com banco MongoDB, API, permissões no servidor, interface por perfil e dados demonstrativos. Instruções de instalação, variáveis e deploy estão no [README](README.md).
 
-Última execução da suíte: **17 testes aprovados, zero falhas**. Build de produção do frontend concluído com sucesso. Essas verificações não substituem homologação com os usuários do batalhão nem testes de carga em infraestrutura de produção.
+Última execução da suíte: **28 testes aprovados, zero falhas**. Build de produção do frontend concluído com sucesso. Essas verificações não substituem homologação com os usuários do batalhão nem testes de carga em infraestrutura de produção.
 
 ## Verificações automatizadas
 
@@ -70,7 +85,7 @@ Verificação visual realizada durante o desenvolvimento: login e Dashboard admi
 - Configurar MongoDB persistente, chave JWT, URLs, HTTPS e hospedagem; nenhum deploy externo foi realizado.
 - Validar os 14 municípios demonstrativos, tipificações, perfis e fluxos com a instituição.
 - Executar homologação operacional, testes de carga e revisão de segurança no ambiente definitivo.
-- GPS contínuo, mapas offline, notificações push com o aplicativo fechado, MFA, recuperação por e-mail e antivírus de anexos permanecem evoluções documentadas.
+- GPS em segundo plano com o aplicativo fechado, mapas offline, notificações push com o aplicativo fechado, MFA, recuperação por e-mail e antivírus de anexos permanecem evoluções documentadas.
 - A exportação atual usa CSV e impressão para PDF. XLSX nativo e PDF gerado no servidor são evoluções.
 - A configuração atual considera uma instância Node; múltiplas instâncias exigem coordenação do agendador e adaptador de eventos.
 

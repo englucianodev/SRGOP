@@ -12,6 +12,7 @@ export function AppProvider({ children }) {
   const [error, setError] = useState(null);
   const [toast, setToast] = useState('');
   const [revision, setRevision] = useState(0);
+  const [chatRevision, setChatRevision] = useState(0);
   const [now, setNow] = useState(Date.now());
   const [remaining, setRemaining] = useState(300);
   const [online, setOnline] = useState(false);
@@ -149,6 +150,7 @@ export function AppProvider({ children }) {
       withCredentials: true,
     });
     let refreshTimer;
+    let chatTimer;
     const scheduleRefresh = () => {
       clearTimeout(refreshTimer);
       refreshTimer = setTimeout(refresh, 150);
@@ -172,6 +174,13 @@ export function AppProvider({ children }) {
         api.get('/auth/me').catch(() => {});
     });
     socket.on('data:changed', scheduleRefresh);
+    socket.on('chat:changed', () => {
+      clearTimeout(chatTimer);
+      chatTimer = setTimeout(() => setChatRevision((v) => v + 1), 150);
+    });
+    socket.on('crew:location', (position) => {
+      window.dispatchEvent(new CustomEvent('srgop:crew-location', { detail: position }));
+    });
     socket.on('notification', (n) => {
       if (notifications && settings?.notificationsEnabled !== false)
         setToast(`${n.title}: ${n.message}`);
@@ -188,6 +197,7 @@ export function AppProvider({ children }) {
     });
     return () => {
       clearTimeout(refreshTimer);
+      clearTimeout(chatTimer);
       socket.disconnect();
       setOnline(false);
     };
@@ -260,6 +270,7 @@ export function AppProvider({ children }) {
         run,
         refresh,
         revision,
+        chatRevision,
         now,
         remaining,
         online,
