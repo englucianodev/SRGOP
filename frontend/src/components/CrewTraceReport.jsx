@@ -314,7 +314,14 @@ export default function CrewTraceReport() {
                               <tr key={index}>
                                 <td>{dateTime(c.at)}</td>
                                 <td>{c.member}</td>
-                                <td>{c.action}</td>
+                                <td>
+                                  {c.action}
+                                  {c.motorcycleRole && (
+                                    <small>
+                                      {c.motorcycleRole} · {c.vehiclePrefix || 'Motocicleta'}
+                                    </small>
+                                  )}
+                                </td>
                                 <td>{c.actor}</td>
                                 <td>{c.reason || '—'}</td>
                               </tr>

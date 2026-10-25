@@ -160,12 +160,9 @@ test('cadastro de viatura, guarnição, ingresso e motorista único', async () =
   assert.equal(+new Date(r.body.shiftEnd) - +new Date(r.body.shiftStart), 86400000);
   assert.equal(
     (await post(soldier2Agent, `/crews/${crew._id}/join`, { driver: true })).status,
-    409,
-  );
-  assert.equal(
-    (await post(soldier2Agent, `/crews/${crew._id}/join`, { driver: false })).status,
     200,
   );
+  assert.equal(String((await Crew.findById(crew._id)).driver), String(r.body.driver));
   assert.equal(
     (await post(soldierAgent, `/crews/${crew._id}/end-shift`, { reason: 'Motivo de teste' }))
       .status,

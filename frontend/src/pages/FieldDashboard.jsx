@@ -10,6 +10,7 @@ import { militaryLabel } from '../components/PersonalFields';
 export default function FieldDashboard({ data }) {
   const app = useApp();
   const crew = data.crews.find((c) => c.members.some((m) => m._id === app.user._id));
+  const seat = crew?.motorcycleSeats?.find((s) => s.member?._id === app.user._id);
   const { data: assigned } = useData('/attendances', []);
   const { data: recent } = useData(`/occurrences?createdBy=${app.user._id}&limit=5`, { items: [] });
   return (
@@ -33,7 +34,7 @@ export default function FieldDashboard({ data }) {
           <h2>{crew?.name || 'Entre em serviço'}</h2>
           <p>
             {crew
-              ? `${crew.city?.name} · ${crew.vehicle?.prefix || 'Sem viatura'}`
+              ? `${crew.city?.name} · ${seat ? `${seat.vehicle?.prefix} · ${seat.role}` : crew.vehicle?.prefix || 'Sem viatura'}`
               : 'Ingresse em uma guarnição para receber os despachos da central.'}
           </p>
           {crew && (

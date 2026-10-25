@@ -15,6 +15,13 @@ export default mongoose.model(
       },
       members: [ref('User')],
       driver: { ...ref('User'), default: null },
+      motorcycleSeats: [
+        {
+          member: { ...ref('User'), required: true },
+          vehicle: { ...ref('Vehicle'), required: true },
+          role: { type: String, enum: ['Piloto', 'Garupa'], required: true },
+        },
+      ],
       status: { type: String, enum: CREW_STATUSES, default: 'Fora de serviço', index: true },
       shiftStart: Date,
       shiftMode: { type: String, enum: ['Regular', 'Motocicleta'], default: 'Regular' },

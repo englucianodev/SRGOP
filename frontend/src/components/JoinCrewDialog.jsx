@@ -35,6 +35,9 @@ export default function JoinCrewDialog({ crew, onClose }) {
   const [driver, setDriver] = useState(false),
     [period, setPeriod] = useState(crew.dutyPeriod || '');
   const motorcycle = crew.type === 'Motocicleta' || crew.vehicle?.type === 'Motocicleta';
+  const [motorcycleRole, setMotorcycleRole] = useState('');
+  const hasDriver = !motorcycle && Boolean(crew.driver);
+  const effectiveDriver = motorcycle ? motorcycleRole === 'Piloto' : driver && !hasDriver;
   const {
     value: checklist,
     setValue: setChecklist,
@@ -59,17 +62,16 @@ export default function JoinCrewDialog({ crew, onClose }) {
           setBusy(true);
           await app.run(async () => {
             await api.post(`/crews/${crew._id}/join`, {
-              driver,
-              ...(motorcycle ? { dutyPeriod: period } : {}),
-              ...(motorcycle && driver
+              driver: effectiveDriver,
+              ...(motorcycle
                 ? {
-                    motorcycles: selected.map((id) => ({
-                      vehicle: id,
-                      checklist: receipts[id].checklist,
-                    })),
+                    dutyPeriod: period,
+                    motorcycle: selected[0],
+                    motorcycleRole,
+                    ...(effectiveDriver ? { checklist: receipts[selected[0]].checklist } : {}),
                   }
                 : {}),
-              ...(driver && crew.vehicle && !motorcycle
+              ...(effectiveDriver && crew.vehicle && !motorcycle
                 ? { checklist: inspectionBody(checklist) }
                 : {}),
             });
@@ -80,16 +82,38 @@ export default function JoinCrewDialog({ crew, onClose }) {
           setBusy(false);
         }}
       >
-        <Select
-          label="Função na guarnição"
-          value={String(driver)}
-          onChange={(e) => setDriver(e.target.value === 'true')}
-        >
-          <option value="false">Integrante</option>
-          <option value="true" disabled={!motorcycle && Boolean(crew.driver)}>
-            Motorista
-          </option>
-        </Select>
+        {motorcycle ? (
+          <Select
+            label="Função na motocicleta"
+            required
+            value={motorcycleRole}
+            onChange={(e) => {
+              setMotorcycleRole(e.target.value);
+              setSelected([]);
+            }}
+          >
+            <option value="">Selecione</option>
+            <option>Piloto</option>
+            <option>Garupa</option>
+          </Select>
+        ) : (
+          <Select
+            label="Função na guarnição"
+            value={String(effectiveDriver)}
+            disabled={hasDriver}
+            onChange={(e) => setDriver(e.target.value === 'true')}
+          >
+            <option value="false">Integrante</option>
+            <option value="true" disabled={hasDriver}>
+              Motorista
+            </option>
+          </Select>
+        )}
+        {hasDriver && (
+          <p className="form-note">
+            Esta guarnição já possui motorista. Você ingressará automaticamente como integrante.
+          </p>
+        )}
         {motorcycle ? (
           <>
             <Select
@@ -113,45 +137,59 @@ export default function JoinCrewDialog({ crew, onClose }) {
             Serviço das 8h às 8h seguintes, independentemente da hora de ingresso.
           </p>
         )}
-        {driver && crew.vehicle && !motorcycle && (
+        {effectiveDriver && crew.vehicle && !motorcycle && (
           <>
             <h3>Checklist de recebimento · {crew.vehicle.prefix}</h3>
             <VehicleChecklist value={checklist} onChange={setChecklist} minimum={minimum} />
           </>
         )}
-        {motorcycle && driver && (
+        {!motorcycle && !crew.driver && crew.members.length >= 3 && !effectiveDriver && (
+          <p className="form-note">
+            A última vaga é reservada ao motorista. Selecione essa função para ingressar.
+          </p>
+        )}
+        {motorcycle && (
           <>
-            <h3>Motocicletas para o serviço</h3>
-            <p>Selecione pelo menos uma motocicleta. Cada uma exige checklist de recebimento.</p>
-            {[
-              ...available,
-              ...selected
-                .filter((id) => !available.some((v) => v._id === id))
-                .map((id) => vehicleSnapshots.current[id]),
-            ]
-              .filter(Boolean)
-              .map((v) => (
-                <label className="checkbox-line" key={v._id}>
-                  <input
-                    type="checkbox"
-                    checked={selected.includes(v._id)}
-                    onChange={(e) =>
-                      setSelected((ids) =>
-                        e.target.checked ? [...ids, v._id] : ids.filter((id) => id !== v._id),
-                      )
+            <Select
+              label="Motocicleta para o serviço"
+              required
+              value={selected[0] || ''}
+              onChange={(e) => setSelected(e.target.value ? [e.target.value] : [])}
+            >
+              <option value="">Selecione uma motocicleta</option>
+              {[
+                ...available,
+                ...selected
+                  .filter((id) => !available.some((v) => v._id === id))
+                  .map((id) => vehicleSnapshots.current[id]),
+              ]
+                .filter(Boolean)
+                .map((v) => (
+                  <option
+                    key={v._id}
+                    value={v._id}
+                    disabled={
+                      v.occupants >= 2 ||
+                      (motorcycleRole === 'Piloto'
+                        ? v.pilotOccupied
+                        : motorcycleRole === 'Garupa'
+                          ? v.passengerOccupied
+                          : false)
                     }
-                  />
-                  {v.prefix} · {v.plate}
-                </label>
-              ))}
+                  >
+                    {v.prefix} · {v.plate} · {v.occupants || 0}/2 ocupantes
+                  </option>
+                ))}
+            </Select>
             {!available.length && <p>Nenhuma motocicleta disponível neste município.</p>}
-            {selected.map((id) => (
-              <MotorcycleReceipt
-                key={id}
-                vehicle={vehicleSnapshots.current[id]}
-                onChange={(receipt) => setReceipts((r) => ({ ...r, [id]: receipt }))}
-              />
-            ))}
+            {effectiveDriver &&
+              selected.map((id) => (
+                <MotorcycleReceipt
+                  key={id}
+                  vehicle={vehicleSnapshots.current[id]}
+                  onChange={(receipt) => setReceipts((r) => ({ ...r, [id]: receipt }))}
+                />
+              ))}
           </>
         )}
         {error && (
@@ -166,10 +204,21 @@ export default function JoinCrewDialog({ crew, onClose }) {
           type="submit"
           busy={busy}
           disabled={
-            (!motorcycle && (crew.vehicle?.provisional || (driver && loading))) ||
+            (!motorcycle &&
+              (crew.members.length >= 4 ||
+                (!crew.driver && !effectiveDriver && crew.members.length >= 3) ||
+                crew.vehicle?.provisional ||
+                (effectiveDriver && loading))) ||
             (motorcycle &&
-              driver &&
-              (!selected.length || selected.some((id) => !receipts[id]?.ready)))
+              (!motorcycleRole ||
+                selected.length !== 1 ||
+                (effectiveDriver && !receipts[selected[0]]?.ready) ||
+                !available.some(
+                  (v) =>
+                    v._id === selected[0] &&
+                    v.occupants < 2 &&
+                    !(motorcycleRole === 'Piloto' ? v.pilotOccupied : v.passengerOccupied),
+                )))
           }
         >
           Confirmar ingresso

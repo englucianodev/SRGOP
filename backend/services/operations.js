@@ -14,7 +14,7 @@ import {
 } from '../models/index.js';
 import { requireValue } from '../utils/errors.js';
 import { serviceWindow } from '../utils/time.js';
-import { recordIntake, requireDriverReturn } from './vehicleInspections.js';
+import { recordIntake, requireDriverReturn, refreshInspectionHold } from './vehicleInspections.js';
 import { audit } from './audit.js';
 import {
   changed,
@@ -289,24 +289,95 @@ export async function joinCrew(actor, id, driver, input = {}) {
       : null;
     const motorcycle = row.type === 'Motocicleta' || assignedVehicle?.type === 'Motocicleta';
     if (motorcycle) row.type = 'Motocicleta';
-    requireValue(motorcycle || !driver || !row.driver, 'Esta guarnição já possui motorista.', 409);
-    if (motorcycle && driver) {
+    let selectedMotorcycle = null;
+    let motorcycleRole = null;
+    let effectiveDriver = driver && !row.driver;
+    if (motorcycle) {
+      motorcycleRole = input.motorcycleRole;
+      const vehicleId = input.motorcycle?.toLowerCase();
       requireValue(
-        input.motorcycles?.length,
-        'Selecione pelo menos uma motocicleta e preencha o recebimento antes de ingressar como motorista.',
+        vehicleId && ['Piloto', 'Garupa'].includes(motorcycleRole),
+        'Selecione a motocicleta e a função Piloto ou Garupa antes de ingressar.',
         422,
       );
       requireValue(
-        new Set(input.motorcycles.map((m) => m.vehicle)).size === input.motorcycles.length,
-        'Não repita a mesma motocicleta.',
+        !input.motorcycles ||
+          (input.motorcycles.length === 1 &&
+            input.motorcycles[0].vehicle.toLowerCase() === vehicleId),
+        'Selecione somente a motocicleta que irá operar.',
+        422,
+      );
+      // Recover seats for services started before explicit pilot/passenger registration.
+      const oldReceipts = await VehicleHandover.find({
+        crew: row._id,
+        driver: { $in: row.members },
+        closedAt: null,
+        intake: { $exists: true },
+      }).session(session);
+      for (const record of oldReceipts)
+        if (!row.motorcycleSeats.some((s) => String(s.member) === String(record.driver)))
+          row.motorcycleSeats.push({
+            member: record.driver,
+            vehicle: record.vehicle,
+            role: 'Piloto',
+          });
+      const seats = row.motorcycleSeats.filter((s) => String(s.vehicle) === vehicleId);
+      requireValue(seats.length < 2, 'Esta motocicleta já possui piloto e garupa.', 409);
+      requireValue(
+        !seats.some((s) => s.role === motorcycleRole),
+        `Esta motocicleta já possui ${motorcycleRole.toLowerCase()}. Selecione outra moto ou função.`,
+        409,
+      );
+      effectiveDriver = motorcycleRole === 'Piloto';
+      selectedMotorcycle = await Vehicle.findOneAndUpdate(
+        {
+          _id: vehicleId,
+          type: 'Motocicleta',
+          city: row.city,
+          provisional: { $ne: true },
+          inspectionHold: { $ne: true },
+          status: { $in: ['Disponível', 'Em operação'] },
+          $or: [{ crew: null }, { crew: row._id }],
+        },
+        { crew: row._id },
+        { new: true, session },
+      );
+      requireValue(
+        selectedMotorcycle,
+        'Motocicleta indisponível, de outro município ou associada a outra guarnição.',
+        409,
+      );
+      requireValue(
+        !(await Crew.exists({
+          _id: { $ne: row._id },
+          $or: [{ vehicle: vehicleId }, { 'motorcycleSeats.vehicle': vehicleId }],
+        }).session(session)),
+        'A motocicleta já pertence a outra guarnição.',
+        409,
+      );
+      if (effectiveDriver)
+        requireValue(
+          input.checklist || input.motorcycles?.[0]?.checklist,
+          'O piloto deve preencher o checklist de recebimento.',
+          422,
+        );
+    } else {
+      requireValue(
+        row.members.length < 4,
+        'A guarnição convencional já possui o limite de quatro integrantes.',
+        409,
+      );
+      requireValue(
+        row.driver || effectiveDriver || row.members.length < 3,
+        'A última vaga da viatura convencional é reservada ao motorista.',
+        409,
+      );
+      requireValue(
+        !input.motorcycle && !input.motorcycleRole && !input.motorcycles,
+        'Seleção de motocicleta disponível somente para equipes de moto.',
         422,
       );
     }
-    requireValue(
-      motorcycle || !input.motorcycles,
-      'A seleção de motocicletas exige guarnição do tipo Motocicleta.',
-      422,
-    );
     if (motorcycle)
       requireValue(
         input.dutyPeriod && ['Manhã', 'Tarde', 'Noite'].includes(input.dutyPeriod),
@@ -356,7 +427,13 @@ export async function joinCrew(actor, id, driver, input = {}) {
     }
     row.members.addToSet(actor._id);
     row.status = 'Disponível';
-    if (driver && (!motorcycle || !row.driver)) row.driver = actor._id;
+    if (effectiveDriver && (!motorcycle || !row.driver)) row.driver = actor._id;
+    if (motorcycle)
+      row.motorcycleSeats.push({
+        member: actor._id,
+        vehicle: selectedMotorcycle._id,
+        role: motorcycleRole,
+      });
     await row.save({ session });
     await CrewShift.updateOne(
       { _id: row.shift },
@@ -369,53 +446,49 @@ export async function joinCrew(actor, id, driver, input = {}) {
             memberName: actor.name,
             actorName: actor.name,
             action: 'Ingresso',
+            ...(motorcycle
+              ? {
+                  vehicle: selectedMotorcycle._id,
+                  vehiclePrefix: selectedMotorcycle.prefix,
+                  motorcycleRole,
+                }
+              : {}),
             roundedAt: motorcycle ? roundHour(new Date()) : undefined,
           },
         },
       },
       { session },
     );
-    if (motorcycle && driver) {
-      for (const selection of input.motorcycles) {
-        const vehicle = await Vehicle.findOneAndUpdate(
-          {
-            _id: selection.vehicle,
-            type: 'Motocicleta',
-            city: row.city,
-            status: { $in: ['Disponível', 'Em operação'] },
-            provisional: { $ne: true },
-            inspectionHold: { $ne: true },
-            $or: [{ crew: null }, { crew: row._id }],
-          },
-          { crew: row._id, status: 'Em operação' },
-          { new: true, session },
-        );
-        requireValue(
-          vehicle,
-          'Motocicleta indisponível, de outro município ou associada a outra guarnição.',
-          409,
-        );
-        await recordIntake(
-          actor,
-          { _id: row._id, shift: row.shift, vehicle: vehicle._id },
-          selection.checklist,
-          session,
-        );
-        await CrewShift.updateOne(
-          { _id: row.shift },
-          {
-            $push: {
-              motorcycles: { driver: actor._id, vehicle: vehicle._id, prefix: vehicle.prefix },
+    if (motorcycle && effectiveDriver) {
+      await Vehicle.updateOne(
+        { _id: selectedMotorcycle._id },
+        { status: 'Em operação' },
+        { session },
+      );
+      await recordIntake(
+        actor,
+        { _id: row._id, shift: row.shift, vehicle: selectedMotorcycle._id },
+        input.checklist || input.motorcycles?.[0]?.checklist,
+        session,
+      );
+      await CrewShift.updateOne(
+        { _id: row.shift },
+        {
+          $push: {
+            motorcycles: {
+              driver: actor._id,
+              vehicle: selectedMotorcycle._id,
+              prefix: selectedMotorcycle.prefix,
             },
           },
-          { session },
-        );
-      }
+        },
+        { session },
+      );
     }
     if (row.vehicle && !motorcycle) {
       const vehicle = await Vehicle.findOneAndUpdate(
         { _id: row.vehicle, status: { $in: ['Disponível', 'Em operação'] } },
-        { status: 'Em operação', ...(driver ? { lastDriver: actor._id } : {}) },
+        { status: 'Em operação', ...(effectiveDriver ? { lastDriver: actor._id } : {}) },
         { session },
       );
       requireValue(vehicle, 'A viatura associada está indisponível ou em manutenção.', 409);
@@ -424,14 +497,18 @@ export async function joinCrew(actor, id, driver, input = {}) {
         'Complete o cadastro da viatura e as entregas pendentes antes do serviço.',
         409,
       );
-      if (driver) await recordIntake(actor, row, input.checklist, session);
+      if (effectiveDriver) await recordIntake(actor, row, input.checklist, session);
     }
     await audit(
       actor,
       'Ingresso na guarnição',
       'Crew',
       id,
-      driver ? 'Motorista' : 'Integrante',
+      motorcycle
+        ? `${motorcycleRole} / ${selectedMotorcycle.prefix}`
+        : effectiveDriver
+          ? 'Motorista'
+          : 'Integrante',
       session,
     );
     return row;
@@ -506,6 +583,8 @@ export async function endShift(id, actor, reason = 'Encerramento automático às
       },
       { session },
     );
+    const seatVehicles = crew.motorcycleSeats.map((s) => s.vehicle);
+    crew.motorcycleSeats = [];
     crew.members = [];
     if (crew.location) crew.location.sharing = false;
     crew.driver = null;
@@ -521,6 +600,7 @@ export async function endShift(id, actor, reason = 'Encerramento automático às
     )
       crew.currentOccurrence = null;
     await crew.save({ session });
+    for (const vehicleId of seatVehicles) await refreshInspectionHold(vehicleId, session);
     await audit(actor, 'Encerramento de turno', 'Crew', id, reason, session);
     for (const member of members)
       await audit(member, 'Saída da guarnição', 'Crew', id, reason, session);

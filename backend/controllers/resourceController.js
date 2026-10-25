@@ -123,6 +123,8 @@ export async function listCrews(req, res) {
       'prefix plate latitude longitude brand model year type mileage provisional',
     )
     .populate('members driver', 'name role')
+    .populate('motorcycleSeats.member', 'name')
+    .populate('motorcycleSeats.vehicle', 'prefix plate mileage type')
     .sort({ name: 1 })
     .lean();
   const records = await VehicleHandover.find({ closedAt: null, intake: { $exists: true } })
@@ -141,17 +143,40 @@ export async function listCrews(req, res) {
 export async function motorcycles(req, res) {
   const crew = await Crew.findById(req.params.id);
   requireValue(crew, 'Guarnição não encontrada.', 404);
-  const open = await VehicleHandover.distinct('vehicle', { closedAt: null });
+  const records = await VehicleHandover.find({ closedAt: null }).select(
+    'crew driver vehicle intake',
+  );
+  const outside = records.filter((r) => String(r.crew) !== String(crew._id)).map((r) => r.vehicle);
+  const seats = [...crew.motorcycleSeats];
+  for (const r of records.filter(
+    (r) =>
+      String(r.crew) === String(crew._id) &&
+      r.intake &&
+      crew.members.some((m) => String(m) === String(r.driver)),
+  ))
+    if (!seats.some((s) => String(s.member) === String(r.driver)))
+      seats.push({ member: r.driver, vehicle: r.vehicle, role: 'Piloto' });
+  const vehicles = await Vehicle.find({
+    city: crew.city,
+    type: 'Motocicleta',
+    provisional: { $ne: true },
+    inspectionHold: { $ne: true },
+    status: { $in: ['Disponível', 'Em operação'] },
+    _id: { $nin: outside },
+    $or: [{ crew: null }, { crew: crew._id }],
+  })
+    .select('prefix plate mileage brand model')
+    .lean();
   res.json(
-    await Vehicle.find({
-      city: crew.city,
-      type: 'Motocicleta',
-      provisional: { $ne: true },
-      inspectionHold: { $ne: true },
-      status: { $in: ['Disponível', 'Em operação'] },
-      _id: { $nin: open },
-      $or: [{ crew: null }, { crew: crew._id }],
-    }).select('prefix plate mileage brand model'),
+    vehicles.map((v) => {
+      const occupants = seats.filter((s) => String(s.vehicle) === String(v._id));
+      return {
+        ...v,
+        pilotOccupied: occupants.some((s) => s.role === 'Piloto'),
+        passengerOccupied: occupants.some((s) => s.role === 'Garupa'),
+        occupants: occupants.length,
+      };
+    }),
   );
 }
 export async function correctMileage(req, res) {
@@ -540,6 +565,8 @@ export async function dashboard(req, res) {
         },
       ]),
       Crew.find()
+        .populate('motorcycleSeats.member', 'name')
+        .populate('motorcycleSeats.vehicle', 'prefix')
         .populate('city', 'name')
         .populate('vehicle', 'prefix')
         .populate('members driver', 'name'),

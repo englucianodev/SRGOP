@@ -27,6 +27,7 @@ export async function manageMember(actor, crewId, input) {
       409,
     );
     const affected = [...crew.members];
+    const leavingSeat = crew.motorcycleSeats.find((s) => String(s.member) === input.member);
     if (input.action === 'Motorista') {
       requireValue(
         crew.shiftMode !== 'Motocicleta',
@@ -113,8 +114,10 @@ export async function manageMember(actor, crewId, input) {
       } else if (String(crew.driver) === input.member && crew.vehicle)
         await requireDriverReturn(crew, input.reason, session, input.member);
       crew.members.pull(input.member);
+      crew.motorcycleSeats = crew.motorcycleSeats.filter((s) => String(s.member) !== input.member);
       if (String(crew.location?.updatedBy) === input.member) crew.location.sharing = false;
-      if (String(crew.driver) === input.member) crew.driver = null;
+      if (String(crew.driver) === input.member)
+        crew.driver = crew.motorcycleSeats.find((s) => s.role === 'Piloto')?.member || null;
       await User.updateOne({ _id: input.member, crew: crew._id }, { crew: null }, { session });
       if (!crew.members.length) {
         crew.status = 'Fora de serviço';
@@ -144,6 +147,7 @@ export async function manageMember(actor, crewId, input) {
       crew: crew._id,
       driver: input.member,
     }).session(session);
+    if (leavingSeat && input.action === 'Saída') vehicleIds.push(leavingSeat.vehicle);
     for (const vehicleId of vehicleIds) await refreshInspectionHold(vehicleId, session);
     if (crew.vehicle) await refreshInspectionHold(crew.vehicle, session);
     await CrewShift.updateOne(
@@ -156,6 +160,9 @@ export async function manageMember(actor, crewId, input) {
             actor: actor._id,
             actorName: actor.name,
             action: input.action,
+            ...(leavingSeat
+              ? { vehicle: leavingSeat.vehicle, motorcycleRole: leavingSeat.role }
+              : {}),
             roundedAt: crew.shiftMode === 'Motocicleta' ? roundHour(new Date()) : undefined,
             reason: input.reason,
           },

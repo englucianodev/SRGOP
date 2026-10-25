@@ -245,6 +245,8 @@ export async function crewReports(req, res) {
           reason: c.reason || '',
           at: c.at,
           roundedAt: c.roundedAt,
+          motorcycleRole: c.motorcycleRole,
+          vehiclePrefix: c.vehiclePrefix,
         })),
       attendances: [],
     };

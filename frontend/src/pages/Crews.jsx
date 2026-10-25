@@ -111,9 +111,15 @@ export default function Crews() {
                 </h2>
                 <p className="muted">{c.city?.name}</p>
                 <p className="muted">{c.type || 'Viatura Convencional'}</p>
-                {(c.motorcycleDrivers || []).map((r) => (
-                  <p key={r.vehicle._id}>
-                    {r.driver?.name} · {r.vehicle.prefix}
+                {!(c.motorcycleSeats || []).length &&
+                  (c.motorcycleDrivers || []).map((r) => (
+                    <p key={r.vehicle._id}>
+                      {r.driver?.name} · {r.vehicle.prefix}
+                    </p>
+                  ))}
+                {(c.motorcycleSeats || []).map((s) => (
+                  <p key={s.member?._id}>
+                    {s.vehicle?.prefix} · {s.role}: {s.member?.name}
                   </p>
                 ))}
                 {c.inspectionBlocked && (
@@ -132,12 +138,21 @@ export default function Crews() {
                   </span>
                 </div>
                 <div className="crew-members">
-                  <span className="eyebrow">INTEGRANTES · {c.members.length}</span>
+                  <span className="eyebrow">
+                    INTEGRANTES · {c.members.length}
+                    {c.type !== 'Motocicleta' && c.vehicle?.type !== 'Motocicleta' ? '/4' : ''}
+                  </span>
                   {c.members.length ? (
                     c.members.map((m) => (
                       <span key={m._id}>
                         {m.name}
-                        {objectId(c.driver) === m._id && <small>Motorista</small>}
+                        {c.motorcycleSeats?.some((s) => s.member?._id === m._id) ? (
+                          <small>
+                            {c.motorcycleSeats.find((s) => s.member?._id === m._id).role}
+                          </small>
+                        ) : (
+                          objectId(c.driver) === m._id && <small>Motorista</small>
+                        )}
                       </span>
                     ))
                   ) : (
@@ -191,9 +206,20 @@ export default function Crews() {
                     !app.user.crew &&
                     !c.currentOccurrence &&
                     c.status !== 'Indisponível' && (
-                      <Button onClick={() => setJoin(c)}>
+                      <Button
+                        disabled={
+                          c.type !== 'Motocicleta' &&
+                          c.vehicle?.type !== 'Motocicleta' &&
+                          c.members.length >= 4
+                        }
+                        onClick={() => setJoin(c)}
+                      >
                         <LogIn size={16} />
-                        Ingressar
+                        {c.type !== 'Motocicleta' &&
+                        c.vehicle?.type !== 'Motocicleta' &&
+                        c.members.length >= 4
+                          ? 'Guarnição lotada (4/4)'
+                          : 'Ingressar'}
                       </Button>
                     )}
                   {manager && active && (
@@ -320,7 +346,13 @@ export default function Crews() {
           </form>
         </Modal>
       )}
-      {join && <JoinCrewDialog key={join._id} crew={join} onClose={() => setJoin(null)} />}
+      {join && (
+        <JoinCrewDialog
+          key={join._id}
+          crew={crews.find((c) => c._id === join._id) || join}
+          onClose={() => setJoin(null)}
+        />
+      )}
       {end && (
         <Modal title="Autorizar encerramento antecipado" onClose={() => setEnd(null)}>
           <form

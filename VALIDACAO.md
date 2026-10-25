@@ -1,5 +1,23 @@
 # Validação e impasses — SRGOP
 
+## Piloto/garupa por moto e capacidade das viaturas — 25/10/2026
+
+- Todo ingresso em equipe de moto exige veículo e função Piloto/Garupa explícitos. Cada pessoa ocupa uma moto e cada moto aceita no máximo um piloto e um garupa, independentemente de quantas motos estejam na equipe. A reserva transacional impede excesso e duplicidade de função sob concorrência.
+- Viaturas convencionais comportam até quatro pessoas, com um motorista e três acompanhantes. Se três acompanhantes ingressarem antes do motorista, a última vaga é reservada ao condutor. Equipe com quatro pessoas aparece como lotada na interface.
+- Vagas, motocicleta e função ficam registradas na composição atual, movimentações do turno e auditoria. Saída do garupa não gera checklist. Saída do piloto exige entrega; a moto permanece associada enquanto houver garupa ou entrega pendente. Encerramento de turno libera as vagas e mantém entregas obrigatórias dos pilotos.
+- Chrome headless confirmou piloto com checklist, garupa na mesma moto sem checklist, bloqueio de função ocupada, segundo piloto em outra moto da mesma equipe e bloqueio da convencional em 4/4, sem erros JavaScript ou rolagem horizontal móvel. Testes usam banco temporário e não alteram cadastros persistentes.
+
+Validação final: **74 testes aprovados, zero falhas**. Compilação de produção e formatação aprovadas.
+
+## Uma motocicleta e um motorista por guarnição — 25/10/2026
+
+- Seleção de motocicleta passa a ser única. API recusa zero ou mais de uma moto ao ingressar como motorista e mantém o checklist do único veículo escolhido.
+- Guarnições convencionais e de motocicleta aceitam apenas um motorista. Com motorista presente, novos ingressos são automaticamente de integrantes, inclusive pedidos concorrentes ou formulários antigos enviados com `driver: true`. Reserva, motorista e recebimento são definidos na mesma transação; o integrante não reserva outra moto nem troca o responsável.
+- Interface fixa a função Integrante quando há motorista e oculta seleção/checklist de recebimento para os demais. Trocar a seleção da moto substitui o formulário anterior. A saída do integrante não exige checklist e preserva o motorista.
+- Chrome headless confirmou seleção única, um checklist/recebimento, função automática e saída do integrante; sem erros JavaScript ou rolagem horizontal móvel. Testes incluem ingressos simultâneos nos dois tipos de equipe, rejeição de duas motos e disputa da mesma motocicleta por equipes diferentes. Registros históricos e entregas antigas permanecem preservados; não houve alteração automática no banco persistente.
+
+Validação final: **70 testes aprovados, zero falhas**. Compilação de produção e formatação aprovadas.
+
 ## Confirmação da urgência e transferência de viaturas — 25/10/2026
 
 - Urgência UU abre confirmação antes de solicitar GPS ou enviar o alerta. Cancelar recebe foco inicial; Cancelar, Escape e Enter inicial não geram pedidos. Somente a confirmação explícita envia. Alerta recebido de outra equipe mantém prioridade sobre a confirmação local.
@@ -101,7 +119,7 @@ As verificações visuais mencionadas nas seções seguintes são registros hist
 
 Código organizado em `frontend` e `backend`, com banco MongoDB, API, permissões no servidor, interface por perfil e dados demonstrativos. Instruções de instalação, variáveis e deploy estão no [README](README.md).
 
-Última execução da suíte: **68 testes aprovados, zero falhas**. Build de produção do frontend concluído com sucesso. Essas verificações não substituem homologação com os usuários do batalhão nem testes de carga em infraestrutura de produção.
+Última execução da suíte: **74 testes aprovados, zero falhas**. Build de produção do frontend concluído com sucesso. Essas verificações não substituem homologação com os usuários do batalhão nem testes de carga em infraestrutura de produção.
 
 ## Verificações automatizadas
 

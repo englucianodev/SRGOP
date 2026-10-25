@@ -141,12 +141,14 @@ export const schemas = {
   join: z
     .object({
       driver: z.boolean(),
+      motorcycle: id.optional(),
+      motorcycleRole: z.enum(['Piloto', 'Garupa']).optional(),
       dutyPeriod: z.enum(['Manhã', 'Tarde', 'Noite']).optional(),
       checklist: inspectionSchema.optional(),
       motorcycles: z
         .array(z.object({ vehicle: id, checklist: inspectionSchema }).strict())
         .min(1)
-        .max(20)
+        .max(1)
         .optional(),
     })
     .strict(),

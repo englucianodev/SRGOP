@@ -153,10 +153,17 @@ export async function refreshInspectionHold(vehicleId, session) {
     const open = await VehicleHandover.exists({ vehicle: vehicleId, closedAt: null }).session(
       session,
     );
-    if (!open && !(await Crew.exists({ vehicle: vehicleId }).session(session)))
+    const seats = await Crew.exists({ 'motorcycleSeats.vehicle': vehicleId }).session(session);
+    if (!open && !seats && !(await Crew.exists({ vehicle: vehicleId }).session(session)))
       await Vehicle.updateOne(
         { _id: vehicleId },
         { crew: null, status: 'Disponível', inspectionHold: false },
+        { session },
+      );
+    else if (!open && seats)
+      await Vehicle.updateOne(
+        { _id: vehicleId, inspectionHold: { $ne: true } },
+        { status: 'Disponível' },
         { session },
       );
   }

@@ -277,6 +277,8 @@ test('motocicleta exige turno e continua em serviço sem prazo de 24h', async ()
   const r = await post(biker.agent, `/crews/${motoCrew._id}/join`, {
     driver: true,
     dutyPeriod: 'Manhã',
+    motorcycle: String(moto._id),
+    motorcycleRole: 'Piloto',
     motorcycles: [{ vehicle: String(moto._id), checklist: inspected(50) }],
   });
   assert.equal(r.status, 200, JSON.stringify(r.body));
@@ -286,13 +288,25 @@ test('motocicleta exige turno e continua em serviço sem prazo de 24h', async ()
   await expireShifts();
   assert.equal(String((await User.findById(biker.user._id)).crew), String(motoCrew._id));
   assert.equal(
-    (await post(mate.agent, `/crews/${motoCrew._id}/join`, { driver: false, dutyPeriod: 'Noite' }))
-      .status,
+    (
+      await post(mate.agent, `/crews/${motoCrew._id}/join`, {
+        driver: false,
+        dutyPeriod: 'Noite',
+        motorcycle: String(moto._id),
+        motorcycleRole: 'Garupa',
+      })
+    ).status,
     409,
   );
   assert.equal(
-    (await post(mate.agent, `/crews/${motoCrew._id}/join`, { driver: false, dutyPeriod: 'Manhã' }))
-      .status,
+    (
+      await post(mate.agent, `/crews/${motoCrew._id}/join`, {
+        driver: false,
+        dutyPeriod: 'Manhã',
+        motorcycle: String(moto._id),
+        motorcycleRole: 'Garupa',
+      })
+    ).status,
     200,
   );
 });
@@ -353,8 +367,14 @@ test('saída da motocicleta registra horários reais e arredondados e exige entr
 test('Urgência UU é exclusiva de quem está em serviço, alcança todas as equipes e o CPU com prioridade máxima', async () => {
   assert.equal((await post(offDuty.agent, '/emergencies')).status, 403);
   assert.equal(
-    (await post(mate.agent, `/crews/${motoCrew._id}/join`, { driver: false, dutyPeriod: 'Tarde' }))
-      .status,
+    (
+      await post(mate.agent, `/crews/${motoCrew._id}/join`, {
+        driver: false,
+        dutyPeriod: 'Tarde',
+        motorcycle: String(moto._id),
+        motorcycleRole: 'Garupa',
+      })
+    ).status,
     200,
   );
   const r = await post(replacement.agent, '/emergencies', {
@@ -524,7 +544,7 @@ test('pré-seleção usa o checklist mais recente por veículo, incluindo C/A e 
   await fresh.deleteOne();
 });
 
-test('tipo da guarnição valida o veículo e motorista escolhe uma ou mais motocicletas antes do ingresso', async () => {
+test('tipo da guarnição valida o veículo e cada piloto escolhe uma moto e garupa identifica sua motocicleta', async () => {
   const c = await City.create({
     name: 'Cidade dos motociclistas',
     latitude: -5.4,
@@ -571,6 +591,8 @@ test('tipo da guarnição valida o veículo e motorista escolhe uma ou mais moto
   const input = (vehicles) => ({
     driver: true,
     dutyPeriod: 'Tarde',
+    motorcycle: String(vehicles[0]._id),
+    motorcycleRole: 'Piloto',
     motorcycles: vehicles.map((v) => ({ vehicle: String(v._id), checklist: inspected(v.mileage) })),
   });
   assert.equal(
@@ -580,64 +602,57 @@ test('tipo da guarnição valida o veículo e motorista escolhe uma ou mais moto
   assert.equal((await post(a.agent, `/crews/${id}/join`, input([conventional]))).status, 409);
   assert.equal((await post(a.agent, `/crews/${id}/join`, input([bikes[0], bikes[0]]))).status, 422);
   assert.equal((await User.findById(a.user._id)).crew, null);
-  assert.equal((await post(a.agent, `/crews/${id}/join`, input([bikes[0], bikes[1]]))).status, 200);
+  assert.equal((await post(a.agent, `/crews/${id}/join`, input([bikes[0], bikes[1]]))).status, 422);
+  assert.equal((await post(a.agent, `/crews/${id}/join`, input([bikes[0]]))).status, 200);
   assert.equal(
     await VehicleHandover.countDocuments({ crew: id, driver: a.user._id, closedAt: null }),
-    2,
+    1,
   );
-  const race = await Promise.all([
-    post(b.agent, `/crews/${id}/join`, input([bikes[2]])),
-    post(d.agent, `/crews/${id}/join`, input([bikes[2]])),
-  ]);
-  assert.deepEqual(race.map((r) => r.status).sort(), [200, 409]);
-  assert.equal(await VehicleHandover.countDocuments({ vehicle: bikes[2]._id, closedAt: null }), 1);
+  assert.equal((await post(b.agent, `/crews/${id}/join`, input([bikes[1]]))).status, 200);
+  assert.equal(
+    (
+      await post(d.agent, `/crews/${id}/join`, {
+        driver: false,
+        dutyPeriod: 'Tarde',
+        motorcycle: String(bikes[0]._id),
+        motorcycleRole: 'Garupa',
+      })
+    ).status,
+    200,
+  );
+  const state = await Crew.findById(id);
+  assert.equal(String(state.driver), String(a.user._id));
+  assert.equal(state.members.length, 3);
+  assert.equal(await VehicleHandover.countDocuments({ crew: id, closedAt: null }), 2);
+  assert.equal((await Vehicle.findById(bikes[1]._id)).status, 'Em operação');
+  assert.equal(String((await Vehicle.findById(bikes[1]._id)).crew), id);
+  assert.equal((await CrewShift.findById(state.shift)).motorcycles.length, 2);
   const crewList = (await a.agent.get('/api/crews')).body.find((c) => c._id === id);
   assert.equal(crewList.type, 'Motocicleta');
-  assert.equal(crewList.motorcycleDrivers.length, 3);
-  assert.equal((await a.agent.get(`/api/crews/${id}/motorcycles`)).body.length, 0);
+  assert.equal(crewList.motorcycleDrivers.length, 2);
+  assert.equal((await post(a.agent, `/crews/${id}/leave`)).status, 422);
+  assert.equal(
+    (
+      await post(a.agent, `/crews/${id}/leave`, {
+        checklists: [{ vehicle: String(bikes[1]._id), checklist: inspected(100) }],
+      })
+    ).status,
+    422,
+  );
   assert.equal(
     (
       await post(a.agent, `/crews/${id}/leave`, {
         checklists: [{ vehicle: String(bikes[0]._id), checklist: inspected(101) }],
       })
     ).status,
-    422,
-  );
-  assert.equal((await User.findById(a.user._id)).crew.toString(), id);
-  assert.equal(
-    (
-      await post(a.agent, `/crews/${id}/leave`, {
-        checklists: bikes
-          .slice(0, 2)
-          .map((v) => ({ vehicle: String(v._id), checklist: inspected(101) })),
-      })
-    ).status,
     200,
-  );
-  assert.equal(
-    await VehicleHandover.countDocuments({ crew: id, driver: a.user._id, closedAt: null }),
-    0,
   );
   assert.equal((await Vehicle.findById(bikes[0]._id)).status, 'Disponível');
-  assert.equal((await Vehicle.findById(bikes[0]._id)).crew, null);
-  const winner = race[0].status === 200 ? b : d;
   assert.equal(
-    (
-      await post(cpu.agent, `/crews/${id}/members`, {
-        member: String(winner.user._id),
-        action: 'Saída',
-        reason: 'Saída autorizada para validar entrega.',
-      })
-    ).status,
+    (await post(b.agent, `/crews/${id}/leave`, { checklist: inspected(101) })).status,
     200,
   );
-  const pending = (await winner.agent.get('/api/vehicle-checklists/pending')).body;
-  assert.equal(pending.length, 1);
-  assert.equal(
-    (await post(winner.agent, `/vehicle-checklists/${pending[0]._id}`, inspected(102))).status,
-    200,
-  );
-  assert.equal((await Vehicle.findById(bikes[2]._id)).status, 'Disponível');
+  assert.equal((await post(d.agent, `/crews/${id}/leave`)).status, 200);
 });
 
 test('guarnições por município e identificadores DEMO são únicos, limitados e repetíveis', async () => {
@@ -841,4 +856,308 @@ test('entrega pendente impede desassociar ou transferir a viatura', async () => 
   assert.equal(r.status, 409);
   assert.equal(String((await Vehicle.findById(v._id)).crew), String(c._id));
   await record.deleteOne();
+});
+
+test('ingressos simultâneos permitem pilotos de motos diferentes e preservam motorista único na convencional', async () => {
+  for (const type of ['Motocicleta', 'Viatura Convencional']) {
+    const tag = type === 'Motocicleta' ? 'MotoRace' : 'ConvRace';
+    const a = await account(`${tag}Um`),
+      b = await account(`${tag}Dois`);
+    const c = await Crew.create({ name: `Equipe ${tag}`, city: city._id, type });
+    const bikes = await Vehicle.create(
+      [1, 2].map((i) => ({
+        prefix: `${tag}-${i}`,
+        plate: `${tag === 'MotoRace' ? 'MRC' : 'CRC'}${i}D23`,
+        city: city._id,
+        type: type === 'Motocicleta' ? 'Motocicleta' : 'Caminhonete',
+        mileage: 50,
+      })),
+    );
+    if (type !== 'Motocicleta') {
+      c.vehicle = bikes[0]._id;
+      await c.save();
+      await Vehicle.updateOne({ _id: bikes[0]._id }, { crew: c._id });
+    }
+    const body = (i) =>
+      type === 'Motocicleta'
+        ? {
+            driver: true,
+            dutyPeriod: 'Noite',
+            motorcycle: String(bikes[i]._id),
+            motorcycleRole: 'Piloto',
+            motorcycles: [{ vehicle: String(bikes[i]._id), checklist: inspected(50) }],
+          }
+        : { driver: true, checklist: inspected(50) };
+    const results = await Promise.all([
+      post(a.agent, `/crews/${c._id}/join`, body(0)),
+      post(b.agent, `/crews/${c._id}/join`, body(1)),
+    ]);
+    assert.deepEqual(
+      results.map((r) => r.status),
+      [200, 200],
+    );
+    const active = await Crew.findById(c._id);
+    assert.equal(active.members.length, 2);
+    assert.ok([String(a.user._id), String(b.user._id)].includes(String(active.driver)));
+    const records = await VehicleHandover.find({ crew: c._id, closedAt: null });
+    assert.equal(records.length, type === 'Motocicleta' ? 2 : 1);
+    assert.ok(records.some((r) => String(r.driver) === String(active.driver)));
+    if (type === 'Motocicleta') {
+      assert.equal((await CrewShift.findById(active.shift)).motorcycles.length, 2);
+      assert.equal(
+        await Vehicle.countDocuments({
+          _id: { $in: bikes.map((v) => v._id) },
+          status: 'Disponível',
+          crew: null,
+        }),
+        0,
+      );
+    }
+  }
+});
+
+test('duas equipes de moto não podem receber a mesma motocicleta', async () => {
+  const a = await account('MotoUnicaEquipeUm'),
+    b = await account('MotoUnicaEquipeDois');
+  const [one, two] = await Crew.create([
+    { name: 'Moto única A', city: city._id, type: 'Motocicleta' },
+    { name: 'Moto única B', city: city._id, type: 'Motocicleta' },
+  ]);
+  const bike = await Vehicle.create({
+    prefix: 'MOTO-UNICA',
+    plate: 'MUN1D23',
+    city: city._id,
+    type: 'Motocicleta',
+    mileage: 1,
+  });
+  const body = {
+    driver: true,
+    dutyPeriod: 'Manhã',
+    motorcycle: String(bike._id),
+    motorcycleRole: 'Piloto',
+    motorcycles: [{ vehicle: String(bike._id), checklist: inspected(1) }],
+  };
+  const result = await Promise.all([
+    post(a.agent, `/crews/${one._id}/join`, body),
+    post(b.agent, `/crews/${two._id}/join`, body),
+  ]);
+  assert.deepEqual(result.map((r) => r.status).sort(), [200, 409]);
+  assert.equal(await VehicleHandover.countDocuments({ vehicle: bike._id, closedAt: null }), 1);
+});
+
+test('cada moto aceita no máximo um piloto e um garupa, com função e veículo obrigatórios', async () => {
+  const a = await account('OcupPiloto'),
+    b = await account('OcupGarupa'),
+    x = await account('OcupExtra');
+  const c = await Crew.create({
+    name: 'Capacidade de motocicleta',
+    city: city._id,
+    type: 'Motocicleta',
+  });
+  const v = await Vehicle.create({
+    prefix: 'MOTO-CAP',
+    plate: 'MCA1D23',
+    city: city._id,
+    type: 'Motocicleta',
+    mileage: 10,
+  });
+  const input = (role) => ({
+    driver: role === 'Piloto',
+    dutyPeriod: 'Manhã',
+    motorcycle: String(v._id),
+    motorcycleRole: role,
+    ...(role === 'Piloto' ? { checklist: inspected(10) } : {}),
+  });
+  assert.equal(
+    (
+      await post(a.agent, `/crews/${c._id}/join`, {
+        driver: true,
+        dutyPeriod: 'Manhã',
+        motorcycle: String(v._id),
+      })
+    ).status,
+    422,
+  );
+  assert.equal(
+    (
+      await post(a.agent, `/crews/${c._id}/join`, {
+        driver: true,
+        dutyPeriod: 'Manhã',
+        motorcycleRole: 'Piloto',
+      })
+    ).status,
+    422,
+  );
+  assert.equal((await post(b.agent, `/crews/${c._id}/join`, input('Garupa'))).status, 200);
+  assert.equal(await VehicleHandover.countDocuments({ crew: c._id, closedAt: null }), 0);
+  assert.equal((await post(x.agent, `/crews/${c._id}/join`, input('Garupa'))).status, 409);
+  assert.equal(
+    (
+      await post(x.agent, `/crews/${c._id}/join`, {
+        ...input('Garupa'),
+        motorcycle: String(v._id).toUpperCase(),
+      })
+    ).status,
+    409,
+  );
+  assert.equal((await post(a.agent, `/crews/${c._id}/join`, input('Piloto'))).status, 200);
+  assert.equal((await post(x.agent, `/crews/${c._id}/join`, input('Piloto'))).status, 409);
+  assert.equal((await User.findById(x.user._id)).crew, null);
+  const state = await Crew.findById(c._id);
+  assert.equal(state.members.length, 2);
+  assert.equal(state.motorcycleSeats.length, 2);
+  assert.deepEqual(state.motorcycleSeats.map((s) => s.role).sort(), ['Garupa', 'Piloto']);
+  const options = (await x.agent.get(`/api/crews/${c._id}/motorcycles`)).body.find(
+    (m) => m._id === String(v._id),
+  );
+  assert.equal(options.occupants, 2);
+  assert.equal(options.pilotOccupied, true);
+  assert.equal(options.passengerOccupied, true);
+  assert.equal(
+    (await post(a.agent, `/crews/${c._id}/leave`, { checklist: inspected(11) })).status,
+    200,
+  );
+  assert.equal(String((await Vehicle.findById(v._id)).crew), String(c._id));
+  assert.equal((await Crew.findById(c._id)).motorcycleSeats[0].role, 'Garupa');
+  assert.equal((await post(b.agent, `/crews/${c._id}/leave`)).status, 200);
+  assert.equal((await Vehicle.findById(v._id)).crew, null);
+});
+
+test('disputa simultânea por vaga de garupa não ultrapassa dois ocupantes nem duplica função', async () => {
+  const [pilot, a, b] = await Promise.all([
+    account('VagaPiloto'),
+    account('VagaGarupaUm'),
+    account('VagaGarupaDois'),
+  ]);
+  const c = await Crew.create({ name: 'Disputa por garupa', city: city._id, type: 'Motocicleta' });
+  const v = await Vehicle.create({
+    prefix: 'MOTO-VAGA',
+    plate: 'MVG1D23',
+    city: city._id,
+    type: 'Motocicleta',
+    mileage: 2,
+  });
+  const base = {
+    driver: true,
+    dutyPeriod: 'Noite',
+    motorcycle: String(v._id),
+    motorcycleRole: 'Piloto',
+    checklist: inspected(2),
+  };
+  assert.equal((await post(pilot.agent, `/crews/${c._id}/join`, base)).status, 200);
+  const body = {
+    driver: false,
+    dutyPeriod: 'Noite',
+    motorcycle: String(v._id),
+    motorcycleRole: 'Garupa',
+  };
+  const result = await Promise.all([
+    post(a.agent, `/crews/${c._id}/join`, body),
+    post(b.agent, `/crews/${c._id}/join`, body),
+  ]);
+  assert.deepEqual(result.map((r) => r.status).sort(), [200, 409]);
+  const state = await Crew.findById(c._id);
+  assert.equal(state.members.length, 2);
+  assert.equal(state.motorcycleSeats.filter((s) => s.role === 'Garupa').length, 1);
+  assert.equal(await VehicleHandover.countDocuments({ crew: c._id, closedAt: null }), 1);
+});
+
+test('guarnição convencional limita quatro integrantes incluindo motorista sob concorrência', async () => {
+  const members = [];
+  for (let i = 0; i < 5; i++) members.push(await account(`LotacaoConv${i}`));
+  const c = await Crew.create({
+    name: 'Limite quatro na convencional',
+    city: city._id,
+    type: 'Viatura Convencional',
+  });
+  const v = await Vehicle.create({
+    prefix: 'VTR-CAP',
+    plate: 'VCA1D23',
+    city: city._id,
+    mileage: 20,
+    crew: c._id,
+  });
+  c.vehicle = v._id;
+  await c.save();
+  for (let i = 0; i < 3; i++)
+    assert.equal(
+      (await post(members[i].agent, `/crews/${c._id}/join`, { driver: false })).status,
+      200,
+    );
+  assert.equal(
+    (await post(members[3].agent, `/crews/${c._id}/join`, { driver: false })).status,
+    409,
+  );
+  const result = await Promise.all([
+    post(members[3].agent, `/crews/${c._id}/join`, { driver: true, checklist: inspected(20) }),
+    post(members[4].agent, `/crews/${c._id}/join`, { driver: false }),
+  ]);
+  assert.deepEqual(result.map((r) => r.status).sort(), [200, 409]);
+  const state = await Crew.findById(c._id);
+  assert.equal(state.members.length, 4);
+  assert.equal(String(state.driver), String(members[3].user._id));
+  assert.equal(
+    await User.countDocuments({ _id: { $in: members.map((m) => m.user._id) }, crew: c._id }),
+    4,
+  );
+  assert.equal(await VehicleHandover.countDocuments({ crew: c._id, closedAt: null }), 1);
+});
+
+test('fim do turno libera vagas das motos e mantém entregas pendentes somente para pilotos', async () => {
+  const pilot = await account('FimMotoPiloto'),
+    passenger = await account('FimMotoGarupa');
+  const c = await Crew.create({
+    name: 'Encerramento de moto ocupada',
+    city: city._id,
+    type: 'Motocicleta',
+  });
+  const v = await Vehicle.create({
+    prefix: 'MOTO-FIM',
+    plate: 'MFI1D23',
+    city: city._id,
+    type: 'Motocicleta',
+    mileage: 30,
+  });
+  assert.equal(
+    (
+      await post(pilot.agent, `/crews/${c._id}/join`, {
+        driver: true,
+        dutyPeriod: 'Tarde',
+        motorcycle: String(v._id),
+        motorcycleRole: 'Piloto',
+        checklist: inspected(30),
+      })
+    ).status,
+    200,
+  );
+  assert.equal(
+    (
+      await post(passenger.agent, `/crews/${c._id}/join`, {
+        driver: false,
+        dutyPeriod: 'Tarde',
+        motorcycle: String(v._id),
+        motorcycleRole: 'Garupa',
+      })
+    ).status,
+    200,
+  );
+  assert.equal(
+    (
+      await post(cpu.agent, `/crews/${c._id}/end-shift`, {
+        reason: 'Turno encerrado pela central para validar vagas.',
+      })
+    ).status,
+    200,
+  );
+  const state = await Crew.findById(c._id);
+  assert.equal(state.motorcycleSeats.length, 0);
+  assert.equal(state.members.length, 0);
+  assert.equal((await passenger.agent.get('/api/vehicle-checklists/pending')).body.length, 0);
+  const pending = (await pilot.agent.get('/api/vehicle-checklists/pending')).body;
+  assert.equal(pending.length, 1);
+  assert.equal(
+    (await post(pilot.agent, `/vehicle-checklists/${pending[0]._id}`, inspected(35))).status,
+    200,
+  );
+  assert.equal((await Vehicle.findById(v._id)).crew, null);
 });
