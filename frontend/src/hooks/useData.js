@@ -2,8 +2,12 @@ import { useEffect, useState } from 'react';
 import { api } from '../services/api';
 import { useApp } from '../context/AppContext';
 export function useData(path, fallback = null) {
-  const { revision, chatRevision } = useApp();
-  const resourceRevision = path?.startsWith('/crew-chats') ? chatRevision : 0;
+  const { revision, chatRevision, notificationRevision } = useApp();
+  const resourceRevision = path?.startsWith('/crew-chats')
+    ? chatRevision
+    : path === '/notifications'
+      ? notificationRevision
+      : 0;
   const [data, setData] = useState(fallback);
   const [loading, setLoading] = useState(true);
   useEffect(() => {

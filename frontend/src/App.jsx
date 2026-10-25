@@ -9,6 +9,7 @@ import Occurrences from './pages/Occurrences';
 import Dispatches from './pages/Dispatches';
 import Attendance from './pages/Attendance';
 import Crews from './pages/Crews';
+import OperationalChat from './pages/OperationalChat';
 import Resources from './pages/Resources';
 import MapPage from './pages/MapPage';
 import Reports from './pages/Reports';
@@ -22,9 +23,14 @@ function Protected({ roles }) {
   if (roles && !roles.includes(user.role)) return <Denied />;
   if (
     activeAttendance &&
-    !['/dashboard', '/ocorrencias', '/atendimento', '/guarnicoes', '/mapa'].includes(
-      location.pathname,
-    )
+    ![
+      '/dashboard',
+      '/ocorrencias',
+      '/atendimento',
+      '/guarnicoes',
+      '/chat-operacional',
+      '/mapa',
+    ].includes(location.pathname)
   )
     return <Navigate to="/atendimento" replace />;
   return <Outlet />;
@@ -55,6 +61,7 @@ export default function App() {
             <Route path="/ocorrencias" element={<Occurrences />} />
             <Route path="/atendimento" element={<Attendance />} />
             <Route path="/guarnicoes" element={<Crews />} />
+            <Route path="/chat-operacional" element={<OperationalChat />} />
             <Route path="/mapa" element={<MapPage />} />
             <Route element={<Protected roles={['Oficial', 'Administrativo']} />}>
               <Route path="/despachos" element={<Dispatches />} />

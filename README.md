@@ -445,7 +445,9 @@ Eventos Socket.IO: `dispatch:new`, `notification`, `attendance:changed`, `data:c
 - Praça recebe um Dashboard simplificado com sua guarnição, turno e atendimentos.
 - Oficial e Administrativo podem autorizar saída individual e troca de motorista, registrando motivo e histórico do turno (`POST /api/crews/:id/members`).
 - Administrativo altera a disponibilidade de equipes sem ocorrência reservada (`PATCH /api/crews/:id/availability`).
-- Chat persistente na tela Guarnições: crie uma conversa, escolha outras equipes em serviço e use **Adicionar guarnições** para ampliar o grupo (até vinte equipes). Cada mensagem exibe usuário, equipe e horário. Integrantes das equipes adicionadas podem ler o histórico da conversa durante o mesmo turno.
+- Chat persistente em **Chat operacional**, no menu lateral logo abaixo de Guarnições: crie uma conversa, escolha outras equipes em serviço e use **Adicionar guarnições** para ampliar o grupo (até vinte equipes). Cada mensagem exibe usuário, equipe e horário. Integrantes das equipes adicionadas podem ler o histórico da conversa durante o mesmo turno. O chat permanece disponível durante atendimentos.
+- Novas mensagens geram notificações persistentes para os integrantes ativos dos turnos participantes, exceto o remetente. O aviso aparece na central de notificações, sinaliza o menu do chat e oferece **Abrir conversa**. A notificação não contém o texto da mensagem, preservando a exigência de justificativa para consulta administrativa. O toque curto respeita as preferências de som e depende da liberação de áudio pelo navegador após interação com a página. Não há redirecionamento automático para Atendimento ao receber mensagem de chat.
+- Em Guarnições, **Ver localização no mapa** abre a equipe com zoom e identificação da posição atual ou última posição GPS registrada, inclusive após o fim do turno. Equipes sem coordenadas exibem **Sem localização GPS**. A tela do mapa informa horário e distingue GPS ativo de posição sem atualização.
 - A API valida participação e turno em cada leitura e envio; Oficial também precisa pertencer a uma equipe participante. Saída individual e fim do turno revogam o acesso. Um novo turno não herda conversas do anterior.
 - Administrativo seleciona a conversa e informa justificativa de ao menos dez caracteres antes de consultar mensagens. A autorização dura quinze minutos, vale apenas para aquela conversa e sessão, e a justificativa e as consultas são registradas em auditoria. A autorização de consulta não permite enviar mensagens nem adicionar equipes sem ser integrante.
 - Os registros antigos de `CrewMessage` permanecem no banco, sem migração automática. O endpoint legado não concede mais leitura global a Oficial/Administrativo; novos chats usam `/api/crew-chats`.
@@ -458,7 +460,7 @@ Eventos Socket.IO: `dispatch:new`, `notification`, `attendance:changed`, `data:c
 
 ## Testes e build
 
-A última execução aprovou **28 testes de integração**, incluindo chat privado, consulta administrativa auditada, grupos, revogação de acesso, atendimento automático sob concorrência, GPS e conexões Socket.IO reais. O registro de verificações, impasses corrigidos e limitações está em [VALIDACAO.md](VALIDACAO.md).
+A última execução aprovou **29 testes de integração**, incluindo chat privado, notificações persistentes restritas aos participantes, consulta administrativa auditada, grupos, revogação de acesso, atendimento automático sob concorrência, GPS e conexões Socket.IO reais. O registro de verificações, impasses corrigidos e limitações está em [VALIDACAO.md](VALIDACAO.md).
 
 Na raiz:
 

@@ -21,6 +21,7 @@ import {
   AuditLog,
   ChatAccess,
   ChatMessage,
+  Notification,
 } from '../models/index.js';
 
 let mongo,
@@ -147,6 +148,34 @@ test('chat privado inclui a própria equipe e bloqueia pessoas externas mesmo co
     (await post(first.agent, `/crew-chats/${chat._id}/messages`, { text: '  ' })).status,
     422,
   );
+});
+
+test('mensagens geram notificações persistentes somente para integrantes participantes, sem conteúdo privado', async () => {
+  const message = await ChatMessage.findOne({ chat: chat._id });
+  const notices = await Notification.find({ chatMessage: message._id });
+  assert.deepEqual(
+    notices.map((n) => String(n.user)).sort(),
+    [String(teammate.user._id), String(second.user._id)].sort(),
+  );
+  assert.ok(
+    notices.every(
+      (n) =>
+        n.kind === 'chat' &&
+        String(n.chat) === chat._id &&
+        !n.read &&
+        !n.message.includes(message.text),
+    ),
+  );
+  const inbox = await second.agent.get('/api/notifications');
+  assert.ok(inbox.body.some((n) => n.chatMessage === String(message._id)));
+  assert.equal(
+    (await admin.agent.get('/api/notifications')).body.filter((n) => n.kind === 'chat').length,
+    0,
+  );
+  const notice = notices.find((n) => String(n.user) === String(second.user._id));
+  assert.equal((await patch(first.agent, `/notifications/${notice._id}/read`, {})).status, 404);
+  assert.equal((await patch(second.agent, `/notifications/${notice._id}/read`, {})).status, 200);
+  assert.equal((await Notification.findById(notice._id)).read, true);
 });
 
 test('consulta administrativa exige motivo, é auditada e não vale para outra sessão ou conversa', async () => {
@@ -437,9 +466,13 @@ test('Socket.IO entrega atualização do chat apenas às equipes participantes e
     const outsider = await open(officer);
     const privileged = await open(admin);
     const leaks = [];
+    outsider.on('notification', (event) => leaks.push(event));
+    privileged.on('notification', (event) => leaks.push(event));
+    insider.on('dispatch:new', (event) => leaks.push(event));
     outsider.on('chat:changed', (event) => leaks.push(event));
     privileged.on('chat:changed', (event) => leaks.push(event));
     const update = once(insider, 'chat:changed', { signal: AbortSignal.timeout(5000) });
+    const notification = once(insider, 'notification', { signal: AbortSignal.timeout(5000) });
     assert.equal(
       (
         await post(first.agent, `/crew-chats/${chat._id}/messages`, {
@@ -449,6 +482,10 @@ test('Socket.IO entrega atualização do chat apenas às equipes participantes e
       201,
     );
     assert.equal((await update)[0].chatId, chat._id);
+    const alert = (await notification)[0];
+    assert.equal(alert.kind, 'chat');
+    assert.equal(alert.chat, chat._id);
+    assert.ok(!alert.message.includes('Mensagem restrita por socket.'));
     const positionUpdate = once(outsider, 'crew:location', { signal: AbortSignal.timeout(5000) });
     assert.equal(
       (
@@ -482,6 +519,7 @@ test('Socket.IO entrega atualização do chat apenas às equipes participantes e
       201,
     );
     assert.deepEqual((await auditedUpdate)[0], { chatId: chat._id });
+    assert.deepEqual(leaks, []);
     // Expiration/removal of the sender prevents any further message write.
     await Crew.updateOne({ _id: firstCrew._id }, { shiftEnd: new Date(Date.now() - 1000) });
     assert.equal(

@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { MapPin, Car } from 'lucide-react';
 import { useData } from '../hooks/useData';
 import { useApp } from '../context/AppContext';
@@ -7,7 +8,12 @@ import { PageTitle, Panel, Select, Badge } from '../components/UI';
 import OperationalMap from '../components/OperationalMap';
 export default function MapPage() {
   const app = useApp();
-  const [filter, setFilter] = useState({});
+  const [query] = useSearchParams();
+  const requestedCrew = /^[a-f\d]{24}$/i.test(query.get('crew') || '') ? query.get('crew') : '';
+  const [filter, setFilter] = useState({ crew: requestedCrew });
+  useEffect(() => {
+    setFilter((previous) => ({ ...previous, city: '', crew: requestedCrew }));
+  }, [requestedCrew]);
   const { data: cities } = useData('/cities', []);
   const { data: crews } = useData('/crews', []);
   const { data: vehicles } = useData(
@@ -86,6 +92,7 @@ export default function MapPage() {
           cities={cities.filter((c) => !filter.city || c._id === filter.city)}
           occurrences={occurrences.items}
           vehicles={filteredVehicles}
+          focusCrew={filter.crew}
           crews={crews.filter(
             (c) =>
               (!filter.city || c.city?._id === filter.city) &&

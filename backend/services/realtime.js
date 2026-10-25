@@ -104,6 +104,7 @@ export async function queueCrewNotifications(
 export function deliverNotifications(rows) {
   for (const row of rows) {
     io?.to(`user:${row.user}`).emit('notification', row);
+    if (row.kind === 'chat') continue;
     io?.to(`user:${row.user}`).emit('dispatch:new', {
       occurrenceId: row.occurrence,
       kind: row.kind,

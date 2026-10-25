@@ -1,10 +1,62 @@
-import { MapContainer, TileLayer, CircleMarker, Popup } from 'react-leaflet';
+import { useEffect, useRef } from 'react';
+import { MapContainer, TileLayer, CircleMarker, Popup, useMap } from 'react-leaflet';
 import { Badge } from './UI';
+function FocusCrew({ crew }) {
+  const map = useMap();
+  const latitude = crew?.location?.latitude;
+  const longitude = crew?.location?.longitude;
+  useEffect(() => {
+    if (Number.isFinite(latitude) && Number.isFinite(longitude))
+      map.setView([latitude, longitude], 16);
+  }, [map, crew?._id, latitude, longitude]);
+  return null;
+}
+function CrewMarker({ crew: c, focused }) {
+  const marker = useRef(null);
+  const live =
+    c.members.length > 0 &&
+    +new Date(c.shiftEnd) > Date.now() &&
+    c.location.sharing &&
+    Date.now() - +new Date(c.location.locatedAt) < 60000;
+  useEffect(() => {
+    if (focused) marker.current?.openPopup();
+  }, [focused]);
+  return (
+    <CircleMarker
+      ref={marker}
+      center={[c.location.latitude, c.location.longitude]}
+      radius={10}
+      pathOptions={{
+        color: live ? '#098b62' : '#68788a',
+        weight: 3,
+        fillColor: live ? '#26c995' : '#aeb8c1',
+        fillOpacity: 0.85,
+      }}
+    >
+      <Popup>
+        <strong>{c.name}</strong>
+        <p>
+          {c.city?.name} · {c.vehicle?.prefix || 'Sem viatura'}
+        </p>
+        <p>{live ? 'GPS ativo' : 'Última posição · GPS sem atualização'}</p>
+        <p>
+          Precisão:{' '}
+          {Number.isFinite(c.location.accuracy)
+            ? `${Math.round(c.location.accuracy)} m`
+            : 'Não informada'}
+          <br />
+          Atualizado: {new Date(c.location.locatedAt).toLocaleString('pt-BR')}
+        </p>
+      </Popup>
+    </CircleMarker>
+  );
+}
 export default function OperationalMap({
   cities = [],
   occurrences = [],
   vehicles = [],
   crews = [],
+  focusCrew = '',
   compact = false,
 }) {
   return (
@@ -15,6 +67,7 @@ export default function OperationalMap({
       className={`operational-map ${compact ? 'compact' : ''}`}
       aria-label="Mapa operacional dos municípios"
     >
+      <FocusCrew crew={crews.find((c) => c._id === focusCrew)} />
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
         url={`https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png?key=${encodeURIComponent(import.meta.env.VITE_CARTO_API_KEY || 'cb1_4u0a_1_93cf66948d960a7d71de1c27')}`}
@@ -84,39 +137,13 @@ export default function OperationalMap({
       {crews
         .filter(
           (c) =>
-            c.members.length &&
-            +new Date(c.shiftEnd) > Date.now() &&
+            ((c.members.length && +new Date(c.shiftEnd) > Date.now()) || c._id === focusCrew) &&
             Number.isFinite(c.location?.latitude) &&
             Number.isFinite(c.location?.longitude),
         )
-        .map((c) => {
-          const live = c.location.sharing && Date.now() - +new Date(c.location.locatedAt) < 60000;
-          return (
-            <CircleMarker
-              key={`crew-${c._id}`}
-              center={[c.location.latitude, c.location.longitude]}
-              radius={10}
-              pathOptions={{
-                color: live ? '#098b62' : '#68788a',
-                weight: 3,
-                fillColor: live ? '#26c995' : '#aeb8c1',
-                fillOpacity: 0.85,
-              }}
-            >
-              <Popup>
-                <strong>{c.name}</strong>
-                <p>
-                  {c.city?.name} · {c.vehicle?.prefix || 'Sem viatura'}
-                </p>
-                <p>{live ? 'GPS ativo' : 'Última posição · GPS sem atualização'}</p>
-                <p>
-                  Precisão: {Math.round(c.location.accuracy)} m<br />
-                  Atualizado: {new Date(c.location.locatedAt).toLocaleString('pt-BR')}
-                </p>
-              </Popup>
-            </CircleMarker>
-          );
-        })}
+        .map((c) => (
+          <CrewMarker key={`crew-${c._id}`} crew={c} focused={c._id === focusCrew} />
+        ))}
     </MapContainer>
   );
 }

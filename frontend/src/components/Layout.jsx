@@ -6,6 +6,7 @@ import {
   Send,
   Radio,
   UsersRound,
+  MessageSquare,
   Car,
   Map,
   ChartNoAxesCombined,
@@ -34,6 +35,7 @@ const links = [
   ['/despachos', 'Despachos', Send, 'management'],
   ['/atendimento', 'Atendimento', Radio, 'all'],
   ['/guarnicoes', 'Guarnições', UsersRound, 'all'],
+  ['/chat-operacional', 'Chat operacional', MessageSquare, 'all'],
   ['/viaturas', 'Viaturas', Car, 'management'],
   ['/mapa', 'Mapa operacional', Map, 'all'],
   ['/relatorios', 'Relatórios', ChartNoAxesCombined, 'management'],
@@ -91,7 +93,14 @@ export default function Layout() {
     .filter(
       (l) =>
         !app.activeAttendance ||
-        ['/dashboard', '/ocorrencias', '/atendimento', '/guarnicoes', '/mapa'].includes(l[0]),
+        [
+          '/dashboard',
+          '/ocorrencias',
+          '/atendimento',
+          '/guarnicoes',
+          '/chat-operacional',
+          '/mapa',
+        ].includes(l[0]),
     );
   const title =
     links.find((l) => location.pathname.startsWith(l[0]))?.[1] || 'Central de operações';
@@ -146,6 +155,10 @@ export default function Layout() {
                 {app.user.role === 'Praça' && path === '/guarnicoes' ? 'Minha guarnição' : label}
               </span>
               {path === '/atendimento' && app.ringing && <i className="notification-dot" />}
+              {path === '/chat-operacional' &&
+                notifications.some((n) => n.kind === 'chat' && !n.read) && (
+                  <i className="notification-dot" />
+                )}
             </NavLink>
           ))}
         </nav>
@@ -259,6 +272,18 @@ export default function Layout() {
                 <strong>{n.title}</strong>
                 <p>{n.message}</p>
                 <small>{fmtDateTime(n.createdAt)}</small>
+                {n.kind === 'chat' && n.chat && (
+                  <NavLink
+                    className="button secondary"
+                    to={`/chat-operacional?chat=${n.chat}`}
+                    onClick={() => {
+                      setBell(false);
+                      if (!n.read) app.run(() => api.patch(`/notifications/${n._id}/read`));
+                    }}
+                  >
+                    Abrir conversa
+                  </NavLink>
+                )}
                 {!n.read && (
                   <Button
                     variant="ghost"

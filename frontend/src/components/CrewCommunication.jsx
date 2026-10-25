@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Send, MessageSquare, Plus, ShieldCheck } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { useData } from '../hooks/useData';
@@ -8,6 +9,7 @@ import { Panel, Select, Input, Textarea, Button, Empty, Modal } from './UI';
 
 export default function CrewCommunication({ crews }) {
   const app = useApp();
+  const [query, setQuery] = useSearchParams();
   const admin = app.user.role === 'Administrativo';
   const { data: chats } = useData('/crew-chats', []);
   const [selected, setSelected] = useState('');
@@ -81,6 +83,12 @@ export default function CrewCommunication({ crews }) {
     setText('');
     setNotice('');
   }
+  useEffect(() => {
+    const chatId = query.get('chat');
+    if (!chatId) return;
+    select(chatId);
+    setQuery({}, { replace: true });
+  }, [query]);
   async function perform(fn, message) {
     setBusy(true);
     try {

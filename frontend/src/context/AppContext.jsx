@@ -13,6 +13,7 @@ export function AppProvider({ children }) {
   const [toast, setToast] = useState('');
   const [revision, setRevision] = useState(0);
   const [chatRevision, setChatRevision] = useState(0);
+  const [notificationRevision, setNotificationRevision] = useState(0);
   const [now, setNow] = useState(Date.now());
   const [remaining, setRemaining] = useState(300);
   const [online, setOnline] = useState(false);
@@ -26,6 +27,7 @@ export function AppProvider({ children }) {
   const last = useRef(Date.now());
   const sent = useRef(0);
   const audio = useRef(null);
+  const heardNotifications = useRef(new Set());
   const loggedOut = useRef(false);
   const activityChannel = useRef(null);
   const refresh = () => setRevision((v) => v + 1);
@@ -182,6 +184,30 @@ export function AppProvider({ children }) {
       window.dispatchEvent(new CustomEvent('srgop:crew-location', { detail: position }));
     });
     socket.on('notification', (n) => {
+      if (n.kind === 'chat') {
+        setNotificationRevision((v) => v + 1);
+        if (heardNotifications.current.has(n._id)) return;
+        heardNotifications.current.add(n._id);
+        if (heardNotifications.current.size > 500)
+          heardNotifications.current.delete(heardNotifications.current.values().next().value);
+        if (notifications && settings?.notificationsEnabled !== false)
+          setToast(`${n.title}: ${n.message}`);
+        const ctx = audio.current;
+        if (sound && settings?.soundEnabled !== false && ctx?.state === 'running') {
+          [660, 880].forEach((frequency, index) => {
+            const oscillator = ctx.createOscillator();
+            const gain = ctx.createGain();
+            oscillator.frequency.value = frequency;
+            gain.gain.value = 0.06;
+            oscillator.connect(gain);
+            gain.connect(ctx.destination);
+            const at = ctx.currentTime + index * 0.16;
+            oscillator.start(at);
+            oscillator.stop(at + 0.12);
+          });
+        }
+        return;
+      }
       if (notifications && settings?.notificationsEnabled !== false)
         setToast(`${n.title}: ${n.message}`);
       refresh();
@@ -201,7 +227,14 @@ export function AppProvider({ children }) {
       socket.disconnect();
       setOnline(false);
     };
-  }, [user?._id, user?.crew, notifications, settings?.notificationsEnabled]);
+  }, [
+    user?._id,
+    user?.crew,
+    notifications,
+    settings?.notificationsEnabled,
+    sound,
+    settings?.soundEnabled,
+  ]);
   useEffect(() => {
     if (!ringing || !sound || settings?.soundEnabled === false) return;
     const beep = () => {
@@ -271,6 +304,7 @@ export function AppProvider({ children }) {
         refresh,
         revision,
         chatRevision,
+        notificationRevision,
         now,
         remaining,
         online,

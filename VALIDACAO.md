@@ -1,5 +1,14 @@
 # Validação e impasses — SRGOP
 
+## Guia de chat, notificações e localização pelo mapa
+
+- Nova rota `/chat-operacional`, abaixo de Guarnições no menu lateral, disponível durante atendimentos. O chat foi retirado da página de Guarnições; a consulta administrativa continua exigindo justificativa.
+- Cada mensagem grava notificações na mesma transação, para os integrantes ativos das guarnições/turnos participantes, excluindo o remetente. As notificações contêm referência à conversa e à mensagem, sem transcrição do conteúdo privado. Não são enviadas globalmente à central nem a administradores apenas por terem autorização de consulta.
+- Evento de notificação do chat toca dois tons curtos conforme as preferências, atualiza a central e sinaliza mensagens não lidas no menu. **Abrir conversa** direciona ao chat correto e marca aquela notificação como lida. Mensagens de chat não disparam `dispatch:new` nem interrompem a página com navegação automática.
+- Botão de localização em cada guarnição com coordenadas abre `/mapa?crew=ID`, aplica zoom 16 e abre a identificação do marcador. A última posição permanece consultável se o turno terminou; sem coordenadas, o botão indica indisponibilidade.
+
+Validação: 29 testes de integração aprovados, incluindo isolamento das notificações por usuário, leitura somente pelo destinatário, ausência de texto privado nos avisos e entrega Socket.IO sem emitir um despacho. Chrome headless com banco temporário: menu e rota do chat, central com link para a conversa, criação dos dois osciladores do toque, foco no marcador, posição atual/última posição, acesso ao chat durante atendimento e navegação móvel. Zero erros JavaScript no fluxo. O teste de áudio verifica a geração dos tons no navegador, sem avaliação auditiva em aparelho físico.
+
 ## Chat, atendimento automático e GPS — 24/10/2026
 
 - Chat com grupos de até vinte guarnições, usuário remetente, horário, histórico paginado e notificações Socket.IO direcionadas. Participação exige vínculo atual com o turno da equipe; Oficial não possui acesso global. Inclusão de novas equipes e envio são serializados com as alterações de integrantes no banco.
@@ -41,7 +50,7 @@ As verificações visuais mencionadas nas seções seguintes são registros hist
 
 Código organizado em `frontend` e `backend`, com banco MongoDB, API, permissões no servidor, interface por perfil e dados demonstrativos. Instruções de instalação, variáveis e deploy estão no [README](README.md).
 
-Última execução da suíte: **28 testes aprovados, zero falhas**. Build de produção do frontend concluído com sucesso. Essas verificações não substituem homologação com os usuários do batalhão nem testes de carga em infraestrutura de produção.
+Última execução da suíte: **29 testes aprovados, zero falhas**. Build de produção do frontend concluído com sucesso. Essas verificações não substituem homologação com os usuários do batalhão nem testes de carga em infraestrutura de produção.
 
 ## Verificações automatizadas
 

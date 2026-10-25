@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import CrewManagement from '../components/CrewManagement';
-import CrewCommunication from '../components/CrewCommunication';
+import { Link } from 'react-router-dom';
 import {
   Plus,
   UsersRound,
@@ -140,6 +140,24 @@ export default function Crews() {
                   </div>
                 </div>
                 <div className="attendance-actions">
+                  {Number.isFinite(c.location?.latitude) &&
+                  Number.isFinite(c.location?.longitude) ? (
+                    <Link
+                      className="button secondary"
+                      to={`/mapa?crew=${c._id}`}
+                      aria-label={`Ver localização de ${c.name} no mapa`}
+                    >
+                      <Navigation size={16} /> Ver localização no mapa
+                    </Link>
+                  ) : (
+                    <Button
+                      variant="secondary"
+                      disabled
+                      title="Esta guarnição ainda não compartilhou uma posição GPS."
+                    >
+                      Sem localização GPS
+                    </Button>
+                  )}
                   <CrewManagement crew={c} />
                   {!app.activeAttendance &&
                     !app.user.crew &&
@@ -200,7 +218,6 @@ export default function Crews() {
           })}
       </div>
       {!crews.length && <Empty text="Nenhuma guarnição cadastrada." />}
-      <CrewCommunication crews={crews} />
       {editing && (
         <Modal
           title={editing === 'new' ? 'Cadastrar guarnição' : 'Alterar guarnição'}

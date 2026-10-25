@@ -1,8 +1,8 @@
-import { Crew, CrewChat, ChatMessage, ChatAccess } from '../models/index.js';
+import { Crew, CrewChat, ChatMessage, ChatAccess, User, Notification } from '../models/index.js';
 import { requireValue } from '../utils/errors.js';
 import { transaction } from '../services/operations.js';
 import { audit } from '../services/audit.js';
-import { crewChatChanged } from '../services/realtime.js';
+import { crewChatChanged, deliverNotifications } from '../services/realtime.js';
 import { id } from '../middlewares/validation.js';
 
 const activeCrew = (actor, session) =>
@@ -185,8 +185,32 @@ export async function send(req, res) {
     );
     chat.updatedAt = new Date();
     await chat.save({ session });
-    return { chat, message };
+    const crews = await Crew.find({
+      $or: chat.memberships.map((m) => ({ _id: m.crew, shift: m.shift })),
+      shiftEnd: { $gt: new Date() },
+      status: { $ne: 'Fora de serviço' },
+    }).session(session);
+    const recipients = await User.find({
+      _id: { $ne: req.user._id },
+      active: true,
+      $or: crews.map((c) => ({ _id: { $in: c.members }, crew: c._id })),
+    }).session(session);
+    const notifications = recipients.length
+      ? await Notification.insertMany(
+          recipients.map((user) => ({
+            user: user._id,
+            kind: 'chat',
+            chat: chat._id,
+            chatMessage: message._id,
+            title: 'Nova mensagem no chat operacional',
+            message: `Nova mensagem na conversa ${chat.name}. Abra o chat para consultar.`,
+          })),
+          { session },
+        )
+      : [];
+    return { chat, message, notifications };
   });
   await crewChatChanged(result.chat);
+  deliverNotifications(result.notifications);
   res.status(201).json(result.message);
 }
