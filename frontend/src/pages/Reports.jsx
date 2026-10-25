@@ -17,7 +17,7 @@ export default function Reports() {
           aria-pressed={mode === 'crews'}
           onClick={() => setMode('crews')}
         >
-          Rastreabilidade de guarnições
+          Guarnições
         </Button>
         <Button
           variant={mode === 'general' ? 'primary' : 'secondary'}
