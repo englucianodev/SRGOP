@@ -162,6 +162,8 @@ export async function create(req, res) {
             {
               occurrence: created._id,
               crew: crew._id,
+              shift: crew.shift,
+              members: crew.members,
               acceptedBy: req.user._id,
               startedAt: created.startedAt,
             },

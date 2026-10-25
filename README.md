@@ -458,9 +458,21 @@ Eventos Socket.IO: `dispatch:new`, `notification`, `attendance:changed`, `data:c
 - Indicadores de encerramentos, armas e veículos recuperados usam a data de conclusão. A distribuição de ocorrências usa a data do fato.
 - Atividade sincronizada entre abas, recuperação de despachos pendentes ao reconectar e logout restrito à sessão encerrada.
 
+## Rastreabilidade das guarnições
+
+Em **Relatórios → Rastreabilidade de guarnições**, informe o período inicial/final, selecione uma ou mais equipes e clique em **Gerar relatório**. Sem seleção de equipes, todas são incluídas. A emissão inicial considera o mês atual. **Indicadores gerais** mantém o relatório anterior e seus filtros.
+
+Cada equipe apresenta dias civis trabalhados sem duplicação, turnos que se sobrepõem ao período, integrantes com ingressos/saídas e reingressos, movimentações e as ocorrências atendidas como equipe principal ou apoio. O período considera a execução do serviço e do atendimento em `America/Fortaleza`, e não a data do fato. Turnos iniciados antes da data inicial e atendimentos que continuam após o fim do turno são incluídos quando alcançam o período solicitado. Um turno sem encerramento tem como limite observado a data prevista ou a emissão, o que ocorrer primeiro.
+
+Novos turnos preservam nome da equipe, município e viatura no momento do início; novos atendimentos e apoios registram o turno e seus integrantes no momento do aceite/autorização. A composição é consultada pelo histórico de turnos, sem depender dos integrantes atuais ou da situação ativa do usuário. Dados antigos são aproveitados: sem ingresso registrado, o intervalo é identificado como estimado; sem vínculo explícito, o atendimento só é associado quando há um único turno compatível. Casos sem correspondência ou ambíguos aparecem em **Atendimentos sem vínculo histórico de turno**. Município histórico não registrado não é preenchido automaticamente com o cadastro atual.
+
+**Exportar rastreabilidade CSV** inclui turnos, intervalos dos integrantes e atendimentos. **Imprimir / PDF** inclui também o histórico de movimentações. Os critérios e o instante de emissão aparecem no relatório. Limites: mil turnos e dez mil atendimentos/apoios por consulta; ao exceder, o sistema pede filtros mais restritos, sem truncar silenciosamente o relatório.
+
+API, restrita a Oficial e Administrativo: `GET /api/reports/crews?from=2026-10-01&to=2026-10-25&crews=ID1,ID2`. `from` e `to` são obrigatórios; `crews` é opcional e aceita até cem IDs separados por vírgula. Acrescente `format=csv` para exportar. Os indicadores gerais continuam em `/api/reports`.
+
 ## Testes e build
 
-A última execução aprovou **29 testes de integração**, incluindo chat privado, notificações persistentes restritas aos participantes, consulta administrativa auditada, grupos, revogação de acesso, atendimento automático sob concorrência, GPS e conexões Socket.IO reais. O registro de verificações, impasses corrigidos e limitações está em [VALIDACAO.md](VALIDACAO.md).
+A última execução aprovou **38 testes de integração**, incluindo rastreabilidade histórica das guarnições, chat privado, notificações persistentes restritas aos participantes, consulta administrativa auditada, grupos, revogação de acesso, atendimento automático sob concorrência, GPS e conexões Socket.IO reais. O registro de verificações, impasses corrigidos e limitações está em [VALIDACAO.md](VALIDACAO.md).
 
 Na raiz:
 

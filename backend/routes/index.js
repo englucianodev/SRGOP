@@ -10,6 +10,7 @@ import * as resource from '../controllers/resourceController.js';
 import * as chat from '../controllers/chatController.js';
 import * as gps from '../controllers/gpsController.js';
 import { reports } from '../controllers/reportController.js';
+import { crewReports } from '../controllers/crewReportController.js';
 import {
   dispatchOccurrence,
   acceptOccurrence,
@@ -241,6 +242,7 @@ router.put('/vehicles/:id', admin, v(s.vehicle), a(resource.saveVehicle));
 router.delete('/vehicles/:id', admin, a(resource.removeVehicle));
 router.patch('/vehicles/:id/location', v(s.location), a(resource.location));
 router.get('/reports', management, a(reports));
+router.get('/reports/crews', management, a(crewReports));
 router.get('/settings', a(resource.settings));
 router.put('/settings', admin, v(s.settings), a(resource.saveSettings));
 router.get('/cpu', management, a(resource.cpu));

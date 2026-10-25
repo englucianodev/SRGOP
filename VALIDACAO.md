@@ -1,5 +1,16 @@
 # Validação e impasses — SRGOP
 
+## Rastreabilidade das guarnições — 25/10/2026
+
+- Nova seção em Relatórios com seleção múltipla de guarnições, datas inicial e final e geração explícita. Exportação CSV e impressão/PDF usam os mesmos critérios emitidos. Os indicadores anteriores continuam disponíveis em Indicadores gerais.
+- Relatório por equipe e turno, dias civis trabalhados, ingressos/saídas/reingressos dos integrantes, movimentações, ocorrências principais e apoios, responsável e integrantes no início de cada atendimento. Datas e dias calculados em America/Fortaleza, com limites inclusivos por dia e exclusão de turnos que terminaram exatamente à meia-noite da data inicial.
+- Novos turnos guardam identificação da equipe/município/viatura, e novas movimentações guardam os nomes dos envolvidos. Aceite comum, atendimento automático e autorização de apoio registram o turno e os integrantes. Registros antigos são reconstruídos pelo histórico disponível, com intervalos estimados identificados; turnos ambíguos não são escolhidos arbitrariamente.
+- Serviços que começaram antes do período e continuaram nele são incluídos. Atendimentos podem continuar vinculados ao turno original depois do fim do serviço. Turnos sem encerramento usam o limite previsto ou o instante de emissão. Limites de volume provocam erro explícito, sem apresentar resultado truncado como relatório completo.
+
+Verificações: 38 testes de integração com MongoDB temporário, incluindo seleção múltipla, troca de composição, usuários inativos, trabalho noturno, reingresso, apoio, data do fato anterior ao atendimento, atendimento após fim do turno, ausência/ambiguidade de histórico, permissões, validação de filtros, CSV e gravação de novos vínculos. Build de produção e Prettier conferidos.
+
+Chrome headless com dados fictícios: emissão por duas equipes, repetição da emissão com os mesmos filtros, composição histórica, download CSV, expansão das movimentações antes da impressão, interface móvel e acesso aos indicadores gerais, sem erros JavaScript. Nenhum banco persistente foi modificado e nenhum deploy foi executado. Para disponibilizar, atualize backend e frontend; não é necessário executar seed.
+
 ## Guia de chat, notificações e localização pelo mapa
 
 - Nova rota `/chat-operacional`, abaixo de Guarnições no menu lateral, disponível durante atendimentos. O chat foi retirado da página de Guarnições; a consulta administrativa continua exigindo justificativa.
@@ -50,7 +61,7 @@ As verificações visuais mencionadas nas seções seguintes são registros hist
 
 Código organizado em `frontend` e `backend`, com banco MongoDB, API, permissões no servidor, interface por perfil e dados demonstrativos. Instruções de instalação, variáveis e deploy estão no [README](README.md).
 
-Última execução da suíte: **29 testes aprovados, zero falhas**. Build de produção do frontend concluído com sucesso. Essas verificações não substituem homologação com os usuários do batalhão nem testes de carga em infraestrutura de produção.
+Última execução da suíte: **38 testes aprovados, zero falhas**. Build de produção do frontend concluído com sucesso. Essas verificações não substituem homologação com os usuários do batalhão nem testes de carga em infraestrutura de produção.
 
 ## Verificações automatizadas
 

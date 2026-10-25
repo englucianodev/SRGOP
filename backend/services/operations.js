@@ -8,6 +8,7 @@ import {
   Attendance,
   CrewShift,
   SupportRequest,
+  City,
 } from '../models/index.js';
 import { requireValue } from '../utils/errors.js';
 import { audit } from './audit.js';
@@ -160,7 +161,16 @@ export async function acceptOccurrence(actor, id) {
     row.history.push(history(actor, 'Aceite'));
     await row.save({ session });
     await Attendance.create(
-      [{ occurrence: row._id, crew: row.crew, acceptedBy: actor._id, startedAt: row.startedAt }],
+      [
+        {
+          occurrence: row._id,
+          crew: row.crew,
+          shift: reservedCrew.shift,
+          members: reservedCrew.members,
+          acceptedBy: actor._id,
+          startedAt: row.startedAt,
+        },
+      ],
       { session },
     );
     await audit(actor, 'Aceite', 'Occurrence', row._id, '', session);
@@ -227,6 +237,7 @@ export async function closeOccurrence(actor, id, input) {
         await releaseCrew(support.targetCrew, occurrence._id, session);
       }
       support.status = 'Concluído';
+      support.endedAt = endedAt;
       await support.save({ session });
     }
     await audit(actor, 'Encerramento', 'Occurrence', id, input.summary.slice(0, 1900), session);
@@ -271,7 +282,20 @@ export async function joinCrew(actor, id, driver) {
       row.location = { sharing: false };
       row.shiftEnd = new Date(+row.shiftStart + 86400000);
       const [shift] = await CrewShift.create(
-        [{ crew: row._id, start: row.shiftStart, plannedEnd: row.shiftEnd }],
+        [
+          {
+            crew: row._id,
+            crewName: row.name,
+            city: row.city,
+            cityName: (await City.findById(row.city).session(session))?.name,
+            vehicle: row.vehicle,
+            vehiclePrefix: row.vehicle
+              ? (await Vehicle.findById(row.vehicle).session(session))?.prefix
+              : undefined,
+            start: row.shiftStart,
+            plannedEnd: row.shiftEnd,
+          },
+        ],
         { session },
       );
       row.shift = shift._id;
@@ -284,7 +308,15 @@ export async function joinCrew(actor, id, driver) {
       { _id: row.shift },
       {
         $addToSet: { members: actor._id },
-        $push: { changes: { member: actor._id, actor: actor._id, action: 'Ingresso' } },
+        $push: {
+          changes: {
+            member: actor._id,
+            actor: actor._id,
+            memberName: actor.name,
+            actorName: actor.name,
+            action: 'Ingresso',
+          },
+        },
       },
       { session },
     );
@@ -339,6 +371,9 @@ export async function endShift(id, actor, reason = 'Encerramento automático ap�
         { status: 'Disponível' },
         { session },
       );
+    const memberNames = await User.find({ _id: { $in: members } })
+      .select('name')
+      .session(session);
     await CrewShift.updateOne(
       { _id: crew.shift, end: null },
       {
@@ -347,7 +382,9 @@ export async function endShift(id, actor, reason = 'Encerramento automático ap�
           changes: {
             $each: members.map((member) => ({
               member,
+              memberName: memberNames.find((u) => String(u._id) === String(member))?.name,
               actor: actor?._id,
+              actorName: actor?.name,
               action: 'Saída',
               reason,
             })),
@@ -413,6 +450,9 @@ export async function authorizeSupport(actor, id, approved) {
         { new: true, session },
       );
       requireValue(crew, 'A guarnição de apoio não está disponível.', 409);
+      support.shift = crew.shift;
+      support.members = crew.members;
+      support.startedAt = new Date();
       occurrence.history.push(history(actor, 'Apoio autorizado', crew.name));
       await occurrence.save({ session });
     }

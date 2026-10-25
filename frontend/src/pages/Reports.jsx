@@ -6,7 +6,32 @@ import { downloadFile } from '../services/api';
 import { params, duration, fmtDateTime } from '../utils/format';
 import { PageTitle, Panel, Button, Badge, Loading, Select } from '../components/UI';
 import OccurrenceFilters from '../components/OccurrenceFilters';
+import CrewTraceReport from '../components/CrewTraceReport';
 export default function Reports() {
+  const [mode, setMode] = useState('crews');
+  return (
+    <>
+      <div className="report-tabs no-print" aria-label="Tipo de relatório">
+        <Button
+          variant={mode === 'crews' ? 'primary' : 'secondary'}
+          aria-pressed={mode === 'crews'}
+          onClick={() => setMode('crews')}
+        >
+          Rastreabilidade de guarnições
+        </Button>
+        <Button
+          variant={mode === 'general' ? 'primary' : 'secondary'}
+          aria-pressed={mode === 'general'}
+          onClick={() => setMode('general')}
+        >
+          Indicadores gerais
+        </Button>
+      </div>
+      {mode === 'crews' ? <CrewTraceReport /> : <GeneralReports />}
+    </>
+  );
+}
+function GeneralReports() {
   const app = useApp();
   const [filters, setFilters] = useState({});
   const [group, setGroup] = useState('city');

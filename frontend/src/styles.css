@@ -3241,3 +3241,67 @@ select {
 .legend-dot.green {
   background: #098b62;
 }
+.report-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 22px;
+}
+.report-tabs .button,
+.trace-filters .form-actions .button {
+  max-width: 100%;
+  white-space: normal;
+}
+.trace-filters .form-actions {
+  justify-content: flex-start;
+}
+.trace-filters {
+  padding: 22px;
+}
+.trace-note {
+  margin: 0;
+  padding: 16px 22px;
+  line-height: 1.7;
+}
+.trace-shift {
+  padding: 20px 22px;
+  border-top: 1px solid var(--border);
+}
+.trace-shift h3 {
+  font-size: 15px;
+}
+.trace-shift h4 {
+  margin-top: 22px;
+  margin-bottom: 12px;
+}
+.trace-shift > p {
+  line-height: 1.7;
+}
+.trace-changes {
+  margin-top: 18px;
+}
+.trace-changes summary {
+  cursor: pointer;
+  padding: 8px 0;
+}
+@media print {
+  .trace-crew {
+    break-inside: auto;
+  }
+  .trace-shift {
+    break-inside: auto;
+  }
+  .trace-shift h3,
+  .trace-shift h4 {
+    break-after: avoid;
+  }
+  .trace-shift tr {
+    break-inside: avoid;
+  }
+  .trace-shift thead {
+    display: table-header-group;
+  }
+  .gps-control {
+    display: none !important;
+  }
+}

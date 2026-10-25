@@ -61,7 +61,9 @@ export async function manageMember(actor, crewId, input) {
         $push: {
           changes: {
             member: input.member,
+            memberName: (await User.findById(input.member).session(session))?.name,
             actor: actor._id,
+            actorName: actor.name,
             action: input.action,
             reason: input.reason,
           },
