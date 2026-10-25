@@ -104,7 +104,7 @@ export async function queueCrewNotifications(
 export function deliverNotifications(rows) {
   for (const row of rows) {
     io?.to(`user:${row.user}`).emit('notification', row);
-    if (row.kind === 'chat') continue;
+    if (['chat', 'pendente'].includes(row.kind)) continue;
     io?.to(`user:${row.user}`).emit('dispatch:new', {
       occurrenceId: row.occurrence,
       kind: row.kind,
@@ -118,4 +118,7 @@ export function attendanceChanged(occurrence) {
       .emit('attendance:changed', { occurrenceId: occurrence._id, status: occurrence.status }),
   );
   changed('occurrences', occurrence.assignedMembers);
+}
+export function serviceChanged() {
+  io?.emit('service:changed');
 }

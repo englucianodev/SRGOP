@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { ROLES, PRIORITIES, VEHICLE_STATUSES, MODULES } from '../utils/constants.js';
+import { ROLES, RANKS, PRIORITIES, VEHICLE_STATUSES, MODULES } from '../utils/constants.js';
 z.config(z.locales.pt());
 export const id = z.string().regex(/^[a-f\d]{24}$/i, 'Identificador inválido.');
 const text = (min = 1, max = 200) =>
@@ -13,13 +13,38 @@ const coord = {
   latitude: z.number().min(-90).max(90).optional(),
   longitude: z.number().min(-180).max(180).optional(),
 };
+const personal = {
+  callSign: text(0, 80).optional(),
+  rank: z.enum(['', ...RANKS]).optional(),
+  serviceNumber: text(0, 40).optional(),
+  registration: text(0, 40).optional(),
+  phone: text(0, 30)
+    .refine((value) => !value || /^[+\d().\s-]{8,30}$/.test(value), 'Informe um telefone válido.')
+    .optional(),
+};
 export const schemas = {
+  account: z
+    .object({
+      name: text(3, 120),
+      email: z.email().max(200),
+      ...personal,
+      currentPassword: text(1, 128).optional(),
+    })
+    .strict(),
+  ownPassword: z
+    .object({ currentPassword: text(1, 128), password, confirmPassword: text(10, 72) })
+    .strict()
+    .refine((v) => v.password === v.confirmPassword, {
+      message: 'As senhas não coincidem.',
+      path: ['confirmPassword'],
+    }),
   login: z
     .object({ email: z.email(), password: text(1, 128), remember: z.boolean().default(false) })
     .strict(),
   register: z
     .object({
       name: text(3, 120),
+      ...personal,
       email: z.email().max(200),
       password,
       confirmPassword: text(10, 72),
@@ -34,6 +59,7 @@ export const schemas = {
   user: z
     .object({
       name: text(3, 120),
+      ...personal,
       email: z.email().max(200),
       city: id,
       role: z.enum(ROLES),

@@ -11,7 +11,7 @@ Interface em português do Brasil, tema institucional, modos claro e escuro e na
 - Ocorrências com protocolo automático, filtros, histórico de alterações, anexos PDF/JPEG/PNG autenticados e impressão.
 - Despacho e reencaminhamento para guarnições ativas e disponíveis; notificação persistida e aviso Socket.IO aos integrantes.
 - Aceite exclusivo sob concorrência, rejeição motivada, observações, cronômetro, pedido de apoio, autorização e encerramento com resumo e resultados.
-- Guarnições, motorista único, associação de viatura e turnos de 24 horas, com encerramento automático e antecipado autorizado.
+- Guarnições, motorista único, associação de viatura e serviço fixo das 8h às 8h seguintes, com encerramento automático e antecipado autorizado.
 - Viaturas, quilometragem, manutenção, motorista, associação de guarnição e atualização de coordenadas por API/interface.
 - Mapa React Leaflet com ocorrências, cidades, viaturas, prioridades e filtros.
 - Relatórios por período, município, crime, prioridade, situação, guarnição e viatura; tempo médio, resultados, usuários ativos, turnos e manutenção.
@@ -282,7 +282,7 @@ Abra **http://localhost:5173**. Utilize `localhost` tanto para a interface quant
 ### 7. Fluxo operacional de teste
 
 1. Entre como Praça, abra **Minha guarnição**, escolha uma equipe e confirme se será motorista.
-2. O primeiro ingresso inicia o turno de 24 horas. Outros integrantes entram no mesmo turno, sem reiniciá-lo.
+2. O serviço vai das 8h às 8h seguintes, independentemente do ingresso. Antes das 8h, o ingresso pertence ao serviço do dia anterior. Outros integrantes não estendem o limite.
 3. Registre uma ocorrência, com descrição de pelo menos dez caracteres e município/tipo válidos.
 4. Em outro perfil do navegador, entre como Oficial e assuma o CPU no Dashboard.
 5. Abra Despachos e encaminhe a ocorrência à guarnição em serviço.
@@ -319,15 +319,15 @@ Abra **http://localhost:5173**. Utilize `localhost` tanto para a interface quant
 ## Regras de negócio e consistência
 
 - Dia operacional no fuso `America/Fortaleza`. Datas persistidas em UTC e apresentadas em português do Brasil. Configure os dispositivos operacionais no fuso de Brasília/Fortaleza.
-- CPU protegido por índice único de `day`; apenas Oficial pode assumir. Administrativo altera a indicação com justificativa auditada, mantendo um registro por dia.
+- CPU protegido por índice único de `day`; apenas Oficial pode assumir. Administrativo altera a indicação com justificativa auditada. A data do serviço começa às 8h de Fortaleza; antes desse horário, vale o CPU do serviço iniciado no dia anterior.
 - MongoDB transactions em despacho, aceite, conclusão, ingresso e encerramento de turnos. Uma guarnição só pode ter uma ocorrência reservada por vez. O apoio autorizado também reserva a guarnição até o encerramento.
 - Ocorrências encerradas/canceladas não são editáveis. Exclusão de ocorrência é lógica e preserva histórico. Usuários são desativados em vez de apagados.
 - Alterações guardam campos alterados, autor e data no histórico. Senhas e tokens nunca integram o histórico.
 - Guarnições e viaturas vinculadas a ocorrências não podem ser excluídas. Cadastros ativos em turno não podem ser alterados administrativamente até encerrar o turno.
 - Um usuário só integra uma guarnição por vez e só mantém um atendimento principal ativo. Um motorista por guarnição.
-- O encerramento automático é verificado a cada 30 segundos e na inicialização da API. Despachos também verificam a expiração diretamente: não há janela de 30 segundos para receber novos despachos após expirar.
+- O encerramento automático tem agendamento para as 8h, verificação de recuperação a cada 30 segundos e na inicialização. A validade do serviço é conferida diretamente nas operações: às 8h não há prorrogação de acesso ao turno enquanto o agendador termina a limpeza. O encerramento automático registra o limite previsto.
 - Encerramento do turno libera integrantes. Despachos não aceitos retornam à fila. Atendimento já aceito continua acessível ao responsável até finalizar; a equipe não recebe novos despachos.
-- A saída durante as 24 horas é realizada pelo encerramento autorizado do turno completo. Não há remoção individual de integrante durante turno ativo nesta versão.
+- A saída antecipada e a remoção individual de integrantes exigem autorização e justificativa, preservando as movimentações no histórico.
 - Durante atendimento principal ativo, funções secundárias ficam ocultas no menu e bloqueadas no backend. Ocorrências, atendimento, informações essenciais da guarnição e posição da viatura permanecem acessíveis.
 - Pedidos de apoio listam equipes disponíveis e usam distância aproximada em linha reta, com posição cadastrada da viatura ou centro do município. Não representam roteamento ou localização garantidamente atual.
 - Anexos armazenados em coleção MongoDB separada, até dez arquivos por ocorrência, com limite de 5 MB por arquivo e validação da assinatura do formato. Download exige sessão e usa `Content-Disposition: attachment`.
@@ -470,9 +470,27 @@ Novos turnos preservam nome da equipe, município e viatura no momento do iníci
 
 API, restrita a Oficial e Administrativo: `GET /api/reports/crews?from=2026-10-01&to=2026-10-25&crews=ID1,ID2`. `from` e `to` são obrigatórios; `crews` é opcional e aceita até cem IDs separados por vírgula. Acrescente `format=csv` para exportar. Os indicadores gerais continuam em `/api/reports`.
 
+## Minha conta, foto e identificação pessoal
+
+O menu do perfil no canto superior direito abre por mouse, clique ou teclado e oferece **Minha conta** e **Sair**. A página `/minha-conta` não aparece no menu lateral e permanece disponível durante atendimentos. Nela o usuário altera nome completo, e-mail, Nome de Guerra, Posto/Graduação (lista das treze opções institucionais), Número/Barra, Matrícula e Telefone. Os campos também existem no cadastro público e na edição administrativa. Município, situação e perfil de acesso continuam sob controle administrativo.
+
+A foto aceita JPEG/PNG de até 2 MB, é centralizada e normalizada no navegador para miniatura de 384 × 384 e armazenada no MongoDB em coleção separada, sem depender do disco da hospedagem. Leitura e alteração são autenticadas e restritas à própria conta. A miniatura substitui as iniciais; sem foto, as iniciais são usadas como alternativa. **Meu serviço** identifica o policial por posto/graduação e nome de guerra, com nome completo como alternativa para cadastros antigos.
+
+Alterar e-mail exige a senha atual. Trocar a própria senha exige senha atual, nova senha de ao menos dez caracteres e confirmação. Todas as sessões são revogadas após a troca, e o usuário volta ao login. A atualização pessoal não permite mudar permissões ou a própria ativação.
+
+API autenticada: `PUT /api/auth/me`, `POST /api/auth/me/password`, `GET/PUT/DELETE /api/auth/me/photo` (upload multipart no campo `photo`).
+
+## Serviço das 8h e alertas ao CPU
+
+O período do serviço é fixo: 08h00 a 08h00 seguintes em `America/Fortaleza`, mesmo com ingresso tardio. O histórico mantém o horário real do ingresso. Ao iniciar a API atualizada, turnos ativos antigos sem a nova referência de serviço são adequados à janela das 8h relativa à sua data de início; se o limite já passou, são encerrados. Turnos históricos já concluídos não são convertidos. Essa adequação é auditada e executada uma vez por turno.
+
+Ocorrência cadastrada que permanecer **Em aberto** entra na fila de Despachos e cria aviso persistente ao CPU ativo do serviço, com toque curto e **Abrir despachos** na central de notificações. O indicador Alertas contabiliza todas as ocorrências em aberto, independentemente da data do fato. A notificação não simula despacho para uma guarnição nem muda a página automaticamente. Atendimento automático não gera esse aviso. Sem CPU ativo, o Administrativo é avisado; ao assumir ou ser indicado, o CPU recebe notificações das até cem pendências mais recentes. O som depende das preferências e da liberação do navegador após interação.
+
+Para Praça, um quadro acima do GPS apresenta o CPU do serviço, posto/nome de guerra e telefone clicável. `GET /api/service-cpu` disponibiliza apenas os dados necessários de identificação e contato aos usuários autenticados. A mudança de serviço às 8h e alterações da indicação do CPU atualizam as sessões conectadas.
+
 ## Testes e build
 
-A última execução aprovou **38 testes de integração**, incluindo rastreabilidade histórica das guarnições, chat privado, notificações persistentes restritas aos participantes, consulta administrativa auditada, grupos, revogação de acesso, atendimento automático sob concorrência, GPS e conexões Socket.IO reais. O registro de verificações, impasses corrigidos e limitações está em [VALIDACAO.md](VALIDACAO.md).
+A última execução aprovou **50 testes de integração**, incluindo conta/foto/senha, escala das 8h, contato e alertas ao CPU, rastreabilidade histórica das guarnições, chat privado, notificações persistentes restritas aos participantes, consulta administrativa auditada, grupos, revogação de acesso, atendimento automático sob concorrência, GPS e conexões Socket.IO reais. O registro de verificações, impasses corrigidos e limitações está em [VALIDACAO.md](VALIDACAO.md).
 
 Na raiz:
 

@@ -5,6 +5,7 @@ export default mongoose.model(
     {
       crew: { type: mongoose.Schema.Types.ObjectId, ref: 'Crew', required: true, index: true },
       crewName: String,
+      dutyDay: String,
       city: { type: mongoose.Schema.Types.ObjectId, ref: 'City' },
       cityName: String,
       vehicle: { type: mongoose.Schema.Types.ObjectId, ref: 'Vehicle' },

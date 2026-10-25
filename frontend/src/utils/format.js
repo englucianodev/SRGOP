@@ -1,6 +1,13 @@
-export const fmtDate = (value) => (value ? new Date(value).toLocaleDateString('pt-BR') : '—');
+export const fmtDate = (value) =>
+  value ? new Date(value).toLocaleDateString('pt-BR', { timeZone: 'America/Fortaleza' }) : '—';
 export const fmtTime = (value) =>
-  value ? new Date(value).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '—';
+  value
+    ? new Date(value).toLocaleTimeString('pt-BR', {
+        hour: '2-digit',
+        minute: '2-digit',
+        timeZone: 'America/Fortaleza',
+      })
+    : '—';
 export const fmtDateTime = (value) => (value ? `${fmtDate(value)} às ${fmtTime(value)}` : '—');
 export const duration = (seconds) => {
   const n = Math.max(0, Math.floor(seconds || 0));

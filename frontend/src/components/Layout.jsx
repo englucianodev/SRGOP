@@ -25,10 +25,12 @@ import {
 import logo from '../assets/logo.svg';
 import { useApp } from '../context/AppContext';
 import { useData } from '../hooks/useData';
-import { initials, fmtTime, fmtDateTime } from '../utils/format';
+import { fmtTime, fmtDateTime } from '../utils/format';
 import { Button, Modal, Empty } from './UI';
 import { api } from '../services/api';
 import GpsControl from './GpsControl';
+import ProfileMenu from './ProfileMenu';
+import ServiceCpu from './ServiceCpu';
 const links = [
   ['/dashboard', 'Dashboard', LayoutDashboard, 'all'],
   ['/ocorrencias', 'Ocorrências', FileText, 'all'],
@@ -103,7 +105,9 @@ export default function Layout() {
         ].includes(l[0]),
     );
   const title =
-    links.find((l) => location.pathname.startsWith(l[0]))?.[1] || 'Central de operações';
+    location.pathname === '/minha-conta'
+      ? 'Minha conta'
+      : links.find((l) => location.pathname.startsWith(l[0]))?.[1] || 'Central de operações';
   return (
     <div className="app-shell">
       <a className="skip-link" href="#main-content">
@@ -155,6 +159,10 @@ export default function Layout() {
                 {app.user.role === 'Praça' && path === '/guarnicoes' ? 'Minha guarnição' : label}
               </span>
               {path === '/atendimento' && app.ringing && <i className="notification-dot" />}
+              {path === '/despachos' &&
+                notifications.some((n) => n.kind === 'pendente' && !n.read) && (
+                  <i className="notification-dot" />
+                )}
               {path === '/chat-operacional' &&
                 notifications.some((n) => n.kind === 'chat' && !n.read) && (
                   <i className="notification-dot" />
@@ -218,15 +226,7 @@ export default function Layout() {
               <Bell size={19} />
               {notifications.some((n) => !n.read) && <i />}
             </button>
-            <div className="user-profile">
-              <span className="avatar">{initials(app.user.name)}</span>
-              <div>
-                <strong>{app.user.name}</strong>
-                <small>
-                  {app.user.role} · {app.user.city?.name}
-                </small>
-              </div>
-            </div>
+            <ProfileMenu onExit={() => setExit(true)} />
           </div>
         </header>
         {app.activeAttendance && (
@@ -236,6 +236,7 @@ export default function Layout() {
           </div>
         )}
         <main id="main-content" tabIndex={-1}>
+          {app.user.role === 'Praça' && <ServiceCpu />}
           <GpsControl />
           <Outlet />
         </main>
@@ -272,6 +273,18 @@ export default function Layout() {
                 <strong>{n.title}</strong>
                 <p>{n.message}</p>
                 <small>{fmtDateTime(n.createdAt)}</small>
+                {n.kind === 'pendente' && n.occurrence && (
+                  <NavLink
+                    className="button secondary"
+                    to="/despachos"
+                    onClick={() => {
+                      setBell(false);
+                      if (!n.read) app.run(() => api.patch(`/notifications/${n._id}/read`));
+                    }}
+                  >
+                    Abrir despachos
+                  </NavLink>
+                )}
                 {n.kind === 'chat' && n.chat && (
                   <NavLink
                     className="button secondary"

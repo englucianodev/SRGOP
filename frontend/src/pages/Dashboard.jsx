@@ -34,7 +34,6 @@ export default function Dashboard() {
   );
   const myCrew = data.crews.find((c) => c.members.some((m) => m._id === app.user._id));
   const modules = app.settings?.modules || [];
-  const first = app.user.name.split(' ')[0];
   const metrics = [
     {
       name: 'Alertas',
@@ -75,7 +74,7 @@ export default function Dashboard() {
   return (
     <>
       <PageTitle
-        title={app.user.role === 'Praça' ? `Bom serviço, ${first}.` : 'Visão geral da operação'}
+        title="Visão geral da operação"
         description={new Intl.DateTimeFormat('pt-BR', { dateStyle: 'full' }).format(app.now)}
       >
         <span className="live-label">

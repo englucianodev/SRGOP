@@ -6,6 +6,7 @@ import { useApp } from '../context/AppContext';
 import { useData } from '../hooks/useData';
 import { api } from '../services/api';
 import { Button, Input, Select, Modal } from '../components/UI';
+import PersonalFields, { personalDefaults } from '../components/PersonalFields';
 export default function Login({ register = false }) {
   const app = useApp();
   const navigate = useNavigate();
@@ -16,6 +17,7 @@ export default function Login({ register = false }) {
   const { data: cities } = useData(register ? '/auth/cities' : null, []);
   const [form, setForm] = useState({
     name: '',
+    ...personalDefaults(),
     email: '',
     password: '',
     confirmPassword: '',
@@ -81,6 +83,7 @@ export default function Login({ register = false }) {
               onChange={(e) => set('name', e.target.value)}
             />
           )}
+          {register && <PersonalFields value={form} onChange={set} />}
           <Input
             label="E-mail"
             type="email"

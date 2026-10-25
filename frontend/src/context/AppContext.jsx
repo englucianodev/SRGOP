@@ -31,6 +31,15 @@ export function AppProvider({ children }) {
   const loggedOut = useRef(false);
   const activityChannel = useRef(null);
   const refresh = () => setRevision((v) => v + 1);
+  const finishSession = (message) => {
+    loggedOut.current = true;
+    setUser(null);
+    setActiveAttendance(null);
+    setRinging(false);
+    setError(null);
+    navigate('/login', { replace: true });
+    if (message) setToast(message);
+  };
   const hydrate = (data) => {
     setUser(data.user);
     setSettings(data.settings);
@@ -51,7 +60,10 @@ export function AppProvider({ children }) {
       .finally(() => setReady(true));
   }, []);
   useEffect(() => {
-    const listener = (e) => setError(e.detail);
+    const listener = (e) => {
+      if (e.detail?.status === 401 && loggedOut.current) return;
+      setError(e.detail);
+    };
     window.addEventListener('srgop:error', listener);
     return () => window.removeEventListener('srgop:error', listener);
   }, []);
@@ -173,9 +185,13 @@ export function AppProvider({ children }) {
     socket.on('disconnect', (reason) => {
       setOnline(false);
       if (reason === 'io server disconnect' && !loggedOut.current)
-        api.get('/auth/me').catch(() => {});
+        api.get('/auth/me', { quiet: true }).catch((error) => {
+          if (error.response?.status === 401 && !loggedOut.current)
+            finishSession('Sua sessão foi encerrada. Entre novamente.');
+        });
     });
     socket.on('data:changed', scheduleRefresh);
+    socket.on('service:changed', scheduleRefresh);
     socket.on('chat:changed', () => {
       clearTimeout(chatTimer);
       chatTimer = setTimeout(() => setChatRevision((v) => v + 1), 150);
@@ -184,7 +200,7 @@ export function AppProvider({ children }) {
       window.dispatchEvent(new CustomEvent('srgop:crew-location', { detail: position }));
     });
     socket.on('notification', (n) => {
-      if (n.kind === 'chat') {
+      if (['chat', 'pendente'].includes(n.kind)) {
         setNotificationRevision((v) => v + 1);
         if (heardNotifications.current.has(n._id)) return;
         heardNotifications.current.add(n._id);
@@ -194,7 +210,7 @@ export function AppProvider({ children }) {
           setToast(`${n.title}: ${n.message}`);
         const ctx = audio.current;
         if (sound && settings?.soundEnabled !== false && ctx?.state === 'running') {
-          [660, 880].forEach((frequency, index) => {
+          (n.kind === 'pendente' ? [880, 1100] : [660, 880]).forEach((frequency, index) => {
             const oscillator = ctx.createOscillator();
             const gain = ctx.createGain();
             oscillator.frequency.value = frequency;
@@ -290,6 +306,8 @@ export function AppProvider({ children }) {
     <Context.Provider
       value={{
         user,
+        updateUser: setUser,
+        finishSession,
         settings,
         setSettings,
         ready,

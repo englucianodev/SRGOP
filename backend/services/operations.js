@@ -11,6 +11,7 @@ import {
   City,
 } from '../models/index.js';
 import { requireValue } from '../utils/errors.js';
+import { serviceWindow } from '../utils/time.js';
 import { audit } from './audit.js';
 import {
   changed,
@@ -278,13 +279,15 @@ export async function joinCrew(actor, id, driver) {
         'Encerre o turno anterior antes de iniciar outro.',
         409,
       );
-      row.shiftStart = new Date();
+      const duty = serviceWindow();
+      row.shiftStart = duty.start;
       row.location = { sharing: false };
-      row.shiftEnd = new Date(+row.shiftStart + 86400000);
+      row.shiftEnd = duty.end;
       const [shift] = await CrewShift.create(
         [
           {
             crew: row._id,
+            dutyDay: duty.day,
             crewName: row.name,
             city: row.city,
             cityName: (await City.findById(row.city).session(session))?.name,
@@ -341,7 +344,7 @@ export async function joinCrew(actor, id, driver) {
   changed('crews', crew.members);
   return crew;
 }
-export async function endShift(id, actor, reason = 'Encerramento automático após 24 horas') {
+export async function endShift(id, actor, reason = 'Encerramento automático às 8h') {
   const result = await transaction(async (session) => {
     const crew = await Crew.findById(id).session(session);
     requireValue(crew, 'Guarnição não encontrada.', 404);
@@ -352,6 +355,7 @@ export async function endShift(id, actor, reason = 'Encerramento automático ap�
     );
     if (!actor) requireValue(+crew.shiftEnd <= Date.now(), 'Este turno já foi renovado.', 409);
     const members = [...crew.members];
+    const endedAt = +crew.shiftEnd <= Date.now() ? crew.shiftEnd : new Date();
     const pending = await Occurrence.findOne({ crew: id, status: 'Despachada' }).session(session);
     if (pending) {
       pending.status = 'Em aberto';
@@ -377,7 +381,7 @@ export async function endShift(id, actor, reason = 'Encerramento automático ap�
     await CrewShift.updateOne(
       { _id: crew.shift, end: null },
       {
-        $set: { end: new Date(), endedBy: actor?._id, reason },
+        $set: { end: endedAt, endedBy: actor?._id, reason },
         $push: {
           changes: {
             $each: members.map((member) => ({
@@ -397,7 +401,7 @@ export async function endShift(id, actor, reason = 'Encerramento automático ap�
     if (crew.location) crew.location.sharing = false;
     crew.driver = null;
     crew.status = 'Fora de serviço';
-    crew.shiftEnd = new Date();
+    crew.shiftEnd = endedAt;
     crew.endedBy = actor?._id;
     crew.endReason = reason;
     if (
@@ -430,6 +434,29 @@ export async function expireShifts() {
       if (e.status !== 409) console.error('Turnos:', e.message);
     }
   }
+}
+export async function alignActiveShifts() {
+  const rows = await Crew.find({
+    'members.0': { $exists: true },
+    status: { $ne: 'Fora de serviço' },
+  }).select('_id');
+  for (const row of rows)
+    await transaction(async (session) => {
+      const crew = await Crew.findById(row._id).session(session);
+      const shift = crew?.shift ? await CrewShift.findById(crew.shift).session(session) : null;
+      if (!crew || shift?.dutyDay || shift?.end) return;
+      const duty = serviceWindow(new Date(shift?.start || crew.shiftStart || Date.now()));
+      crew.shiftStart = duty.start;
+      crew.shiftEnd = duty.end;
+      await crew.save({ session });
+      if (shift) {
+        shift.start = duty.start;
+        shift.plannedEnd = duty.end;
+        shift.dutyDay = duty.day;
+        await shift.save({ session });
+      }
+      await audit(null, 'Adequação do turno às 8h', 'Crew', crew._id, duty.day, session);
+    });
 }
 export async function authorizeSupport(actor, id, approved) {
   const result = await transaction(async (session) => {

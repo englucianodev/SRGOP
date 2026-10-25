@@ -18,6 +18,11 @@ export async function register(req, res) {
     422,
   );
   const user = await User.create({
+    callSign: v.callSign,
+    rank: v.rank,
+    serviceNumber: v.serviceNumber,
+    registration: v.registration,
+    phone: v.phone,
     name: v.name,
     email: v.email,
     password: await bcrypt.hash(v.password, 12),

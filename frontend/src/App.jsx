@@ -9,6 +9,7 @@ import Occurrences from './pages/Occurrences';
 import Dispatches from './pages/Dispatches';
 import Attendance from './pages/Attendance';
 import Crews from './pages/Crews';
+import MyAccount from './pages/MyAccount';
 import OperationalChat from './pages/OperationalChat';
 import Resources from './pages/Resources';
 import MapPage from './pages/MapPage';
@@ -29,6 +30,7 @@ function Protected({ roles }) {
       '/atendimento',
       '/guarnicoes',
       '/chat-operacional',
+      '/minha-conta',
       '/mapa',
     ].includes(location.pathname)
   )
@@ -61,6 +63,7 @@ export default function App() {
             <Route path="/ocorrencias" element={<Occurrences />} />
             <Route path="/atendimento" element={<Attendance />} />
             <Route path="/guarnicoes" element={<Crews />} />
+            <Route path="/minha-conta" element={<MyAccount />} />
             <Route path="/chat-operacional" element={<OperationalChat />} />
             <Route path="/mapa" element={<MapPage />} />
             <Route element={<Protected roles={['Oficial', 'Administrativo']} />}>

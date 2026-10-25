@@ -1,5 +1,16 @@
 # Validação e impasses — SRGOP
 
+## Minha conta, identificação e serviço das 8h — 25/10/2026
+
+- Página pessoal fora do menu lateral, acessível pelo menu do perfil via hover/clique/teclado, com Minha conta e Sair. Inclui nome de guerra, treze postos/graduações, número/barra, matrícula e telefone, também disponíveis no cadastro e na administração. Praça é identificada por posto e nome de guerra.
+- Foto JPEG/PNG de até 2 MB, normalização para miniatura no navegador e armazenamento autenticado no MongoDB. Alteração de e-mail exige senha atual; alteração de senha exige confirmação e revoga todas as sessões, inclusive sockets. Uma resposta 401 de consulta antiga não bloqueia o novo login após o encerramento esperado.
+- Serviço e CPU compartilham a referência das 8h de Fortaleza. Ingresso tardio não estende o serviço. A API agenda a limpeza para as 8h e mantém recuperação periódica; as operações validam a expiração diretamente. Turnos ativos antigos são adequados e auditados na inicialização, mantendo os registros reais de ingresso e os turnos já concluídos.
+- Cadastro sem atendimento automático gera aviso persistente e sonoro para o CPU e entra nos alertas de pendências. Sem CPU ativo, Administrativo recebe o aviso. O novo CPU recupera as pendências recentes; o quadro acima do GPS da Praça exibe identificação e telefone do responsável. Avisos de pendência não emitem o evento de despacho para equipes.
+
+Validação: 50 testes de integração aprovados, incluindo nova conta, permissões, foto e limites de upload, senha/e-mail, revogação de sessões, limites 07h59/08h00, adequação de turno antigo, notificações exclusivas ao CPU, ausência de alerta no atendimento automático e contato disponível para Praça. A regressão de chat, GPS, relatórios e atendimentos permaneceu aprovada. Build e Prettier conferidos.
+
+Chrome headless com dados temporários: menu por hover/clique, conta sem link lateral, edição pessoal, miniatura após upload, identificação militar, contato do CPU acima do GPS, geração dos tons de alerta e acesso a Despachos, troca de senha/novo login e Sair em desktop/móvel, sem erros JavaScript. A foto usada foi uma imagem sintética; o teste de áudio verifica os osciladores do navegador. Nenhum dado persistente do usuário foi alterado durante os testes. Para publicar, atualize backend e frontend; não execute seed para habilitar os recursos.
+
 ## Rastreabilidade das guarnições — 25/10/2026
 
 - Nova seção em Relatórios com seleção múltipla de guarnições, datas inicial e final e geração explícita. Exportação CSV e impressão/PDF usam os mesmos critérios emitidos. Os indicadores anteriores continuam disponíveis em Indicadores gerais.
@@ -61,7 +72,7 @@ As verificações visuais mencionadas nas seções seguintes são registros hist
 
 Código organizado em `frontend` e `backend`, com banco MongoDB, API, permissões no servidor, interface por perfil e dados demonstrativos. Instruções de instalação, variáveis e deploy estão no [README](README.md).
 
-Última execução da suíte: **38 testes aprovados, zero falhas**. Build de produção do frontend concluído com sucesso. Essas verificações não substituem homologação com os usuários do batalhão nem testes de carga em infraestrutura de produção.
+Última execução da suíte: **50 testes aprovados, zero falhas**. Build de produção do frontend concluído com sucesso. Essas verificações não substituem homologação com os usuários do batalhão nem testes de carga em infraestrutura de produção.
 
 ## Verificações automatizadas
 

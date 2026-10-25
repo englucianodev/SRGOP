@@ -1,4 +1,19 @@
 export const ROLES = ['Administrativo', 'Oficial', 'Praça'];
+export const RANKS = [
+  'Soldado',
+  'Cabo',
+  '3º Sargento',
+  '2ª Sargento',
+  '1º Sargento',
+  'Subtenente',
+  'Aspirante',
+  '2º Tenente',
+  '1º Tenente',
+  'Capitão',
+  'Major',
+  'Tenente Coronel',
+  'Coronel',
+];
 export const MANAGEMENT = ['Administrativo', 'Oficial'];
 export const STATUSES = ['Em aberto', 'Despachada', 'Em atendimento', 'Encerrada', 'Cancelada'];
 export const PRIORITIES = ['Alta', 'Média', 'Baixa'];

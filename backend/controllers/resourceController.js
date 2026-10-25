@@ -17,9 +17,10 @@ import {
 } from '../models/index.js';
 import { requireValue } from '../utils/errors.js';
 import { audit } from '../services/audit.js';
-import { changed, disconnectUser } from '../services/realtime.js';
+import { changed, disconnectUser, serviceChanged } from '../services/realtime.js';
 import { transaction } from '../services/operations.js';
-import { dayKey, dayRange } from '../utils/time.js';
+import { dayKey, dayRange, serviceWindow } from '../utils/time.js';
+import { notifyPendingForCpu } from '../services/pendingDispatch.js';
 const validCity = async (city, session) =>
   requireValue(
     await City.exists({ _id: city, active: true }).session(session || null),
@@ -82,6 +83,7 @@ export async function saveUser(req, res) {
   });
   disconnectUser(result._id);
   changed('users');
+  if (result.role === 'Oficial') serviceChanged();
   res.status(req.params.id ? 200 : 201).json(result);
 }
 export async function removeUser(req, res) {
@@ -299,12 +301,19 @@ export async function saveSettings(req, res) {
   res.json(row);
 }
 export async function cpu(req, res) {
-  res.json(await DailyOfficer.findOne({ day: dayKey() }).populate('officer', 'name'));
+  res.json(
+    await DailyOfficer.findOne({ day: serviceWindow().day }).populate(
+      'officer',
+      'name callSign rank phone',
+    ),
+  );
 }
 export async function assumeCpu(req, res) {
-  const row = await DailyOfficer.create({ day: dayKey(), officer: req.user._id });
+  const row = await DailyOfficer.create({ day: serviceWindow().day, officer: req.user._id });
   await audit(req.user, 'Assumiu CPU', 'DailyOfficer', row._id);
   changed('cpu');
+  await notifyPendingForCpu(req.user._id);
+  serviceChanged();
   res.status(201).json(await row.populate('officer', 'name'));
 }
 export async function updateCpu(req, res) {
@@ -314,7 +323,7 @@ export async function updateCpu(req, res) {
     422,
   );
   const row = await DailyOfficer.findOneAndUpdate(
-    { day: dayKey() },
+    { day: serviceWindow().day },
     {
       officer: req.input.officer,
       reason: req.input.reason,
@@ -325,6 +334,8 @@ export async function updateCpu(req, res) {
   );
   await audit(req.user, 'CPU administrado', 'DailyOfficer', row._id, req.input.reason);
   changed('cpu');
+  await notifyPendingForCpu(req.input.officer);
+  serviceChanged();
   res.json(row);
 }
 export async function dashboard(req, res) {
@@ -352,7 +363,10 @@ export async function dashboard(req, res) {
         .populate('crew', 'name')
         .sort({ createdAt: -1 })
         .limit(6),
-      DailyOfficer.findOne({ day: dayKey() }).populate('officer', 'name'),
+      DailyOfficer.findOne({ day: serviceWindow().day }).populate(
+        'officer',
+        'name callSign rank phone',
+      ),
       SystemSetting.findOne({ key: 'general' }),
       SupportRequest.countDocuments({ status: 'Pendente' }),
       Attendance.findOne({ acceptedBy: req.user._id, status: 'Em atendimento' }),
@@ -375,12 +389,8 @@ export async function dashboard(req, res) {
     .populate('city', 'name')
     .select('city crimeType priority status protocol');
   const alerts = await Occurrence.countDocuments({
-    ...match,
+    deleted: false,
     status: 'Em aberto',
-    $or: [
-      { priority: 'Alta' },
-      { createdAt: { $lte: new Date(Date.now() - (settings?.alertMinutes || 10) * 60000) } },
-    ],
   });
   res.json({
     counts,
@@ -394,6 +404,7 @@ export async function dashboard(req, res) {
     support,
     myAttendance,
     day: dayKey(),
+    serviceDay: serviceWindow().day,
   });
 }
 export async function auditLogs(req, res) {

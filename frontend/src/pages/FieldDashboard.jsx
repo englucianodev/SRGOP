@@ -4,6 +4,7 @@ import { useApp } from '../context/AppContext';
 import { useData } from '../hooks/useData';
 import { duration, fmtDateTime } from '../utils/format';
 import { PageTitle, Panel, Badge, Empty } from '../components/UI';
+import { militaryLabel } from '../components/PersonalFields';
 
 export default function FieldDashboard({ data }) {
   const app = useApp();
@@ -14,7 +15,7 @@ export default function FieldDashboard({ data }) {
     <>
       <PageTitle
         eyebrow="MEU SERVIÇO"
-        title={`Bom serviço, ${app.user.name.split(' ')[0]}.`}
+        title={militaryLabel(app.user)}
         description={new Intl.DateTimeFormat('pt-BR', { dateStyle: 'full' }).format(app.now)}
       >
         <Link className="button primary" to="/ocorrencias?nova=1">

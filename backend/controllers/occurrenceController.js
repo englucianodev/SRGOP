@@ -12,7 +12,8 @@ import {
 import { requireValue } from '../utils/errors.js';
 import { dayRange } from '../utils/time.js';
 import { audit } from '../services/audit.js';
-import { changed, attendanceChanged } from '../services/realtime.js';
+import { changed, attendanceChanged, deliverNotifications } from '../services/realtime.js';
+import { queuePendingDispatch } from '../services/pendingDispatch.js';
 import { getOccurrence, history, transaction, canAttend } from '../services/operations.js';
 import { id as idSchema } from '../middlewares/validation.js';
 import { z } from 'zod';
@@ -181,11 +182,14 @@ export async function create(req, res) {
       }
     }
     await audit(req.user, 'Cadastro', 'Occurrence', created._id, created.protocol, session);
-    return created;
+    const notifications =
+      created.status === 'Em aberto' ? await queuePendingDispatch(created, session) : [];
+    return { created, notifications };
   });
   changed('occurrences');
-  if (row.status === 'Em atendimento') attendanceChanged(row);
-  res.status(201).json(row);
+  if (row.created.status === 'Em atendimento') attendanceChanged(row.created);
+  deliverNotifications(row.notifications);
+  res.status(201).json(row.created);
 }
 export async function update(req, res) {
   await references(req.input);

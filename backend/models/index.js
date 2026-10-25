@@ -1,4 +1,5 @@
 export { default as User } from './User.js';
+export { default as ProfilePhoto } from './ProfilePhoto.js';
 export { default as City } from './City.js';
 export { default as Occurrence } from './Occurrence.js';
 export { default as Crew } from './Crew.js';

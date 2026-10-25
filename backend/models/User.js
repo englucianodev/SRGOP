@@ -1,8 +1,14 @@
 import mongoose from 'mongoose';
-import { ROLES } from '../utils/constants.js';
+import { ROLES, RANKS } from '../utils/constants.js';
 const schema = new mongoose.Schema(
   {
     name: { type: String, required: true, trim: true, maxlength: 120 },
+    callSign: { type: String, trim: true, maxlength: 80, default: '' },
+    rank: { type: String, enum: ['', ...RANKS], default: '' },
+    serviceNumber: { type: String, trim: true, maxlength: 40, default: '' },
+    registration: { type: String, trim: true, maxlength: 40, default: '' },
+    phone: { type: String, trim: true, maxlength: 30, default: '' },
+    avatarVersion: { type: String, default: '' },
     email: {
       type: String,
       required: true,

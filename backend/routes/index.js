@@ -5,6 +5,7 @@ import { auth, allow, essentialOnly } from '../middlewares/auth.js';
 import { schemas as s, validate as v, id } from '../middlewares/validation.js';
 import { asyncRoute as a, AppError, requireValue } from '../utils/errors.js';
 import * as authentication from '../controllers/authController.js';
+import * as account from '../controllers/accountController.js';
 import * as occurrence from '../controllers/occurrenceController.js';
 import * as resource from '../controllers/resourceController.js';
 import * as chat from '../controllers/chatController.js';
@@ -52,6 +53,19 @@ router.post('/auth/register', authLimit, v(s.register), a(authentication.registe
 router.post('/auth/login', authLimit, v(s.login), a(authentication.login));
 router.use(auth);
 router.get('/auth/me', a(authentication.me));
+router.put('/auth/me', v(s.account), a(account.update));
+router.post('/auth/me/password', authLimit, v(s.ownPassword), a(account.password));
+router.get('/auth/me/photo', a(account.photo));
+router.put(
+  '/auth/me/photo',
+  multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 2 * 1024 * 1024, files: 1 },
+  }).single('photo'),
+  a(account.savePhoto),
+);
+router.delete('/auth/me/photo', a(account.removePhoto));
+router.get('/service-cpu', a(resource.cpu));
 router.post('/auth/activity', a(authentication.activity));
 router.post('/auth/logout', a(authentication.logout));
 router.use(essentialOnly);

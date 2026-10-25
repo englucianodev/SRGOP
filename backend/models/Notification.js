@@ -10,7 +10,11 @@ export default mongoose.model(
       chat: { type: mongoose.Schema.Types.ObjectId, ref: 'CrewChat' },
       chatMessage: { type: mongoose.Schema.Types.ObjectId, ref: 'ChatMessage' },
       read: { type: Boolean, default: false },
-      kind: { type: String, enum: ['despacho', 'apoio', 'sistema', 'chat'], default: 'sistema' },
+      kind: {
+        type: String,
+        enum: ['despacho', 'apoio', 'sistema', 'chat', 'pendente'],
+        default: 'sistema',
+      },
     },
     { timestamps: true },
   ),

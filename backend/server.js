@@ -4,7 +4,9 @@ import mongoose from 'mongoose';
 import { connectDatabase } from './config/database.js';
 import { createApp, allowedOrigins } from './app.js';
 import { configureSocket } from './services/realtime.js';
-import { expireShifts } from './services/operations.js';
+import { expireShifts, alignActiveShifts } from './services/operations.js';
+import { serviceWindow } from './utils/time.js';
+import { serviceChanged } from './services/realtime.js';
 import { SystemSetting } from './models/index.js';
 export async function startServer({ initialize } = {}) {
   if (
@@ -23,7 +25,24 @@ export async function startServer({ initialize } = {}) {
   );
   const server = http.createServer(createApp());
   const io = configureSocket(server, allowedOrigins());
+  await alignActiveShifts();
   await expireShifts();
+  let boundaryTimer;
+  const boundary = () => {
+    boundaryTimer = setTimeout(
+      async () => {
+        try {
+          await expireShifts();
+          serviceChanged();
+        } catch (error) {
+          console.error('Mudança de serviço:', error.message);
+        }
+        boundary();
+      },
+      Math.max(1, +serviceWindow().end - Date.now()),
+    );
+  };
+  boundary();
   let expiring = false;
   const timer = setInterval(async () => {
     if (expiring) return;
@@ -41,6 +60,7 @@ export async function startServer({ initialize } = {}) {
   console.info(`SRGOP API em http://localhost:${port}`);
   const close = async () => {
     clearInterval(timer);
+    clearTimeout(boundaryTimer);
     await new Promise((resolve) => io.close(resolve));
     await mongoose.disconnect();
   };

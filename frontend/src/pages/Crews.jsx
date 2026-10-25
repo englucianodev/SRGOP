@@ -65,7 +65,7 @@ export default function Crews() {
     <>
       <PageTitle
         title={manager ? 'Guarnições' : 'Minha guarnição'}
-        description="Organização das equipes e controle de turnos de 24 horas."
+        description="Organização das equipes e serviço das 8h às 8h do dia seguinte."
       >
         {admin && (
           <Button onClick={() => edit()}>
@@ -264,8 +264,9 @@ export default function Crews() {
                 ))}
             </Select>
             <p className="form-note">
-              Cada integrante ingressa com sua própria conta. O turno começa no primeiro ingresso e
-              dura 24 horas.
+              Cada integrante ingressa com sua própria conta. O serviço vai das 8h às 8h do dia
+              seguinte, independentemente do horário de ingresso. Antes das 8h, o ingresso pertence
+              ao serviço iniciado no dia anterior.
             </p>
             <Button type="submit" busy={busy}>
               Salvar guarnição

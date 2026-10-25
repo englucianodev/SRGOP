@@ -4,6 +4,7 @@ import { useApp } from '../context/AppContext';
 import { useData } from '../hooks/useData';
 import { api } from '../services/api';
 import { objectId, fmtDate, fmtDateTime, localInput } from '../utils/format';
+import PersonalFields, { personalDefaults } from '../components/PersonalFields';
 import {
   PageTitle,
   Panel,
@@ -39,6 +40,7 @@ export default function Resources({ type }) {
       isUser
         ? {
             name: r?.name || '',
+            ...personalDefaults(r || {}),
             email: r?.email || '',
             city: objectId(r?.city),
             role: r?.role || 'Praça',
@@ -242,6 +244,7 @@ export default function Resources({ type }) {
                     value={form.name}
                     onChange={(e) => set('name', e.target.value)}
                   />
+                  <PersonalFields value={form} onChange={set} />
                   <Input
                     label="E-mail"
                     type="email"
