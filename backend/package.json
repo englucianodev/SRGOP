@@ -8,6 +8,7 @@
     "dev": "node --watch server.js",
     "seed": "node seed.js",
     "provision:fleet": "node scripts/provisionFleet.js",
+    "provision:crews": "node scripts/provisionCrews.js",
     "test": "node --test --test-concurrency=1 tests/*.test.js",
     "dev:demo": "node scripts/demo.js"
   },

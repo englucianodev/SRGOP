@@ -8,8 +8,16 @@ import { isOnDuty } from '../utils/duty';
 import { fmtDateTime } from '../utils/format';
 import { Button, Modal, Textarea } from './UI';
 import VehicleChecklist, { blankInspection, inspectionBody } from './VehicleChecklist';
+import { useInspectionDefaults } from '../hooks/useInspectionDefaults';
 function ReturnChecklist({ record, done }) {
-  const [value, setValue] = useState(() => blankInspection(record.vehicle?.mileage || 0));
+  const {
+    value,
+    setValue,
+    minimum,
+    loading,
+    error: loadError,
+    retry,
+  } = useInspectionDefaults(record.vehicle?._id, record.vehicle?.mileage || 0);
   const [busy, setBusy] = useState(false),
     [error, setError] = useState('');
   return (
@@ -46,13 +54,17 @@ function ReturnChecklist({ record, done }) {
           }
         }}
       >
-        <VehicleChecklist
-          value={value}
-          onChange={setValue}
-          minimum={record.vehicle?.mileage || 0}
-        />
+        <VehicleChecklist value={value} onChange={setValue} minimum={minimum} />
         {error && <p role="alert">{error}</p>}
-        <Button type="submit" busy={busy}>
+        {loadError && (
+          <p role="alert">
+            {loadError}{' '}
+            <Button type="button" onClick={retry}>
+              Tentar novamente
+            </Button>
+          </p>
+        )}
+        <Button type="submit" busy={busy} disabled={loading}>
           Registrar checklist
         </Button>
       </form>

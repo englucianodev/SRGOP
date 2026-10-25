@@ -7,7 +7,8 @@ import { Button, Modal, Select, Textarea } from './UI';
 export default function CrewManagement({ crew }) {
   const app = useApp();
   const [open, setOpen] = useState(false);
-  const [action, setAction] = useState('Motorista');
+  const motorcycle = crew.type === 'Motocicleta' || crew.shiftMode === 'Motocicleta';
+  const [action, setAction] = useState(motorcycle ? 'Saída' : 'Motorista');
   const [member, setMember] = useState('');
   const [reason, setReason] = useState('');
   const [busy, setBusy] = useState(false);
@@ -45,7 +46,7 @@ export default function CrewManagement({ crew }) {
         <Modal title={`Gerenciar ${crew.name}`} onClose={() => setOpen(false)}>
           <form onSubmit={save}>
             <Select label="Ação" value={action} onChange={(e) => setAction(e.target.value)}>
-              <option value="Motorista">Definir motorista atual</option>
+              {!motorcycle && <option value="Motorista">Definir motorista atual</option>}
               <option value="Saída">Autorizar saída de integrante</option>
               {app.user.role === 'Administrativo' && (
                 <>

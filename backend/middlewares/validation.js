@@ -52,7 +52,16 @@ export const schemas = {
     .refine((v) => (v.latitude === undefined) === (v.longitude === undefined), {
       message: 'Informe as duas coordenadas.',
     }),
-  motorcycleLeave: z.object({ checklist: inspectionSchema.optional() }).strict(),
+  mileage: z.object({ mileage: z.number().int().min(0).max(100000000) }).strict(),
+  motorcycleLeave: z
+    .object({
+      checklist: inspectionSchema.optional(),
+      checklists: z
+        .array(z.object({ vehicle: id, checklist: inspectionSchema }).strict())
+        .max(20)
+        .optional(),
+    })
+    .strict(),
   account: z
     .object({
       name: text(3, 120),
@@ -121,12 +130,24 @@ export const schemas = {
   reason: z.object({ reason: text(5, 1000) }).strict(),
   note: z.object({ text: text(3, 3000) }).strict(),
   support: z.object({ targetCrew: id, reason: text(5, 1000) }).strict(),
-  crew: z.object({ name: text(2, 100), city: id, vehicle: id.nullable().optional() }).strict(),
+  crew: z
+    .object({
+      name: text(2, 100),
+      city: id,
+      vehicle: id.nullable().optional(),
+      type: z.enum(['Motocicleta', 'Viatura Convencional']).optional(),
+    })
+    .strict(),
   join: z
     .object({
       driver: z.boolean(),
       dutyPeriod: z.enum(['Manhã', 'Tarde', 'Noite']).optional(),
       checklist: inspectionSchema.optional(),
+      motorcycles: z
+        .array(z.object({ vehicle: id, checklist: inspectionSchema }).strict())
+        .min(1)
+        .max(20)
+        .optional(),
     })
     .strict(),
   member: z

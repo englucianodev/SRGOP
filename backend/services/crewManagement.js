@@ -1,3 +1,4 @@
+import { mileageFilter } from '../utils/mileage.js';
 import { activeDuty, onDuty } from '../utils/duty.js';
 import {
   Crew,
@@ -27,6 +28,11 @@ export async function manageMember(actor, crewId, input) {
     );
     const affected = [...crew.members];
     if (input.action === 'Motorista') {
+      requireValue(
+        crew.shiftMode !== 'Motocicleta',
+        'O condutor de motocicleta deve escolher as motos e ingressar com sua própria conta.',
+        422,
+      );
       requireValue(String(crew.driver) !== input.member, 'O integrante já é o motorista.', 409);
       await requireDriverReturn(crew, input.reason, session);
       crew.driver = input.member;
@@ -65,41 +71,47 @@ export async function manageMember(actor, crewId, input) {
         'A guarnição está designada a uma ocorrência. Não é possível retirar o último integrante.',
         409,
       );
-      if (String(crew.driver) === input.member && crew.vehicle) {
-        if (String(actor._id) === input.member && input.checklist) {
-          const record = await VehicleHandover.findOne({
-            crew: crew._id,
-            driver: actor._id,
-            closedAt: null,
-          }).session(session);
-          requireValue(
-            record && !record.pendingIntake,
-            'Registre o recebimento da viatura antes da saída.',
-            409,
-          );
-          requireValue(
-            await Vehicle.findOneAndUpdate(
-              { _id: crew.vehicle, mileage: { $lte: input.checklist.mileage } },
-              { mileage: input.checklist.mileage },
-              { session },
-            ),
-            'O KM atual não pode diminuir.',
-            409,
-          );
-          record.delivery = input.checklist;
-          record.closedAt = new Date();
-          record.pendingReturn = false;
-          await record.save({ session });
-          await audit(
-            actor,
-            'Entrega de viatura',
-            'VehicleHandover',
-            record._id,
-            `${input.checklist.mileage} km`,
-            session,
-          );
-        } else await requireDriverReturn(crew, input.reason, session);
-      }
+      const records = await VehicleHandover.find({
+        crew: crew._id,
+        driver: input.member,
+        closedAt: null,
+      }).session(session);
+      if (records.length) {
+        if (String(actor._id) === input.member && (input.checklist || input.checklists)) {
+          for (const record of records) {
+            const checklist =
+              input.checklists?.find((c) => c.vehicle === String(record.vehicle))?.checklist ||
+              (records.length === 1 ? input.checklist : null);
+            requireValue(
+              checklist && !record.pendingIntake,
+              'Preencha o checklist de entrega de cada motocicleta recebida.',
+              422,
+            );
+            requireValue(
+              await Vehicle.findOneAndUpdate(
+                { _id: record.vehicle, ...mileageFilter(actor, checklist.mileage) },
+                { mileage: checklist.mileage },
+                { session },
+              ),
+              'O KM atual não pode diminuir.',
+              409,
+            );
+            record.delivery = checklist;
+            record.closedAt = new Date();
+            record.pendingReturn = false;
+            await record.save({ session });
+            await audit(
+              actor,
+              'Entrega de viatura',
+              'VehicleHandover',
+              record._id,
+              `${checklist.mileage} km`,
+              session,
+            );
+          }
+        } else await requireDriverReturn(crew, input.reason, session, input.member);
+      } else if (String(crew.driver) === input.member && crew.vehicle)
+        await requireDriverReturn(crew, input.reason, session, input.member);
       crew.members.pull(input.member);
       if (String(crew.location?.updatedBy) === input.member) crew.location.sharing = false;
       if (String(crew.driver) === input.member) crew.driver = null;
@@ -128,6 +140,11 @@ export async function manageMember(actor, crewId, input) {
       }
     }
     await crew.save({ session });
+    const vehicleIds = await VehicleHandover.distinct('vehicle', {
+      crew: crew._id,
+      driver: input.member,
+    }).session(session);
+    for (const vehicleId of vehicleIds) await refreshInspectionHold(vehicleId, session);
     if (crew.vehicle) await refreshInspectionHold(crew.vehicle, session);
     await CrewShift.updateOne(
       { _id: crew.shift },

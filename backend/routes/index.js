@@ -24,7 +24,15 @@ import {
   endShift,
   authorizeSupport,
 } from '../services/operations.js';
-import { City, Occurrence, Dispatch, SupportRequest, Crew, CrewMessage } from '../models/index.js';
+import {
+  City,
+  Occurrence,
+  Dispatch,
+  SupportRequest,
+  Crew,
+  CrewMessage,
+  VehicleHandover,
+} from '../models/index.js';
 import { manageMember, setAvailability, sendCrewMessage } from '../services/crewManagement.js';
 import { provisionDefaultFleet } from '../services/defaultFleet.js';
 import { requireDriverReturn } from '../services/vehicleInspections.js';
@@ -73,6 +81,7 @@ router.put(
 router.delete('/auth/me/photo', a(account.removePhoto));
 router.get('/service-cpu', a(resource.cpu));
 router.get('/vehicle-checklists/pending', a(inspections.pending));
+router.get('/vehicle-checklists/defaults', a(inspections.defaults));
 router.post('/vehicle-checklists/:id', v(s.inspection), a(inspections.complete));
 router.post('/auth/activity', a(authentication.activity));
 router.post('/auth/logout', a(authentication.logout));
@@ -199,6 +208,7 @@ router.post(
   a(async (req, res) => res.json(await authorizeSupport(req.user, req.params.id, false))),
 );
 router.get('/crews', a(resource.listCrews));
+router.get('/crews/:id/motorcycles', a(resource.motorcycles));
 router.patch('/crews/:id/gps', v(s.gps), a(gps.location));
 router.get('/crew-chats', a(chat.list));
 router.post('/crew-chats', v(s.chat), a(chat.create));
@@ -232,7 +242,13 @@ router.post(
       403,
     );
     requireValue(
-      String(crew.driver) !== String(req.user._id) || !crew.vehicle || req.input.checklist,
+      (await VehicleHandover.countDocuments({
+        crew: crew._id,
+        driver: req.user._id,
+        closedAt: null,
+      })) === 0 ||
+        req.input.checklist ||
+        req.input.checklists?.length,
       'O motorista deve preencher o checklist de entrega.',
       422,
     );
@@ -242,6 +258,7 @@ router.post(
         action: 'Saída',
         reason: 'Encerramento voluntário do serviço de motocicleta.',
         checklist: req.input.checklist,
+        checklists: req.input.checklists,
       }),
     );
   }),
@@ -318,6 +335,7 @@ router.post(
   a(async (req, res) => res.json(await provisionDefaultFleet(req.user))),
 );
 router.get('/vehicles/:id/checklists', management, a(inspections.history));
+router.patch('/vehicles/:id/mileage', admin, v(s.mileage), a(resource.correctMileage));
 router.post('/vehicles', admin, v(s.vehicle), a(resource.saveVehicle));
 router.put('/vehicles/:id', admin, v(s.vehicle), a(resource.saveVehicle));
 router.delete('/vehicles/:id', admin, a(resource.removeVehicle));

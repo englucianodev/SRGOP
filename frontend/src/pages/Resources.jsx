@@ -30,6 +30,8 @@ export default function Resources({ type }) {
   const [detail, setDetail] = useState(null);
   const [remove, setRemove] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [kmVehicle, setKmVehicle] = useState(null);
+  const [km, setKm] = useState('');
   const filtered = rows.filter((r) =>
     `${r.name || r.prefix} ${r.email || r.plate} ${r.city?.name}`
       .toLowerCase()
@@ -49,7 +51,7 @@ export default function Resources({ type }) {
           }
         : {
             prefix: r?.prefix || '',
-            plate: r?.provisional ? '' : r?.plate || '',
+            plate: r?.plate?.startsWith('P-') ? '' : r?.plate || '',
             brand: r?.brand || 'Chevrolet',
             model: r?.model || 'S10',
             year: r?.year || '',
@@ -189,7 +191,7 @@ export default function Resources({ type }) {
                         {isUser
                           ? r.email
                           : r.provisional
-                            ? 'Cadastro provisório — placa e KM a conferir'
+                            ? `${r.plate?.startsWith('DEMO') ? `${r.plate} · ` : ''}Cadastro provisório — dados a conferir`
                             : r.plate}
                       </span>
                       {!isUser && (
@@ -227,6 +229,17 @@ export default function Resources({ type }) {
                     </td>
                     <td>
                       <div className="row-actions">
+                        {!isUser && admin && (
+                          <Button
+                            variant="ghost"
+                            onClick={() => {
+                              setKmVehicle(r);
+                              setKm(String(r.mileage));
+                            }}
+                          >
+                            Corrigir KM
+                          </Button>
+                        )}
                         <button
                           className="icon-button"
                           aria-label={`Visualizar ${r.name || r.prefix}`}
@@ -461,6 +474,39 @@ export default function Resources({ type }) {
                 Salvar alterações
               </Button>
             </div>
+          </form>
+        </Modal>
+      )}
+      {kmVehicle && (
+        <Modal title={`Corrigir KM · ${kmVehicle.prefix}`} onClose={() => setKmVehicle(null)}>
+          <form
+            onSubmit={async (e) => {
+              e.preventDefault();
+              setBusy(true);
+              await app.run(async () => {
+                await api.patch(`/vehicles/${kmVehicle._id}/mileage`, { mileage: Number(km) });
+                setKmVehicle(null);
+              }, 'Quilometragem corrigida com registro de auditoria.');
+              setBusy(false);
+            }}
+          >
+            <p>
+              O Administrativo pode corrigir o KM para um valor menor. A alteração fica registrada
+              na auditoria.
+            </p>
+            <Input
+              label="KM corrigido"
+              required
+              type="number"
+              min="0"
+              max="100000000"
+              step="1"
+              value={km}
+              onChange={(e) => setKm(e.target.value)}
+            />
+            <Button type="submit" busy={busy}>
+              Salvar KM
+            </Button>
           </form>
         </Modal>
       )}

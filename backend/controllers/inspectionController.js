@@ -4,6 +4,25 @@ import { refreshInspectionHold } from '../services/vehicleInspections.js';
 import { audit } from '../services/audit.js';
 import { changed } from '../services/realtime.js';
 import { requireValue } from '../utils/errors.js';
+import { mileageFilter } from '../utils/mileage.js';
+import mongoose from 'mongoose';
+export async function defaults(req, res) {
+  requireValue(mongoose.isValidObjectId(req.query.vehicle), 'Viatura inválida.', 422);
+  const vehicle = await Vehicle.findById(req.query.vehicle);
+  requireValue(vehicle, 'Viatura não encontrada.', 404);
+  const [received, delivered] = await Promise.all([
+    VehicleHandover.findOne({ vehicle: vehicle._id, 'intake.at': { $exists: true } })
+      .sort({ 'intake.at': -1 })
+      .select('intake'),
+    VehicleHandover.findOne({ vehicle: vehicle._id, 'delivery.at': { $exists: true } })
+      .sort({ 'delivery.at': -1 })
+      .select('delivery'),
+  ]);
+  const latest = [received?.intake, delivered?.delivery]
+    .filter(Boolean)
+    .sort((a, b) => +b.at - +a.at)[0];
+  res.json({ mileage: vehicle.mileage, inspection: latest || null });
+}
 export async function pending(req, res) {
   await expireShifts();
   res.json(
@@ -30,7 +49,7 @@ export async function complete(req, res) {
       404,
     );
     const vehicle = await Vehicle.findOneAndUpdate(
-      { _id: record.vehicle, mileage: { $lte: req.input.mileage } },
+      { _id: record.vehicle, ...mileageFilter(req.user, req.input.mileage) },
       { mileage: req.input.mileage },
       { new: true, session },
     );

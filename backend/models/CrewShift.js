@@ -14,6 +14,13 @@ export default mongoose.model(
       cityName: String,
       vehicle: { type: mongoose.Schema.Types.ObjectId, ref: 'Vehicle' },
       vehiclePrefix: String,
+      motorcycles: [
+        {
+          driver: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+          vehicle: { type: mongoose.Schema.Types.ObjectId, ref: 'Vehicle' },
+          prefix: String,
+        },
+      ],
       members: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
       changes: [
         {

@@ -8,6 +8,11 @@ export default mongoose.model(
       name: { type: String, required: true, unique: true, trim: true, maxlength: 100 },
       city: { ...ref('City'), required: true, index: true },
       vehicle: { ...ref('Vehicle'), default: null },
+      type: {
+        type: String,
+        enum: ['Motocicleta', 'Viatura Convencional'],
+        default: 'Viatura Convencional',
+      },
       members: [ref('User')],
       driver: { ...ref('User'), default: null },
       status: { type: String, enum: CREW_STATUSES, default: 'Fora de serviço', index: true },

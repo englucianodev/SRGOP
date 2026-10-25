@@ -50,7 +50,13 @@ export default function Crews() {
   const [location, setLocation] = useState(null);
   const [position, setPosition] = useState({ latitude: '', longitude: '', mileage: '' });
   function edit(c) {
-    setForm({ name: c?.name || '', city: objectId(c?.city), vehicle: objectId(c?.vehicle) });
+    setForm({
+      name: c?.name || '',
+      city: objectId(c?.city),
+      vehicle: objectId(c?.vehicle),
+      type:
+        c?.type || (c?.vehicle?.type === 'Motocicleta' ? 'Motocicleta' : 'Viatura Convencional'),
+    });
     setEditing(c?._id || 'new');
   }
   async function save(e) {
@@ -104,6 +110,12 @@ export default function Crews() {
                   {mine && <small> Sua guarnição</small>}
                 </h2>
                 <p className="muted">{c.city?.name}</p>
+                <p className="muted">{c.type || 'Viatura Convencional'}</p>
+                {(c.motorcycleDrivers || []).map((r) => (
+                  <p key={r.vehicle._id}>
+                    {r.driver?.name} · {r.vehicle.prefix}
+                  </p>
+                ))}
                 {c.inspectionBlocked && (
                   <p className="form-note" role="status">
                     Viatura retida até a conclusão dos checklists dos motoristas.
@@ -264,6 +276,15 @@ export default function Crews() {
                 ))}
             </Select>
             <Select
+              label="Tipo"
+              required
+              value={form.type}
+              onChange={(e) => setForm({ ...form, type: e.target.value, vehicle: '' })}
+            >
+              <option>Viatura Convencional</option>
+              <option>Motocicleta</option>
+            </Select>
+            <Select
               label="Viatura"
               value={form.vehicle}
               onChange={(e) => setForm({ ...form, vehicle: e.target.value })}
@@ -271,7 +292,10 @@ export default function Crews() {
               <option value="">Sem viatura / desassociar</option>
               {vehicles
                 .filter(
-                  (v) => (!v.crew && v.status === 'Disponível') || objectId(v.crew) === editing,
+                  (v) =>
+                    objectId(v.city) === form.city &&
+                    (form.type === 'Motocicleta') === (v.type === 'Motocicleta') &&
+                    ((!v.crew && v.status === 'Disponível') || objectId(v.crew) === editing),
                 )
                 .map((v) => (
                   <option key={v._id} value={v._id}>

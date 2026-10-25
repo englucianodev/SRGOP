@@ -1,5 +1,14 @@
 # Validação e impasses — SRGOP
 
+## KM administrativo, últimas seleções e tipos de guarnição — 25/10/2026
+
+- Administrativo pode reduzir o KM em correção específica, localização e checklist. Praça e Oficial permanecem sujeitos ao KM igual ou superior ao último registrado. Correção específica tem auditoria com valor anterior e novo e funciona durante serviço ativo.
+- Checklists recuperam seleção e observação do último recebimento ou entrega do próprio veículo. Sem histórico, os seis itens começam em S/A. O formulário aguarda o carregamento antes de permitir a confirmação.
+- Guarnições têm tipo Motocicleta ou Viatura Convencional, com validação de compatibilidade e município do veículo. Cada condutor pode selecionar uma ou mais motos, com checklist individual e reserva transacional. Dois condutores concorrentes não recebem a mesma moto. A saída exige entregar todas; saída autorizada gera pendências individuais.
+- Carga autorizada no banco configurado: 11 guarnições criadas, cobertura dos 15 municípios e 15 caminhonetes com prefixos VTR-1800–VTR-1814 e placas DEMO0100–DEMO0114. Consulta independente confirmou zero municípios sem equipe associada à caminhonete. Cadastros provisórios permanecem indisponíveis até conferência dos dados reais.
+
+Validação: **65 testes aprovados, zero falhas**. Chrome headless com banco temporário conferiu seleção anterior C/A e observação, demais itens S/A, KM mínimo para Praça, redução pelo Administrativo, cadastro do tipo, seleção/recebimento/entrega de duas motos e layout móvel sem erros JavaScript ou rolagem horizontal.
+
 ## Frota, checklists, motocicletas e Urgência UU — 25/10/2026
 
 - Exclusão administrativa de município preserva referências históricas e recusa serviços ativos. Viaturas incluem marca, modelo, ano e tipo. Provisionamento repetível criou 10 S10 provisórias no banco configurado, complementando 5 existentes nos 15 municípios ativos; a segunda execução criou zero registros. Novos cadastros estão indisponíveis, aguardando dados reais.
@@ -83,7 +92,7 @@ As verificações visuais mencionadas nas seções seguintes são registros hist
 
 Código organizado em `frontend` e `backend`, com banco MongoDB, API, permissões no servidor, interface por perfil e dados demonstrativos. Instruções de instalação, variáveis e deploy estão no [README](README.md).
 
-Última execução da suíte: **60 testes aprovados, zero falhas**. Build de produção do frontend concluído com sucesso. Essas verificações não substituem homologação com os usuários do batalhão nem testes de carga em infraestrutura de produção.
+Última execução da suíte: **65 testes aprovados, zero falhas**. Build de produção do frontend concluído com sucesso. Essas verificações não substituem homologação com os usuários do batalhão nem testes de carga em infraestrutura de produção.
 
 ## Verificações automatizadas
 

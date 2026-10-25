@@ -11,7 +11,7 @@ Interface em português do Brasil, tema institucional, modos claro e escuro e na
 - Ocorrências com protocolo automático, filtros, histórico de alterações, anexos PDF/JPEG/PNG autenticados e impressão.
 - Despacho e reencaminhamento para guarnições ativas e disponíveis; notificação persistida e aviso Socket.IO aos integrantes.
 - Aceite exclusivo sob concorrência, rejeição motivada, observações, cronômetro, pedido de apoio, autorização e encerramento com resumo e resultados.
-- Guarnições, motorista único, associação de viatura e serviço fixo das 8h às 8h seguintes, com encerramento automático e antecipado autorizado.
+- Guarnições convencionais com motorista único e serviço das 8h às 8h seguintes; equipes de motocicleta com escolha das motos por condutor, turno e saída real.
 - Viaturas, quilometragem, manutenção, motorista, associação de guarnição e atualização de coordenadas por API/interface.
 - Mapa React Leaflet com ocorrências, cidades, viaturas, prioridades e filtros.
 - Relatórios por período, município, crime, prioridade, situação, guarnição e viatura; tempo médio, resultados, usuários ativos, turnos e manutenção.
@@ -324,7 +324,7 @@ Abra **http://localhost:5173**. Utilize `localhost` tanto para a interface quant
 - Ocorrências encerradas/canceladas não são editáveis. Exclusão de ocorrência é lógica e preserva histórico. Usuários são desativados em vez de apagados.
 - Alterações guardam campos alterados, autor e data no histórico. Senhas e tokens nunca integram o histórico.
 - Guarnições e viaturas vinculadas a ocorrências não podem ser excluídas. Cadastros ativos em turno não podem ser alterados administrativamente até encerrar o turno.
-- Um usuário só integra uma guarnição por vez e só mantém um atendimento principal ativo. Um motorista por guarnição.
+- Um usuário só integra uma guarnição por vez e só mantém um atendimento principal ativo. Guarnições convencionais têm um motorista; equipes de motocicleta podem ter vários condutores com motocicletas distintas.
 - O encerramento automático tem agendamento para as 8h, verificação de recuperação a cada 30 segundos e na inicialização. A validade do serviço é conferida diretamente nas operações: às 8h não há prorrogação de acesso ao turno enquanto o agendador termina a limpeza. O encerramento automático registra o limite previsto.
 - Encerramento do turno libera integrantes. Despachos não aceitos retornam à fila. Atendimento já aceito continua acessível ao responsável até finalizar; a equipe não recebe novos despachos.
 - A saída antecipada e a remoção individual de integrantes exigem autorização e justificativa, preservando as movimentações no histórico.
@@ -547,7 +547,11 @@ Em Administrativo, o botão Excluir retira o município da lista de atendimento 
 
 O cadastro de viaturas inclui marca, modelo, ano e tipo (Motocicleta, SUV ou Caminhonete). Para completar a frota dos municípios ativos, execute `npm run provision:fleet` em `backend` ou use o botão administrativo na página de recursos. O comando pode ser repetido sem duplicar as S10 existentes. Novos registros são Chevrolet S10 provisórias e indisponíveis: informe prefixo, placa, ano e quilometragem reais antes de liberar. Os identificadores técnicos dos provisórios não representam placas reais, e o KM zero inicial não é uma leitura confirmada.
 
-Ao ingressar como motorista, registre o recebimento da viatura: seis itens S/A ou C/A e quilometragem obrigatória. C/A exige observação. O KM nunca pode ser inferior ao último registrado. A entrega também é obrigatória; encerramento automático gera uma pendência apresentada no próximo acesso. Uma entrega pendente impede a liberação da viatura, e a troca de motorista exige entrega anterior seguida de recebimento pelo novo condutor.
+Ao ingressar como motorista, registre o recebimento da viatura: seis itens S/A ou C/A e quilometragem obrigatória. Os campos recuperam a última seleção e observação de cada veículo; sem histórico, começam em S/A. C/A exige observação. Para Praça e Oficial, o KM deve ser igual ou superior ao último registrado. O Administrativo pode corrigir valores para baixo, inclusive pelo botão **Corrigir KM** em Viaturas, com auditoria e sem editar os demais dados do veículo. A entrega também é obrigatória; encerramento automático gera uma pendência apresentada no próximo acesso. Uma entrega pendente impede a liberação da viatura, e a troca de motorista exige entrega anterior seguida de recebimento pelo novo condutor.
+
+O cadastro de guarnições inclui **Tipo: Motocicleta ou Viatura Convencional**. Cada motorista de motocicleta precisa selecionar pelo menos uma moto disponível do mesmo município e preencher um recebimento por moto. A mesma moto não pode ser recebida simultaneamente por outro condutor. Na saída, é exigida a entrega de todas as motos recebidas; saída autorizada pela central gera os checklists pendentes para o motorista.
+
+Na preparação dos dados de demonstração, `npm run provision:crews` em `backend` completa a frota e as equipes por município e aplica placas **DEMO0100–DEMO0120** e prefixos **VTR-1800–VTR-1820**. Essa carga substitui identificadores das caminhonetes pelos padrões de demonstração; não a execute para preservar identificadores reais já corrigidos. A execução desta atualização resultou em 15 municípios cobertos, 11 novas guarnições e 15 caminhonetes com DEMO0100–DEMO0114 / VTR-1800–VTR-1814. Os cadastros provisórios continuam aguardando ano e KM reais antes da liberação.
 
 O serviço regular permanece das 8h às 8h seguintes. Nas motocicletas, escolha Manhã, Tarde ou Noite no ingresso e registre a saída real. Não há encerramento automático após 24 horas. Os relatórios preservam os horários reais e exibem também entrada e saída arredondadas para a hora mais próxima (30 minutos arredondam para a hora seguinte).
 

@@ -1,20 +1,46 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { api } from '../services/api';
 import { Modal, Button } from './UI';
-import VehicleChecklist, { blankInspection, inspectionBody } from './VehicleChecklist';
+import VehicleChecklist, { inspectionBody } from './VehicleChecklist';
+import { useInspectionDefaults } from '../hooks/useInspectionDefaults';
+function Delivery({ vehicle, onChange }) {
+  const { value, setValue, minimum, loading, error, retry } = useInspectionDefaults(
+    vehicle._id,
+    vehicle.mileage,
+  );
+  useEffect(() => {
+    onChange({ vehicle: vehicle._id, checklist: inspectionBody(value), ready: !loading });
+  }, [value, loading]);
+  return (
+    <section>
+      <h3>{vehicle.prefix}</h3>
+      {error && (
+        <p role="alert">
+          {error}{' '}
+          <Button type="button" onClick={retry}>
+            Tentar novamente
+          </Button>
+        </p>
+      )}
+      <VehicleChecklist value={value} onChange={setValue} minimum={minimum} />
+    </section>
+  );
+}
 export default function MotorcycleExit({ crew }) {
   const app = useApp(),
     [open, setOpen] = useState(false),
     [busy, setBusy] = useState(false);
-  const [checklist, setChecklist] = useState(() => blankInspection(crew.vehicle?.mileage || 0));
-  const driver = crew.driver?._id === app.user._id;
+  const [receipts, setReceipts] = useState({});
+  const vehicles = (crew.motorcycleDrivers || [])
+    .filter((r) => r.driver?._id === app.user._id)
+    .map((r) => r.vehicle);
   return (
     <>
       <Button
         variant="secondary"
         onClick={() => {
-          setChecklist(blankInspection(crew.vehicle?.mileage || 0));
+          setReceipts({});
           setOpen(true);
         }}
       >
@@ -27,10 +53,12 @@ export default function MotorcycleExit({ crew }) {
               e.preventDefault();
               setBusy(true);
               await app.run(async () => {
-                await api.post(
-                  `/crews/${crew._id}/leave`,
-                  driver && crew.vehicle ? { checklist: inspectionBody(checklist) } : {},
-                );
+                await api.post(`/crews/${crew._id}/leave`, {
+                  checklists: vehicles.map((v) => ({
+                    vehicle: v._id,
+                    checklist: receipts[v._id].checklist,
+                  })),
+                });
                 const r = await api.get('/auth/me');
                 app.hydrate(r.data);
                 setOpen(false);
@@ -42,14 +70,18 @@ export default function MotorcycleExit({ crew }) {
               O horário real de saída será registrado agora. O relatório também mostrará o valor
               arredondado para a hora mais próxima.
             </p>
-            {driver && crew.vehicle && (
-              <VehicleChecklist
-                value={checklist}
-                onChange={setChecklist}
-                minimum={crew.vehicle.mileage || 0}
+            {vehicles.map((v) => (
+              <Delivery
+                key={v._id}
+                vehicle={v}
+                onChange={(receipt) => setReceipts((r) => ({ ...r, [v._id]: receipt }))}
               />
-            )}
-            <Button type="submit" busy={busy}>
+            ))}
+            <Button
+              type="submit"
+              busy={busy}
+              disabled={vehicles.some((v) => !receipts[v._id]?.ready)}
+            >
               Registrar saída
             </Button>
           </form>

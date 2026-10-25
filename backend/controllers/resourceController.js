@@ -1,4 +1,5 @@
 import { activeDuty, onDuty } from '../utils/duty.js';
+import { mileageFilter } from '../utils/mileage.js';
 import bcrypt from 'bcryptjs';
 import {
   User,
@@ -115,16 +116,62 @@ export async function removeUser(req, res) {
   res.json({ message: 'Usuário desativado; vínculos históricos preservados.' });
 }
 export async function listCrews(req, res) {
+  const crews = await Crew.find()
+    .populate('city', 'name latitude longitude')
+    .populate(
+      'vehicle',
+      'prefix plate latitude longitude brand model year type mileage provisional',
+    )
+    .populate('members driver', 'name role')
+    .sort({ name: 1 })
+    .lean();
+  const records = await VehicleHandover.find({ closedAt: null, intake: { $exists: true } })
+    .populate('driver', 'name')
+    .populate('vehicle', 'prefix mileage type')
+    .lean();
   res.json(
-    await Crew.find()
-      .populate('city', 'name latitude longitude')
-      .populate(
-        'vehicle',
-        'prefix plate latitude longitude brand model year type mileage provisional',
-      )
-      .populate('members driver', 'name role')
-      .sort({ name: 1 }),
+    crews.map((c) => ({
+      ...c,
+      motorcycleDrivers: records
+        .filter((r) => String(r.crew) === String(c._id) && r.vehicle?.type === 'Motocicleta')
+        .map((r) => ({ driver: r.driver, vehicle: r.vehicle })),
+    })),
   );
+}
+export async function motorcycles(req, res) {
+  const crew = await Crew.findById(req.params.id);
+  requireValue(crew, 'Guarnição não encontrada.', 404);
+  const open = await VehicleHandover.distinct('vehicle', { closedAt: null });
+  res.json(
+    await Vehicle.find({
+      city: crew.city,
+      type: 'Motocicleta',
+      provisional: { $ne: true },
+      inspectionHold: { $ne: true },
+      status: { $in: ['Disponível', 'Em operação'] },
+      _id: { $nin: open },
+      $or: [{ crew: null }, { crew: crew._id }],
+    }).select('prefix plate mileage brand model'),
+  );
+}
+export async function correctMileage(req, res) {
+  await transaction(async (session) => {
+    const vehicle = await Vehicle.findById(req.params.id).session(session);
+    requireValue(vehicle, 'Viatura não encontrada.', 404);
+    const previous = vehicle.mileage;
+    vehicle.mileage = req.input.mileage;
+    await vehicle.save({ session });
+    await audit(
+      req.user,
+      'Correção administrativa de KM',
+      'Vehicle',
+      vehicle._id,
+      `${previous} → ${vehicle.mileage} km`,
+      session,
+    );
+  });
+  changed('vehicles');
+  res.json({ message: 'Quilometragem corrigida.' });
 }
 export async function saveCrew(req, res) {
   const crew = await transaction(async (session) => {
@@ -138,9 +185,25 @@ export async function saveCrew(req, res) {
     );
     if (req.input.vehicle === undefined)
       req.input.vehicle = row.vehicle ? String(row.vehicle) : null;
+    const selected = req.input.vehicle
+      ? await Vehicle.findById(req.input.vehicle).session(session)
+      : null;
+    const crewType =
+      req.input.type || (selected?.type === 'Motocicleta' ? 'Motocicleta' : row.type);
+    requireValue(
+      !selected || String(selected.city) === req.input.city,
+      'Associe uma viatura do mesmo município.',
+      422,
+    );
+    requireValue(
+      !selected || (crewType === 'Motocicleta') === (selected.type === 'Motocicleta'),
+      'O tipo da viatura deve corresponder ao tipo da guarnição.',
+      422,
+    );
+    req.input.type = crewType;
     if (row.vehicle && String(row.vehicle) !== req.input.vehicle)
       await Vehicle.updateOne({ _id: row.vehicle, crew: row._id }, { crew: null }, { session });
-    if (req.input.vehicle) {
+    if (req.input.vehicle && String(row.vehicle) !== req.input.vehicle) {
       const vehicle = await Vehicle.findOneAndUpdate(
         { _id: req.input.vehicle, $or: [{ crew: null }, { crew: row._id }], status: 'Disponível' },
         { crew: row._id },
@@ -225,7 +288,7 @@ export async function saveVehicle(req, res) {
         422,
       );
     requireValue(
-      !req.params.id || req.input.mileage >= row.mileage,
+      req.user.role === 'Administrativo' || !req.params.id || req.input.mileage >= row.mileage,
       'A quilometragem não pode diminuir.',
       422,
     );
@@ -293,7 +356,7 @@ export async function location(req, res) {
   const vehicle = await Vehicle.findOneAndUpdate(
     {
       _id: row._id,
-      ...(req.input.mileage !== undefined ? { mileage: { $lte: req.input.mileage } } : {}),
+      ...(req.input.mileage !== undefined ? mileageFilter(req.user, req.input.mileage) : {}),
     },
     { ...req.input, locatedAt: new Date() },
     { new: true, runValidators: true },
