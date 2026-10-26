@@ -4,6 +4,7 @@ import CrewManagement from '../components/CrewManagement';
 import JoinCrewDialog from '../components/JoinCrewDialog';
 import MotorcycleExit from '../components/MotorcycleExit';
 import { militaryLabel } from '../components/PersonalFields';
+import { filterCrews } from '../utils/crewFilters';
 import { Link } from 'react-router-dom';
 import {
   Plus,
@@ -37,10 +38,14 @@ export default function Crews() {
   const app = useApp();
   const admin = app.user.role === 'Administrativo' && !app.activeAttendance;
   const manager = app.user.role !== 'Praça' && !app.activeAttendance;
+  const canFilter = app.user.role !== 'Praça';
   const { data: crews } = useData('/crews', []);
-  const { data: cities } = useData(admin ? '/cities' : null, []);
+  const { data: cities } = useData(canFilter ? '/cities' : null, []);
   const { data: vehicles } = useData(admin ? '/vehicles' : null, []);
   const [search, setSearch] = useState('');
+  const [filters, setFilters] = useState({});
+  const visibleCrews = filterCrews(crews, { ...filters, search }, app.now);
+  const setFilter = (key, value) => setFilters((f) => ({ ...f, [key]: value }));
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState({});
   const [join, setJoin] = useState(null);
@@ -90,195 +95,278 @@ export default function Crews() {
           onChange={setSearch}
           placeholder="Pesquisar guarnição ou município"
         />
-        <span className="muted">{crews.length} guarnições cadastradas</span>
+        <span className="muted">
+          {visibleCrews.length} de {crews.length} guarnições
+        </span>
       </div>
-      <div className="crew-grid">
-        {crews
-          .filter((c) => `${c.name} ${c.city?.name}`.toLowerCase().includes(search.toLowerCase()))
-          .map((c) => {
-            const mine = c.members.some((m) => m._id === app.user._id);
-            const active = c.status !== 'Fora de serviço' && isOnDuty(c, app.now);
-            const motorcycle =
-              c.type === 'Motocicleta' ||
-              c.shiftMode === 'Motocicleta' ||
-              c.vehicle?.type === 'Motocicleta';
-            return (
-              <Panel className={`crew-card ${mine ? 'my-crew' : ''}`} key={c._id}>
-                <div className="card-top">
-                  <span className="crew-card-icon">
-                    <UsersRound size={22} />
-                  </span>
-                  <Badge>{c.status}</Badge>
-                </div>
-                <h2>
+      {canFilter && (
+        <Panel className="crew-filters-panel">
+          <div className="filter-fields padded">
+            <Select
+              label="Serviço da guarnição"
+              value={filters.duty || ''}
+              onChange={(e) => setFilter('duty', e.target.value)}
+            >
+              <option value="">Todos</option>
+              <option value="on">Em serviço</option>
+              <option value="off">Fora de serviço</option>
+            </Select>
+            <Select
+              label="Quantidade de policiais"
+              value={filters.count || ''}
+              onChange={(e) => setFilter('count', e.target.value)}
+            >
+              <option value="">Todas</option>
+              {[0, 1, 2, 3, 4].map((n) => (
+                <option key={n} value={n}>
+                  {n} {n === 1 ? 'policial' : 'policiais'}
+                </option>
+              ))}
+              <option value="5+">5 ou mais policiais</option>
+            </Select>
+            <Select
+              label="Tipo de guarnição"
+              value={filters.type || ''}
+              onChange={(e) => setFilter('type', e.target.value)}
+            >
+              <option value="">Todos</option>
+              <option>Viatura Convencional</option>
+              <option>Motocicleta</option>
+            </Select>
+            <Select
+              label="Município da guarnição"
+              value={filters.city || ''}
+              onChange={(e) => setFilter('city', e.target.value)}
+            >
+              <option value="">Todos</option>
+              {cities.map((c) => (
+                <option key={c._id} value={c._id}>
                   {c.name}
-                  {mine && <small> Sua guarnição</small>}
-                </h2>
-                <p className="muted">{c.city?.name}</p>
-                <p className="muted">{c.type || 'Viatura Convencional'}</p>
-                {!(c.motorcycleSeats || []).length &&
-                  (c.motorcycleDrivers || []).map((r) => (
-                    <p key={r.vehicle._id}>
-                      {militaryLabel(r.driver)} · {r.vehicle.prefix}
-                    </p>
-                  ))}
-                {(c.motorcycleSeats || []).map((s) => (
-                  <p key={s.member?._id}>
-                    {s.vehicle?.prefix} · {s.role}: {militaryLabel(s.member)}
+                </option>
+              ))}
+            </Select>
+            <Select
+              label="Situação operacional"
+              value={filters.status || ''}
+              onChange={(e) => setFilter('status', e.target.value)}
+            >
+              <option value="">Todas</option>
+              {['Disponível', 'Em atendimento', 'Indisponível', 'Fora de serviço'].map((s) => (
+                <option key={s}>{s}</option>
+              ))}
+            </Select>
+            <Select
+              label="GPS da guarnição"
+              value={filters.gps || ''}
+              onChange={(e) => setFilter('gps', e.target.value)}
+            >
+              <option value="">Todos</option>
+              <option value="live">GPS ativo</option>
+              <option value="stale">Última posição conhecida</option>
+              <option value="none">Sem localização</option>
+            </Select>
+            <Button
+              variant="ghost"
+              onClick={() => {
+                setFilters({});
+                setSearch('');
+              }}
+            >
+              Limpar filtros
+            </Button>
+          </div>
+        </Panel>
+      )}
+      <div className="crew-grid">
+        {visibleCrews.map((c) => {
+          const mine = c.members.some((m) => m._id === app.user._id);
+          const active = c.status !== 'Fora de serviço' && isOnDuty(c, app.now);
+          const motorcycle =
+            c.type === 'Motocicleta' ||
+            c.shiftMode === 'Motocicleta' ||
+            c.vehicle?.type === 'Motocicleta';
+          return (
+            <Panel className={`crew-card ${mine ? 'my-crew' : ''}`} key={c._id}>
+              <div className="card-top">
+                <span className="crew-card-icon">
+                  <UsersRound size={22} />
+                </span>
+                <Badge>{c.status}</Badge>
+              </div>
+              <h2>
+                {c.name}
+                {mine && <small> Sua guarnição</small>}
+              </h2>
+              <p className="muted">{c.city?.name}</p>
+              <p className="muted">{c.type || 'Viatura Convencional'}</p>
+              {!(c.motorcycleSeats || []).length &&
+                (c.motorcycleDrivers || []).map((r) => (
+                  <p key={r.vehicle._id}>
+                    {militaryLabel(r.driver)} · {r.vehicle.prefix}
                   </p>
                 ))}
-                {c.inspectionBlocked && (
-                  <p className="form-note" role="status">
-                    Viatura retida até a conclusão dos checklists dos motoristas.
-                  </p>
-                )}
-                {!motorcycle && (
-                  <div className="crew-meta">
-                    <span>
-                      <Car size={17} />
-                      {c.vehicle?.prefix || 'Sem viatura associada'}
-                    </span>
-                    <span>
-                      <Shield size={17} />
-                      {c.driver ? militaryLabel(c.driver) : 'Motorista não definido'}
-                    </span>
-                  </div>
-                )}
-                <div className="crew-members">
-                  <span className="eyebrow">
-                    GUARNIÇÃO · {c.members.length}
-                    {c.type !== 'Motocicleta' && c.vehicle?.type !== 'Motocicleta' ? '/4' : ''}
+              {(c.motorcycleSeats || []).map((s) => (
+                <p key={s.member?._id}>
+                  {s.vehicle?.prefix} · {s.role}: {militaryLabel(s.member)}
+                </p>
+              ))}
+              {c.inspectionBlocked && (
+                <p className="form-note" role="status">
+                  Viatura retida até a conclusão dos checklists dos motoristas.
+                </p>
+              )}
+              {!motorcycle && (
+                <div className="crew-meta">
+                  <span>
+                    <Car size={17} />
+                    {c.vehicle?.prefix || 'Sem viatura associada'}
                   </span>
-                  {c.members.length ? (
-                    c.members.map((m) => (
-                      <span key={m._id}>
-                        {militaryLabel(m)}
-                        {c.motorcycleSeats?.some((s) => s.member?._id === m._id) ? (
-                          <small>
-                            {c.motorcycleSeats.find((s) => s.member?._id === m._id).role}
-                          </small>
-                        ) : (
-                          objectId(c.driver) === m._id && <small>Motorista</small>
-                        )}
-                      </span>
-                    ))
-                  ) : (
-                    <p>Guarnição sem policiais no turno.</p>
-                  )}
+                  <span>
+                    <Shield size={17} />
+                    {c.driver ? militaryLabel(c.driver) : 'Motorista não definido'}
+                  </span>
                 </div>
-                <div className="shift-timer">
-                  <Clock3 size={17} />
-                  <div>
-                    <strong>{active ? dutyClock(c, app.now) : 'Fora de serviço'}</strong>
-                    <small>
-                      {active
-                        ? `Início: ${fmtDateTime(c.shiftStart)}`
-                        : 'O turno começa no primeiro ingresso'}
-                    </small>
-                  </div>
+              )}
+              <div className="crew-members">
+                <span className="eyebrow">
+                  GUARNIÇÃO · {c.members.length}
+                  {c.type !== 'Motocicleta' && c.vehicle?.type !== 'Motocicleta' ? '/4' : ''}
+                </span>
+                {c.members.length ? (
+                  c.members.map((m) => (
+                    <span key={m._id}>
+                      {militaryLabel(m)}
+                      {c.motorcycleSeats?.some((s) => s.member?._id === m._id) ? (
+                        <small>{c.motorcycleSeats.find((s) => s.member?._id === m._id).role}</small>
+                      ) : (
+                        objectId(c.driver) === m._id && <small>Motorista</small>
+                      )}
+                    </span>
+                  ))
+                ) : (
+                  <p>Guarnição sem policiais no turno.</p>
+                )}
+              </div>
+              <div className="shift-timer">
+                <Clock3 size={17} />
+                <div>
+                  <strong>{active ? dutyClock(c, app.now) : 'Fora de serviço'}</strong>
+                  <small>
+                    {active
+                      ? `Início: ${fmtDateTime(c.shiftStart)}`
+                      : 'O turno começa no primeiro ingresso'}
+                  </small>
                 </div>
-                <div className="attendance-actions">
-                  {Number.isFinite(c.location?.latitude) &&
-                  Number.isFinite(c.location?.longitude) ? (
-                    <Link
-                      className="button secondary"
-                      to={`/mapa?crew=${c._id}`}
-                      aria-label={`Ver localização de ${c.name} no mapa`}
-                    >
-                      <Navigation size={16} /> Ver localização no mapa
-                    </Link>
-                  ) : (
+              </div>
+              <div className="attendance-actions">
+                {Number.isFinite(c.location?.latitude) && Number.isFinite(c.location?.longitude) ? (
+                  <Link
+                    className="button secondary"
+                    to={`/mapa?crew=${c._id}`}
+                    aria-label={`Ver localização de ${c.name} no mapa`}
+                  >
+                    <Navigation size={16} /> Ver localização no mapa
+                  </Link>
+                ) : (
+                  <Button
+                    variant="secondary"
+                    disabled
+                    title="Esta guarnição ainda não compartilhou uma posição GPS."
+                  >
+                    Sem localização GPS
+                  </Button>
+                )}
+                <CrewManagement crew={c} />
+                {mine && c.shiftMode === 'Motocicleta' && <MotorcycleExit crew={c} />}
+                {mine &&
+                  c.driver?._id === app.user._id &&
+                  c.vehicle &&
+                  c.shiftMode !== 'Motocicleta' && (
                     <Button
                       variant="secondary"
-                      disabled
-                      title="Esta guarnição ainda não compartilhou uma posição GPS."
+                      onClick={() => app.run(() => api.post(`/crews/${c._id}/driver-return`))}
                     >
-                      Sem localização GPS
+                      Entregar viatura — checklist
                     </Button>
                   )}
-                  <CrewManagement crew={c} />
-                  {mine && c.shiftMode === 'Motocicleta' && <MotorcycleExit crew={c} />}
-                  {mine &&
-                    c.driver?._id === app.user._id &&
-                    c.vehicle &&
-                    c.shiftMode !== 'Motocicleta' && (
-                      <Button
-                        variant="secondary"
-                        onClick={() => app.run(() => api.post(`/crews/${c._id}/driver-return`))}
-                      >
-                        Entregar viatura — checklist
-                      </Button>
-                    )}
-                  {!app.activeAttendance &&
-                    !app.user.crew &&
-                    !c.currentOccurrence &&
-                    c.status !== 'Indisponível' && (
-                      <Button
-                        disabled={
-                          c.type !== 'Motocicleta' &&
-                          c.vehicle?.type !== 'Motocicleta' &&
-                          c.members.length >= 4
-                        }
-                        onClick={() => setJoin(c)}
-                      >
-                        <LogIn size={16} />
-                        {c.type !== 'Motocicleta' &&
+                {!app.activeAttendance &&
+                  !app.user.crew &&
+                  !c.currentOccurrence &&
+                  c.status !== 'Indisponível' && (
+                    <Button
+                      disabled={
+                        c.type !== 'Motocicleta' &&
                         c.vehicle?.type !== 'Motocicleta' &&
                         c.members.length >= 4
-                          ? 'Guarnição lotada (4/4)'
-                          : 'Ingressar'}
-                      </Button>
-                    )}
-                  {manager && active && (
-                    <Button
-                      variant="danger-ghost"
-                      onClick={() => {
-                        setEnd(c);
-                        setReason('');
-                      }}
+                      }
+                      onClick={() => setJoin(c)}
                     >
-                      Encerrar turno
+                      <LogIn size={16} />
+                      {c.type !== 'Motocicleta' &&
+                      c.vehicle?.type !== 'Motocicleta' &&
+                      c.members.length >= 4
+                        ? 'Guarnição lotada (4/4)'
+                        : 'Ingressar'}
                     </Button>
                   )}
-                  {mine && c.vehicle && (
-                    <Button
-                      variant="secondary"
-                      onClick={() => {
-                        setLocation(c.vehicle);
-                        setPosition({
-                          latitude: c.vehicle.latitude ?? '',
-                          longitude: c.vehicle.longitude ?? '',
-                          mileage: '',
-                        });
-                      }}
-                    >
-                      <Navigation size={16} />
-                      Atualizar posição
+                {manager && active && (
+                  <Button
+                    variant="danger-ghost"
+                    onClick={() => {
+                      setEnd(c);
+                      setReason('');
+                    }}
+                  >
+                    Encerrar turno
+                  </Button>
+                )}
+                {mine && c.vehicle && (
+                  <Button
+                    variant="secondary"
+                    onClick={() => {
+                      setLocation(c.vehicle);
+                      setPosition({
+                        latitude: c.vehicle.latitude ?? '',
+                        longitude: c.vehicle.longitude ?? '',
+                        mileage: '',
+                      });
+                    }}
+                  >
+                    <Navigation size={16} />
+                    Atualizar posição
+                  </Button>
+                )}
+                {admin && !c.members.length && !c.currentOccurrence && (
+                  <>
+                    <Button variant="secondary" onClick={() => edit(c)}>
+                      <Pencil size={15} />
+                      Alterar
                     </Button>
-                  )}
-                  {admin && !c.members.length && !c.currentOccurrence && (
-                    <>
-                      <Button variant="secondary" onClick={() => edit(c)}>
-                        <Pencil size={15} />
-                        Alterar
-                      </Button>
-                      <Button variant="ghost" onClick={() => setRemove(c)}>
-                        <Trash2 size={15} />
-                        Excluir
-                      </Button>
-                    </>
-                  )}
-                  {mine && !manager && (
-                    <small className="muted">
-                      A saída antecipada depende de autorização do Oficial ou Administrativo.
-                    </small>
-                  )}
-                </div>
-              </Panel>
-            );
-          })}
+                    <Button variant="ghost" onClick={() => setRemove(c)}>
+                      <Trash2 size={15} />
+                      Excluir
+                    </Button>
+                  </>
+                )}
+                {mine && !manager && (
+                  <small className="muted">
+                    A saída antecipada depende de autorização do Oficial ou Administrativo.
+                  </small>
+                )}
+              </div>
+            </Panel>
+          );
+        })}
       </div>
-      {!crews.length && <Empty text="Nenhuma guarnição cadastrada." />}
+      {!visibleCrews.length && (
+        <Empty
+          text={
+            crews.length
+              ? 'Nenhuma guarnição corresponde aos filtros.'
+              : 'Nenhuma guarnição cadastrada.'
+          }
+        />
+      )}
       {editing && (
         <Modal
           title={editing === 'new' ? 'Cadastrar guarnição' : 'Alterar guarnição'}

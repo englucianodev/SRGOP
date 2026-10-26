@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, lazy, Suspense } from 'react';
 import { Download, Printer, FileChartColumn } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { useData } from '../hooks/useData';
@@ -6,8 +6,8 @@ import { downloadFile } from '../services/api';
 import { params, duration, fmtDateTime } from '../utils/format';
 import { PageTitle, Panel, Button, Badge, Loading, Select } from '../components/UI';
 import OccurrenceFilters from '../components/OccurrenceFilters';
-import CrewTraceReport from '../components/CrewTraceReport';
-import VehicleReport from '../components/VehicleReport';
+const CrewTraceReport = lazy(() => import('../components/CrewTraceReport'));
+const VehicleReport = lazy(() => import('../components/VehicleReport'));
 export default function Reports() {
   const [mode, setMode] = useState('crews');
   return (
@@ -35,13 +35,15 @@ export default function Reports() {
           Indicadores gerais
         </Button>
       </div>
-      {mode === 'crews' ? (
-        <CrewTraceReport />
-      ) : mode === 'vehicles' ? (
-        <VehicleReport />
-      ) : (
-        <GeneralReports />
-      )}
+      <Suspense fallback={<Loading />}>
+        {mode === 'crews' ? (
+          <CrewTraceReport />
+        ) : mode === 'vehicles' ? (
+          <VehicleReport />
+        ) : (
+          <GeneralReports />
+        )}
+      </Suspense>
     </>
   );
 }

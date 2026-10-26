@@ -1,15 +1,23 @@
-import { isOnDuty, dutyClock } from '../utils/duty';
+import { isOnDuty } from '../utils/duty';
 import { useEffect, useRef } from 'react';
 import { MapContainer, TileLayer, CircleMarker, Popup, useMap } from 'react-leaflet';
 import { Badge } from './UI';
-function FocusCrew({ crew, zoom = 16 }) {
+function FitPoints({ points, fallback, fitKey }) {
   const map = useMap();
-  const latitude = crew?.location?.latitude;
-  const longitude = crew?.location?.longitude;
+  const signature = JSON.stringify(points);
+  const fallbackSignature = JSON.stringify(fallback);
   useEffect(() => {
-    if (Number.isFinite(latitude) && Number.isFinite(longitude))
-      map.setView([latitude, longitude], zoom);
-  }, [map, crew?._id, latitude, longitude, zoom]);
+    map.invalidateSize();
+    const fit = () => {
+      if (points.length) map.fitBounds(points, { padding: [42, 42], maxZoom: 18, animate: false });
+      else if (fallback.length)
+        map.fitBounds(fallback, { padding: [42, 42], maxZoom: 11, animate: false });
+      else map.setView([-5.28, -44.46], 9, { animate: false });
+    };
+    fit();
+    map.on('resize', fit);
+    return () => map.off('resize', fit);
+  }, [map, signature, fallbackSignature, fitKey]);
   return null;
 }
 function CrewMarker({ crew: c, focused }) {
@@ -37,7 +45,8 @@ function CrewMarker({ crew: c, focused }) {
       <Popup>
         <strong>{c.name}</strong>
         <p>
-          {c.city?.name} · {c.vehicle?.prefix || 'Sem viatura'}
+          {c.city?.name}
+          {c.type !== 'Motocicleta' && ` · ${c.vehicle?.prefix || 'Sem viatura'}`}
         </p>
         <p>{live ? 'GPS ativo' : 'Última posição · GPS sem atualização'}</p>
         <p>
@@ -55,12 +64,38 @@ function CrewMarker({ crew: c, focused }) {
 export default function OperationalMap({
   cities = [],
   occurrences = [],
-  vehicles = [],
   crews = [],
   focusCrew = '',
   emergency = null,
   compact = false,
+  mode = 'occurrences',
+  fitKey = '',
 }) {
+  const shownCrews =
+    mode === 'crews'
+      ? crews.filter(
+          (c) => Number.isFinite(c.location?.latitude) && Number.isFinite(c.location?.longitude),
+        )
+      : [];
+  const shownOccurrences =
+    mode === 'occurrences'
+      ? occurrences.filter((o) => Number.isFinite(o.latitude) && Number.isFinite(o.longitude))
+      : [];
+  const points = [
+    ...shownCrews.map((c) => [c.location.latitude, c.location.longitude]),
+    ...shownOccurrences.map((o) => [o.latitude, o.longitude]),
+  ];
+  if (
+    mode === 'crews' &&
+    emergency &&
+    Number.isFinite(emergency.latitude) &&
+    Number.isFinite(emergency.longitude)
+  )
+    points.push([emergency.latitude, emergency.longitude]);
+  const fallback =
+    emergency && !Number.isFinite(emergency.latitude)
+      ? cities.filter((c) => c._id === emergency.city)
+      : cities;
   return (
     <MapContainer
       center={[-5.28, -44.46]}
@@ -69,55 +104,37 @@ export default function OperationalMap({
       className={`operational-map ${compact ? 'compact' : ''}`}
       aria-label="Mapa operacional dos municípios"
     >
-      <FocusCrew
-        zoom={emergency && !Number.isFinite(emergency.latitude) ? 10 : 16}
-        crew={
-          emergency
-            ? {
-                _id: emergency._id,
-                location: Number.isFinite(emergency.latitude)
-                  ? emergency
-                  : cities.find((c) => c._id === emergency.city),
-              }
-            : crews.find((c) => c._id === focusCrew)
-        }
+      <FitPoints
+        points={points}
+        fallback={fallback
+          .filter((c) => Number.isFinite(c.latitude) && Number.isFinite(c.longitude))
+          .map((c) => [c.latitude, c.longitude])}
+        fitKey={`${mode}-${fitKey}`}
       />
-      {emergency && Number.isFinite(emergency.latitude) && Number.isFinite(emergency.longitude) && (
-        <CircleMarker
-          center={[emergency.latitude, emergency.longitude]}
-          radius={17}
-          pathOptions={{ color: '#a90000', fillColor: '#ff1515', fillOpacity: 1, weight: 5 }}
-        >
-          <Popup>
-            <strong>URGÊNCIA UU · {emergency.actorName}</strong>
-            <p>
-              {emergency.crewName} · {emergency.cityName}
-            </p>
-            <p>Posição registrada: {new Date(emergency.locatedAt).toLocaleString('pt-BR')}</p>
-          </Popup>
-        </CircleMarker>
-      )}
+      {mode === 'crews' &&
+        emergency &&
+        Number.isFinite(emergency.latitude) &&
+        Number.isFinite(emergency.longitude) && (
+          <CircleMarker
+            center={[emergency.latitude, emergency.longitude]}
+            radius={17}
+            pathOptions={{ color: '#a90000', fillColor: '#ff1515', fillOpacity: 1, weight: 5 }}
+          >
+            <Popup>
+              <strong>URGÊNCIA UU · {emergency.actorName}</strong>
+              <p>
+                {emergency.crewName} · {emergency.cityName}
+              </p>
+              <p>Posição registrada: {new Date(emergency.locatedAt).toLocaleString('pt-BR')}</p>
+            </Popup>
+          </CircleMarker>
+        )}
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
         url={`https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png?key=${encodeURIComponent(import.meta.env.VITE_CARTO_API_KEY || 'cb1_4u0a_1_93cf66948d960a7d71de1c27')}`}
         maxZoom={20}
       />
-      {cities
-        .filter((c) => c.active !== false)
-        .map((c) => (
-          <CircleMarker
-            key={c._id}
-            center={[c.latitude, c.longitude]}
-            radius={4}
-            pathOptions={{ color: '#466989', weight: 1, fillOpacity: 0.5 }}
-          >
-            <Popup>
-              <strong>{c.name}</strong>
-              <p>Município cadastrado</p>
-            </Popup>
-          </CircleMarker>
-        ))}
-      {occurrences
+      {shownOccurrences
         .filter((o) => Number.isFinite(o.latitude) && Number.isFinite(o.longitude))
         .map((o) => (
           <CircleMarker
@@ -125,7 +142,8 @@ export default function OperationalMap({
             center={[o.latitude, o.longitude]}
             radius={8}
             pathOptions={{
-              color: '#fff',
+              color:
+                o.priority === 'Alta' ? '#b82f2b' : o.priority === 'Média' ? '#a56a08' : '#245f9b',
               weight: 3,
               fillColor:
                 o.priority === 'Alta' ? '#de524e' : o.priority === 'Média' ? '#edaa38' : '#3a81c3',
@@ -143,36 +161,9 @@ export default function OperationalMap({
             </Popup>
           </CircleMarker>
         ))}
-      {vehicles
-        .filter((v) => Number.isFinite(v.latitude) && Number.isFinite(v.longitude))
-        .map((v) => (
-          <CircleMarker
-            key={v._id}
-            center={[v.latitude, v.longitude]}
-            radius={6}
-            pathOptions={{ color: '#14304d', weight: 2, fillColor: '#fff', fillOpacity: 1 }}
-          >
-            <Popup>
-              <strong>{v.prefix}</strong>
-              <p>{v.city?.name}</p>
-              <Badge>{v.status}</Badge>
-              <p>
-                Última posição:{' '}
-                {v.locatedAt ? new Date(v.locatedAt).toLocaleString('pt-BR') : 'Cadastro inicial'}
-              </p>
-            </Popup>
-          </CircleMarker>
-        ))}
-      {crews
-        .filter(
-          (c) =>
-            ((c.members.length && isOnDuty(c)) || c._id === focusCrew) &&
-            Number.isFinite(c.location?.latitude) &&
-            Number.isFinite(c.location?.longitude),
-        )
-        .map((c) => (
-          <CrewMarker key={`crew-${c._id}`} crew={c} focused={c._id === focusCrew} />
-        ))}
+      {shownCrews.map((c) => (
+        <CrewMarker key={`crew-${c._id}`} crew={c} focused={c._id === focusCrew} />
+      ))}
     </MapContainer>
   );
 }

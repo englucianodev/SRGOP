@@ -3454,3 +3454,143 @@ select {
     display: none !important;
   }
 }
+/* Operational filters and readable report controls */
+.crew-filters-panel {
+  margin-bottom: 20px;
+}
+.map-mode-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.map-filters {
+  align-items: flex-start;
+}
+.map-filters .field {
+  flex-basis: 180px;
+}
+.legend-dot.gray {
+  background: #68788a;
+}
+.trace-filters .filter-fields {
+  display: grid;
+  grid-template-columns: minmax(160px, 1fr) minmax(160px, 1fr) minmax(260px, 1.6fr);
+  align-items: start;
+  gap: 22px;
+}
+.trace-filters.vehicle-report-filters .filter-fields {
+  grid-template-columns: minmax(150px, 1fr) minmax(150px, 1fr) minmax(240px, 1.5fr) minmax(
+      200px,
+      1.2fr
+    );
+}
+.trace-filters .field {
+  margin-bottom: 0;
+  min-width: 0;
+}
+.trace-filters .filter-fields .field label {
+  font-size: 14px;
+  color: var(--text);
+  line-height: 1.5;
+}
+.trace-filters .filter-fields input,
+.trace-filters .filter-fields select {
+  font-size: 14px;
+  min-height: 46px;
+  padding: 12px;
+}
+.trace-filters .filter-fields select[multiple] {
+  min-height: 150px;
+}
+.trace-filters .field small {
+  font-size: 12px;
+}
+.trace-filters .form-actions {
+  margin-top: 24px;
+}
+.trace-filters .checkbox-line {
+  display: flex;
+  align-items: center;
+  margin: 28px 0 24px;
+  gap: 12px;
+  font-size: 14px;
+  line-height: 1.6;
+}
+.trace-filters .checkbox-line input[type='checkbox'] {
+  width: 18px;
+  height: 18px;
+  min-height: 18px;
+  flex: 0 0 18px;
+  margin: 0;
+  padding: 0;
+}
+.trace-note {
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+.form-grid .crime-picker-wide {
+  grid-column: 1 / -1;
+}
+.crime-combobox {
+  position: relative;
+  min-width: 0;
+}
+.crime-combobox > input {
+  font-size: 14px;
+  min-height: 46px;
+}
+.crime-suggestions {
+  position: absolute;
+  z-index: 100;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: 0 8px 24px #142e4c26;
+}
+.crime-suggestions ul {
+  list-style: none;
+  margin: 0;
+  padding: 4px;
+  max-height: 250px;
+  overflow-y: auto;
+}
+.crime-suggestions [role='option'] {
+  padding: 11px 12px;
+  font-size: 14px;
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+.crime-suggestions [aria-selected='true'] {
+  background: var(--surface-alt);
+  outline: 1px solid var(--primary);
+  outline-offset: -1px;
+  border-radius: 4px;
+}
+.crime-suggestions p {
+  margin: 0;
+  padding: 10px 12px;
+  color: var(--muted);
+  font-size: 12px;
+}
+@media (max-width: 1200px) {
+  .trace-filters.vehicle-report-filters .filter-fields {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 760px) {
+  .trace-filters .filter-fields,
+  .trace-filters.vehicle-report-filters .filter-fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .map-mode-controls .button {
+    flex: 1 1 200px;
+  }
+}
+@media print {
+  .crime-suggestions {
+    display: none;
+  }
+}

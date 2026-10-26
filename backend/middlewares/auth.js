@@ -2,6 +2,7 @@ import jwt from 'jsonwebtoken';
 import { Session, User, SystemSetting, Attendance, VehicleHandover } from '../models/index.js';
 import { AppError, asyncRoute } from '../utils/errors.js';
 import { audit } from '../services/audit.js';
+import { inactivityPolicy } from '../services/sessionPolicy.js';
 export async function authenticateToken(token) {
   if (!token) throw new AppError('Entre no sistema para continuar.', 401, 'Autenticação');
   let payload;
@@ -16,11 +17,14 @@ export async function authenticateToken(token) {
   }
   const session = await Session.findById(payload.sid);
   const settings = await SystemSetting.findOne({ key: 'general' });
+  const user = await User.findById(payload.sub).populate('city', 'name');
+  const policy = user?.active ? await inactivityPolicy(user, settings) : null;
   if (
     !session ||
     String(session.user) !== payload.sub ||
     +session.expiresAt <= Date.now() ||
-    Date.now() - +session.lastActivity >= (settings?.inactivityMinutes || 5) * 60000
+    Date.now() - +session.lastActivity >=
+      (policy?.inactivityMinutes || settings?.inactivityMinutes || 5) * 60000
   ) {
     if (session) {
       const result = await Session.deleteOne({ _id: session._id });
@@ -33,10 +37,9 @@ export async function authenticateToken(token) {
       'Controle de sessão',
     );
   }
-  const user = await User.findById(payload.sub).populate('city', 'name');
   if (!user?.active)
     throw new AppError('Usuário inativo ou aguardando aprovação.', 401, 'Autenticação');
-  return { user, session };
+  return { user, session, inactivityPolicy: policy };
 }
 export const auth = asyncRoute(async (req, res, next) => {
   Object.assign(req, await authenticateToken(req.cookies.srgop_session));

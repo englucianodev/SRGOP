@@ -13,7 +13,7 @@ Interface em português do Brasil, tema institucional, modos claro e escuro e na
 - Aceite exclusivo sob concorrência, rejeição motivada, observações, cronômetro, pedido de apoio, autorização e encerramento com resumo e resultados.
 - Viatura convencional com até quatro integrantes (um motorista e três acompanhantes). Cada moto tem até um piloto e um garupa. Serviço convencional das 8h às 8h seguintes; motocicleta com seleção de veículo/função, turno e saída real.
 - Viaturas, quilometragem, manutenção, motorista, associação de guarnição e atualização de coordenadas por API/interface.
-- Mapa React Leaflet com ocorrências, cidades, viaturas, prioridades e filtros.
+- Mapa React Leaflet com visualizações exclusivas de guarnições ou ocorrências, cores por prioridade, filtros próprios e enquadramento automático dos pontos.
 - Relatórios por período, município, crime, prioridade, situação, guarnição e viatura; tempo médio, resultados, usuários ativos, turnos e manutenção.
 - Exportação CSV compatível com Excel e PDF pelo comando **Imprimir → Salvar como PDF** do navegador.
 - Gestão de usuários, cidades, tipos de crime, parâmetros, módulos do Dashboard e auditoria.
@@ -310,7 +310,8 @@ Abra **http://localhost:5173**. Utilize `localhost` tanto para a interface quant
 | CRUD de guarnições/viaturas | Sim | Consulta | Não |
 | Usuários | Gerencia | Consulta | Não |
 | Assumir CPU | Administra a indicação | Assume | Não |
-| Mapa/relatórios | Sim | Sim | Não |
+| Mapa operacional | Sim | Sim | Sim |
+| Relatórios | Sim | Sim | Não |
 | Parâmetros/cidades/tipos/auditoria | Sim | Não | Não |
 | Preferências de tema/som | Sim | Sim | Tema no cabeçalho |
 
@@ -338,7 +339,7 @@ Abra **http://localhost:5173**. Utilize `localhost` tanto para a interface quant
 - JWT assinado com HS256, issuer/audience explícitos, validade de 12 horas; opção Lembrar de mim aumenta a validade máxima para sete dias. **Inatividade continua encerrando a sessão**, mesmo quando Lembrar de mim está marcada.
 - Token enviado em cookie `srgop_session`, HttpOnly, Secure em produção. Não é salvo em localStorage nem retornado como campo JSON ao frontend.
 - Sessão registrada no MongoDB. Logout invalida a sessão, alterações de usuário invalidam suas sessões e sockets.
-- Inatividade padrão de cinco minutos, configurável de 1 a 60 pelo Administrativo. Mouse, clique, teclado, toque e scroll reiniciam o cronômetro. A API também verifica inatividade, e recebe batimentos somente quando há interação.
+- Em serviço, o limite de inatividade é de **seis horas** (guarnições convencionais, pilotos/garupas e CPU do serviço atual). Fora de serviço, o padrão permanece em cinco minutos, configurável de 1 a 60 pelo Administrativo. O prazo volta ao valor comum ao terminar o serviço; o contador mostra horas quando necessário. Mouse, clique, teclado, toque e scroll reiniciam o cronômetro. API e Socket.IO usam a mesma política, e consultas/alertas passivos não renovam a atividade. Login, consulta da sessão e registro de atividade retornam `inactivityPolicy` para sincronizar o navegador. O vencimento absoluto da sessão/JWT continua sendo respeitado.
 - CORS com origens explícitas, checagem de Origin em mutações autenticadas, Helmet, validação estrita e limites de requisições.
 - Socket.IO autentica o cookie, usa salas privadas por usuário e revalida sessões a cada 15 segundos. Eventos do cliente não podem despachar ou alterar registros; as mutações passam pela API autenticada.
 - Erros centralizados retornam `message`, `origin` e `redirect: "/dashboard"`. A interface exibe a origem, exige ciência da mensagem e direciona ao Dashboard; sessão inválida chega ao Login pela proteção do Dashboard. Validações locais de formulário aparecem junto ao preenchimento.
@@ -448,12 +449,14 @@ Eventos Socket.IO: `dispatch:new`, `notification`, `attendance:changed`, `data:c
 - Chat persistente em **Chat operacional**, no menu lateral logo abaixo de Guarnições: crie uma conversa, escolha outras equipes em serviço e use **Adicionar guarnições** para ampliar o grupo (até vinte equipes). Cada mensagem exibe usuário, equipe e horário. Integrantes das equipes adicionadas podem ler o histórico da conversa durante o mesmo turno. O chat permanece disponível durante atendimentos.
 - Novas mensagens geram notificações persistentes para os integrantes ativos dos turnos participantes, exceto o remetente. O aviso aparece na central de notificações, sinaliza o menu do chat e oferece **Abrir conversa**. A notificação não contém o texto da mensagem, preservando a exigência de justificativa para consulta administrativa. O toque curto respeita as preferências de som e depende da liberação de áudio pelo navegador após interação com a página. Não há redirecionamento automático para Atendimento ao receber mensagem de chat.
 - Em Guarnições, **Ver localização no mapa** abre a equipe com zoom e identificação da posição atual ou última posição GPS registrada, inclusive após o fim do turno. Equipes sem coordenadas exibem **Sem localização GPS**. A tela do mapa informa horário e distingue GPS ativo de posição sem atualização.
+- Administrativo e Oficial têm filtros combináveis em Guarnições: em/fora de serviço, quantidade de policiais (0 a 4 ou 5+), tipo, município, situação operacional e GPS ativo/última posição/sem localização. A busca também encontra prefixo, posto e nome de guerra; Limpar filtros restaura a listagem. A quantidade exibida é a de equipes encontradas entre o total cadastrado.
 - A API valida participação e turno em cada leitura e envio; Oficial também precisa pertencer a uma equipe participante. Saída individual e fim do turno revogam o acesso. Um novo turno não herda conversas do anterior.
 - Administrativo seleciona a conversa e informa justificativa de ao menos dez caracteres antes de consultar mensagens. A autorização dura quinze minutos, vale apenas para aquela conversa e sessão, e a justificativa e as consultas são registradas em auditoria. A autorização de consulta não permite enviar mensagens nem adicionar equipes sem ser integrante.
 - Os registros antigos de `CrewMessage` permanecem no banco, sem migração automática. O endpoint legado não concede mais leitura global a Oficial/Administrativo; novos chats usam `/api/crew-chats`.
 - Cadastro de ocorrência no município da guarnição em serviço inicia atendimento automaticamente quando o usuário não tem atendimento em andamento e a guarnição está disponível, sem ocorrência reservada. Fora dessas condições o registro permanece em aberto. A reserva, o atendimento e o histórico são gravados na mesma transação; a interface encaminha o autor para Atendimento.
 - **Ligar GPS** fica disponível durante o serviço em todas as páginas autenticadas. O navegador solicita permissão; um integrante por vez transmite a posição da equipe. Há envio limitado a uma atualização por dez segundos e consulta periódica de posição a cada quinze segundos. Desligar, sair do serviço ou encerrar a sessão interrompe o compartilhamento. Fechar a página pode impedir a última requisição de parada; por isso posições com mais de um minuto deixam de aparecer como GPS ativo. O navegador pode suspender a localização em segundo plano ou com a tela bloqueada.
 - O mapa fica disponível a todos os perfis autenticados, inclusive durante o atendimento. Marcadores de guarnições mostram última posição, precisão e horário, mesmo sem viatura associada. A atualização ocorre por Socket.IO. Não há histórico de percurso: somente a última posição é armazenada.
+- Em Mapa Operacional, escolha **Guarnições em tempo real** ou **Ocorrências**: os dois conjuntos não são desenhados juntos. Guarnições têm filtros de município, equipe, serviço, tipo, situação e GPS; ocorrências têm município, crime pesquisável, prioridade, situação, equipe responsável e datas. Alta prioridade aparece em vermelho, média em amarelo/âmbar e baixa em azul. O mapa aproxima o máximo possível mantendo todos os pontos filtrados no enquadramento (zoom máximo 18 para um ponto); sem coordenadas, usa os municípios somente como referência de enquadramento, sem criar marcadores fictícios. Consultas de ocorrências usam `GET /api/occurrences/map`, retornando todos os pontos correspondentes até o limite de 5.000, com contagem dos registros sem GPS; acima disso, exige mais filtros e não corta silenciosamente na primeira página.
 - Mapa atualizado para CARTO Voyager raster, compatível com Leaflet, com a chave fornecida. A variável pública `VITE_CARTO_API_KEY` pode substituir a chave; após alterá-la, gere novo build na Vercel. A atribuição OpenStreetMap/CARTO permanece visível. GPS exige HTTPS ou localhost e permissão de localização no dispositivo.
 - Indicadores de encerramentos, armas e veículos recuperados usam a data de conclusão. A distribuição de ocorrências usa a data do fato.
 - Atividade sincronizada entre abas, recuperação de despachos pendentes ao reconectar e logout restrito à sessão encerrada.
@@ -542,6 +545,10 @@ Faça a carga inicial de demonstração somente em banco de homologação. Para 
 **Não foi realizado deploy externo automaticamente**: a entrega inclui código e configurações prontos para essas plataformas. Domínios, projeto de hospedagem e credenciais de banco devem ser configurados no ambiente escolhido.
 
 ## Viaturas, checklists e Urgência UU
+
+Os filtros dos relatórios de Guarnições e Viaturas têm alinhamento pelo topo, controles com fonte de 14 px e organização responsiva. A opção de checklists com C/A fica afastada dos demais campos. Em Critérios do relatório de viaturas, são listados somente os prefixos; o seletor apresenta prefixo e cidade, sem placa.
+
+Em Configurações, a lista comporta **até 500 tipos de crime**, com **até 200 caracteres por nome**, um tipo por linha. O editor foi ampliado para 18 linhas. Ao cadastrar/editar uma ocorrência, digite parte do crime no campo pesquisável e escolha uma sugestão, inclusive sem acentos; as setas e Enter também permitem selecionar. Os registros continuam exigindo um tipo cadastrado. A API de configurações aceita o tamanho ampliado da lista, mantendo o limite normal das demais requisições.
 
 O botão Urgência UU abre uma confirmação com identificação da equipe e do município. O pedido só é enviado ao clicar em **Confirmar pedido de apoio urgente**; Cancelar, Escape ou Enter no foco inicial não enviam o alerta.
 

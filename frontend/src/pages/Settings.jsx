@@ -149,7 +149,8 @@ export default function Settings() {
                 />
                 <div className="form-grid">
                   <Input
-                    label="Inatividade até logout (minutos)"
+                    label="Inatividade fora de serviço (minutos)"
+                    hint="Em serviço, o limite é de 6 horas. Fora de serviço, aplica-se este valor."
                     type="number"
                     required
                     min="1"
@@ -214,11 +215,23 @@ export default function Settings() {
                   <Textarea
                     label="Um tipo por linha"
                     required
-                    rows={7}
+                    rows={18}
+                    maxLength={100500}
                     value={types}
                     onChange={(e) => setTypes(e.target.value)}
                   />
-                  <p className="form-note">Registros antigos mantêm a classificação original.</p>
+                  <p className="form-note">
+                    Até 500 tipos de crime, com 200 caracteres por nome.{' '}
+                    {
+                      new Set(
+                        types
+                          .split('\n')
+                          .map((t) => t.trim())
+                          .filter(Boolean),
+                      ).size
+                    }{' '}
+                    tipos informados. Registros antigos mantêm a classificação original.
+                  </p>
                 </div>
               </Panel>
             </div>

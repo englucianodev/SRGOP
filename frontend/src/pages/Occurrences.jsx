@@ -20,6 +20,7 @@ import {
 } from '../components/UI';
 import OccurrenceDetail from '../components/OccurrenceDetail';
 import OccurrenceFilters from '../components/OccurrenceFilters';
+import CrimeSelect from '../components/CrimeSelect';
 const fresh = () => ({
   occurredAt: localInput(),
   city: '',
@@ -284,17 +285,13 @@ export default function Occurrences() {
                     </option>
                   ))}
               </Select>
-              <Select
-                label="Tipo de crime"
+              <CrimeSelect
                 required
+                wide
                 value={form.crimeType}
-                onChange={(e) => set('crimeType', e.target.value)}
-              >
-                <option value="">Selecione</option>
-                {app.settings?.crimeTypes.map((t) => (
-                  <option key={t}>{t}</option>
-                ))}
-              </Select>
+                options={app.settings?.crimeTypes || []}
+                onChange={(value) => set('crimeType', value)}
+              />
               <Select
                 label="Prioridade"
                 value={form.priority}

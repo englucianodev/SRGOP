@@ -16,7 +16,11 @@ export default mongoose.model(
       notificationsEnabled: { type: Boolean, default: true },
       modules: { type: [String], enum: MODULES, default: MODULES },
       crimeTypes: {
-        type: [String],
+        type: [{ type: String, trim: true, minlength: 2, maxlength: 200 }],
+        validate: [
+          (items) => items.length >= 1 && items.length <= 500,
+          'Cadastre de 1 a 500 tipos de crime.',
+        ],
         default: [
           'Furto',
           'Roubo',

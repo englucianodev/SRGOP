@@ -6,7 +6,7 @@ const schema = new mongoose.Schema(
     protocol: { type: String, required: true, unique: true },
     occurredAt: { type: Date, required: true, index: true },
     city: { ...ref('City'), required: true, index: true },
-    crimeType: { type: String, required: true, maxlength: 100, index: true },
+    crimeType: { type: String, required: true, maxlength: 200, index: true },
     address: { type: String, required: true, maxlength: 300 },
     latitude: { type: Number, min: -90, max: 90 },
     longitude: { type: Number, min: -180, max: 180 },

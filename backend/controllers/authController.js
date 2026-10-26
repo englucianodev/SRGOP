@@ -4,6 +4,7 @@ import { User, City, Session, SystemSetting } from '../models/index.js';
 import { requireValue } from '../utils/errors.js';
 import { audit } from '../services/audit.js';
 import { disconnectSession } from '../services/realtime.js';
+import { inactivityPolicy } from '../services/sessionPolicy.js';
 const cookieOptions = () => ({
   httpOnly: true,
   secure: process.env.NODE_ENV === 'production',
@@ -65,6 +66,7 @@ export async function login(req, res) {
     user: await User.findById(user._id).populate('city', 'name'),
     settings: await SystemSetting.findOne({ key: 'general' }),
     lastActivity: session.lastActivity,
+    inactivityPolicy: await inactivityPolicy(user, await SystemSetting.findOne({ key: 'general' })),
   });
 }
 export async function me(req, res) {
@@ -72,12 +74,13 @@ export async function me(req, res) {
     user: req.user,
     settings: await SystemSetting.findOne({ key: 'general' }),
     lastActivity: req.session.lastActivity,
+    inactivityPolicy: req.inactivityPolicy,
   });
 }
 export async function activity(req, res) {
   req.session.lastActivity = new Date();
   await req.session.save();
-  res.json({ lastActivity: req.session.lastActivity });
+  res.json({ lastActivity: req.session.lastActivity, inactivityPolicy: req.inactivityPolicy });
 }
 export async function logout(req, res) {
   await req.session.deleteOne();

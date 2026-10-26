@@ -110,7 +110,7 @@ export const schemas = {
     .object({
       occurredAt: date,
       city: id,
-      crimeType: text(2, 100),
+      crimeType: text(2, 200),
       address: text(3, 300),
       description: text(10, 10000),
       priority: z.enum(PRIORITIES),
@@ -215,7 +215,7 @@ export const schemas = {
       soundEnabled: z.boolean(),
       notificationsEnabled: z.boolean(),
       modules: z.array(z.enum(MODULES)),
-      crimeTypes: z.array(text(2, 100)).min(1).max(100),
+      crimeTypes: z.array(text(2, 200)).min(1).max(500),
       operations: z
         .array(z.object({ name: text(2, 120), objective: text(5, 1000), day: z.iso.date() }))
         .max(100),

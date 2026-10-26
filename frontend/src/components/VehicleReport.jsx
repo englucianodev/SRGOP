@@ -78,7 +78,7 @@ export default function VehicleReport() {
       </PageTitle>
       <Panel className="no-print">
         <form
-          className="trace-filters"
+          className="trace-filters vehicle-report-filters"
           onSubmit={(e) => {
             e.preventDefault();
             setFilters({ ...draft, vehicles: [...draft.vehicles] });
@@ -117,7 +117,7 @@ export default function VehicleReport() {
             >
               {vehicles.map((v) => (
                 <option key={v._id} value={v._id}>
-                  {v.prefix} · {v.plate} · {v.city?.name}
+                  {v.prefix} · {v.city?.name}
                 </option>
               ))}
             </Select>
@@ -168,8 +168,7 @@ export default function VehicleReport() {
               completos no horário de Fortaleza.
               <br />
               <strong>Viaturas:</strong>{' '}
-              {data.vehicles.map((v) => `${v.prefix} (${v.plate})`).join(', ') ||
-                'Nenhuma cadastrada'}
+              {data.vehicles.map((v) => v.prefix).join(', ') || 'Nenhuma cadastrada'}
               .<br />
               {momentLabel(data.phase)} ·{' '}
               {data.changesOnly ? 'Somente checklists com C/A' : 'Todos os checklists registrados'}.

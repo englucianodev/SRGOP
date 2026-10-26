@@ -32,8 +32,16 @@ export function occurrenceFilter(query = {}) {
       requireValue(idSchema.safeParse(query[key]).success, `Filtro ${key} inválido.`, 422);
       filter[key] = query[key];
     }
-  for (const key of ['priority', 'status', 'crimeType'])
+  for (const key of ['priority', 'status'])
     if (typeof query[key] === 'string' && query[key].length <= 100) filter[key] = query[key];
+  if (query.crimeType) {
+    requireValue(
+      typeof query.crimeType === 'string' && query.crimeType.length <= 200,
+      'Filtro de crime inválido.',
+      422,
+    );
+    filter.crimeType = query.crimeType;
+  }
   if (query.from || query.to) {
     filter.occurredAt = {};
     if (query.from) {
@@ -72,6 +80,29 @@ export async function list(req, res) {
     Occurrence.countDocuments(filter),
   ]);
   res.json({ items, total, page, pages: Math.ceil(total / limit) });
+}
+export async function mapPoints(req, res) {
+  const filter = occurrenceFilter(req.query);
+  const [items, total] = await Promise.all([
+    Occurrence.find({
+      ...filter,
+      latitude: { $gte: -90, $lte: 90 },
+      longitude: { $gte: -180, $lte: 180 },
+    })
+      .select('protocol crimeType address priority status occurredAt latitude longitude city crew')
+      .populate('city', 'name')
+      .populate('crew', 'name')
+      .sort({ createdAt: -1 })
+      .limit(5001)
+      .lean(),
+    Occurrence.countDocuments(filter),
+  ]);
+  requireValue(
+    items.length <= 5000,
+    'Há mais de 5.000 pontos. Reduza o período ou aplique mais filtros no mapa.',
+    422,
+  );
+  res.json({ items, total, withoutCoordinates: total - items.length });
 }
 export async function detail(req, res) {
   const row = await populateOccurrence(Occurrence.findOne({ _id: req.params.id, deleted: false }));

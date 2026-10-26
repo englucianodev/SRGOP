@@ -105,6 +105,7 @@ router.post('/users', admin, v(s.user), a(resource.saveUser));
 router.put('/users/:id', admin, v(s.user), a(resource.saveUser));
 router.delete('/users/:id', admin, a(resource.removeUser));
 router.get('/occurrences', a(occurrence.list));
+router.get('/occurrences/map', a(occurrence.mapPoints));
 router.post('/occurrences', v(s.occurrence), a(occurrence.create));
 router.get('/occurrences/:id', a(occurrence.detail));
 router.put('/occurrences/:id', v(s.occurrence), a(occurrence.update));

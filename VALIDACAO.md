@@ -1,5 +1,22 @@
 # Validação e impasses — SRGOP
 
+## Filtros operacionais, mapa exclusivo, relatórios e pesquisa de crimes — 25/10/2026
+
+- Filtros de Guarnições para Administrativo/Oficial por serviço, efetivo 0/1/2/3/4/5+, tipo, município, situação e GPS. Pesquisa considera identificação militar e prefixo. Filtros se combinam e o botão Limpar restaura a listagem.
+- Mapa separa Guarnições em tempo real e Ocorrências, com filtros próprios, cores distintas Alta/Média/Baixa e enquadramento automático de todos os pontos. Validados pontos dentro da área do mapa e zoom 18 ao selecionar uma equipe. API de pontos retorna mais de cem resultados, exclui descrição, informa ausência de coordenadas e exige redução do filtro acima de 5.000 pontos. Links de guarnição/urgência continuam no modo de equipes.
+- Relatórios têm controles alinhados, fontes de 14 px, organização móvel e afastamento do filtro C/A. Critérios de viaturas mostram prefixos; seletor mostra prefixo/cidade. Relatórios são carregados sob demanda.
+- Campo de crime pesquisável por trecho e sem acentos, com sugestões e validação de escolha cadastrada. Cadastro suporta 500 tipos de até 200 caracteres, editor de 18 linhas e parser ampliado somente em configurações. Testados lista acima de 100 KB e filtros exatos de nomes maiores de 100 caracteres.
+
+Validação: **94 testes aprovados, zero falhas**, build de produção e formatação aprovados. Chrome headless conferiu perfis, combinações de filtros, exclusividade/cores/enquadramento do mapa, alinhamento e fontes medidos, espaçamento do checkbox, prefixos, busca e cadastro de ocorrência, inclusão de mais cem tipos, versão móvel e ausência de erros JavaScript/rolagem horizontal. Capturas de desktop/móvel foram inspecionadas. Testes usam banco temporário, sem alterar cadastros persistentes.
+
+## Inatividade de seis horas em serviço — 25/10/2026
+
+- Prazo de inatividade de 360 minutos para integrantes de guarnições em serviço, inclusive motos, e CPU da escala atual. Vínculo antigo, guarnição vazia ou turno expirado não concede a extensão. Fora de serviço, mantém o prazo administrativo configurado.
+- Política única para autenticação HTTP e Socket.IO, retornada por login/me/activity. Navegador usa a política e o fim previsto do serviço para ajustar o contador e voltar ao prazo comum; campo de configuração identifica explicitamente o prazo fora de serviço. Consultas passivas não renovam atividade, e o vencimento absoluto da sessão permanece válido.
+- Testes cobrem 5h59/6h, motocicletas sem fim fixo, configuração comum, vínculo inválido, término de serviço, CPU, renovação de atividade, login e sockets. Chrome headless conferiu contador em horas, recarregamento após duas horas inativo, retorno ao prazo comum ao encerrar serviço, ingresso de cinco minutos para seis horas e saída para prazo comum, sem erros JavaScript.
+
+Validação final: **89 testes aprovados, zero falhas**, compilação de produção e formatação aprovadas. Testes usam banco temporário, sem alterar cadastros persistentes.
+
 ## Relatório de viaturas e retirada do cadastro automático na tela — 25/10/2026
 
 - Retirado o botão Cadastrar S10 por município do controle de Viaturas. Cadastro manual permanece disponível.
@@ -135,7 +152,7 @@ As verificações visuais mencionadas nas seções seguintes são registros hist
 
 Código organizado em `frontend` e `backend`, com banco MongoDB, API, permissões no servidor, interface por perfil e dados demonstrativos. Instruções de instalação, variáveis e deploy estão no [README](README.md).
 
-Última execução da suíte: **81 testes aprovados, zero falhas**. Build de produção do frontend concluído com sucesso. Essas verificações não substituem homologação com os usuários do batalhão nem testes de carga em infraestrutura de produção.
+Última execução da suíte: **94 testes aprovados, zero falhas**. Build de produção do frontend concluído com sucesso. Essas verificações não substituem homologação com os usuários do batalhão nem testes de carga em infraestrutura de produção.
 
 ## Verificações automatizadas
 

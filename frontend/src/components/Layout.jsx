@@ -25,7 +25,7 @@ import {
 import logo from '../assets/logo.svg';
 import { useApp } from '../context/AppContext';
 import { useData } from '../hooks/useData';
-import { fmtTime, fmtDateTime } from '../utils/format';
+import { fmtTime, fmtDateTime, duration } from '../utils/format';
 import { Button, Modal, Empty } from './UI';
 import { api } from '../services/api';
 import GpsControl from './GpsControl';
@@ -209,7 +209,9 @@ export default function Layout() {
             >
               <Clock3 size={14} />
               <span>
-                {Math.floor(app.remaining / 60)}:{String(app.remaining % 60).padStart(2, '0')}
+                {app.remaining >= 3600
+                  ? duration(app.remaining)
+                  : `${Math.floor(app.remaining / 60)}:${String(app.remaining % 60).padStart(2, '0')}`}
               </span>
             </div>
             <button

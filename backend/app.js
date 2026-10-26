@@ -25,6 +25,7 @@ export function createApp() {
       credentials: true,
     }),
   );
+  app.use('/api/settings', express.json({ limit: '512kb' }));
   app.use(express.json({ limit: '100kb' }));
   app.use(cookieParser());
   app.use((req, res, next) => {

@@ -8,6 +8,7 @@ export function AppProvider({ children }) {
   const navigate = useNavigate();
   const [user, setUser] = useState(null);
   const [settings, setSettings] = useState(null);
+  const [inactivityPolicy, setInactivityPolicy] = useState(null);
   const [ready, setReady] = useState(false);
   const [error, setError] = useState(null);
   const [toast, setToast] = useState('');
@@ -43,6 +44,7 @@ export function AppProvider({ children }) {
   const hydrate = (data) => {
     setUser(data.user);
     setSettings(data.settings);
+    setInactivityPolicy(data.inactivityPolicy || null);
     last.current = data.lastActivity ? +new Date(data.lastActivity) : Date.now();
     loggedOut.current = false;
   };
@@ -118,6 +120,7 @@ export function AppProvider({ children }) {
         .then((r) => {
           const at = +new Date(r.data.lastActivity);
           last.current = Math.max(last.current, at);
+          if (r.data.inactivityPolicy) setInactivityPolicy(r.data.inactivityPolicy);
           channel?.postMessage({ user: user._id, at });
         })
         .catch(() => {})
@@ -144,10 +147,13 @@ export function AppProvider({ children }) {
     const timer = setInterval(() => {
       const time = Date.now();
       setNow(time);
-      const left = Math.max(
-        0,
-        Math.ceil(((settings?.inactivityMinutes || 5) * 60000 - (time - last.current)) / 1000),
-      );
+      const stillOnDuty =
+        inactivityPolicy?.onDuty &&
+        (!inactivityPolicy.dutyEndsAt || time < +new Date(inactivityPolicy.dutyEndsAt));
+      const minutes = stillOnDuty
+        ? inactivityPolicy.inactivityMinutes
+        : inactivityPolicy?.offDutyInactivityMinutes || settings?.inactivityMinutes || 5;
+      const left = Math.max(0, Math.ceil((minutes * 60000 - (time - last.current)) / 1000));
       setRemaining(left);
       if (!left) logout(true);
     }, 1000);
@@ -157,7 +163,14 @@ export function AppProvider({ children }) {
       channel?.close();
       events.forEach((e) => window.removeEventListener(e, activity));
     };
-  }, [user?._id, settings?.inactivityMinutes]);
+  }, [
+    user?._id,
+    settings?.inactivityMinutes,
+    inactivityPolicy?.onDuty,
+    inactivityPolicy?.inactivityMinutes,
+    inactivityPolicy?.offDutyInactivityMinutes,
+    inactivityPolicy?.dutyEndsAt,
+  ]);
   useEffect(() => {
     if (!user) return;
     const socket = io(import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000', {
@@ -286,6 +299,9 @@ export function AppProvider({ children }) {
       .then((r) => {
         setUser(r.data.user);
         setSettings(r.data.settings);
+        setInactivityPolicy(r.data.inactivityPolicy || null);
+        if (r.data.lastActivity)
+          last.current = Math.max(last.current, +new Date(r.data.lastActivity));
       })
       .catch(() => {});
   }, [revision, user?._id]);
@@ -315,6 +331,7 @@ export function AppProvider({ children }) {
         updateUser: setUser,
         finishSession,
         settings,
+        inactivityPolicy,
         setSettings,
         ready,
         hydrate,
