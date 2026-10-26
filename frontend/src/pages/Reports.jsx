@@ -7,6 +7,7 @@ import { params, duration, fmtDateTime } from '../utils/format';
 import { PageTitle, Panel, Button, Badge, Loading, Select } from '../components/UI';
 import OccurrenceFilters from '../components/OccurrenceFilters';
 import CrewTraceReport from '../components/CrewTraceReport';
+import VehicleReport from '../components/VehicleReport';
 export default function Reports() {
   const [mode, setMode] = useState('crews');
   return (
@@ -20,6 +21,13 @@ export default function Reports() {
           Guarnições
         </Button>
         <Button
+          variant={mode === 'vehicles' ? 'primary' : 'secondary'}
+          aria-pressed={mode === 'vehicles'}
+          onClick={() => setMode('vehicles')}
+        >
+          Viaturas
+        </Button>
+        <Button
           variant={mode === 'general' ? 'primary' : 'secondary'}
           aria-pressed={mode === 'general'}
           onClick={() => setMode('general')}
@@ -27,7 +35,13 @@ export default function Reports() {
           Indicadores gerais
         </Button>
       </div>
-      {mode === 'crews' ? <CrewTraceReport /> : <GeneralReports />}
+      {mode === 'crews' ? (
+        <CrewTraceReport />
+      ) : mode === 'vehicles' ? (
+        <VehicleReport />
+      ) : (
+        <GeneralReports />
+      )}
     </>
   );
 }

@@ -15,6 +15,7 @@ import * as inspections from '../controllers/inspectionController.js';
 import * as emergency from '../controllers/emergencyController.js';
 import { reports } from '../controllers/reportController.js';
 import { crewReports } from '../controllers/crewReportController.js';
+import { vehicleReports } from '../controllers/vehicleReportController.js';
 import {
   dispatchOccurrence,
   acceptOccurrence,
@@ -342,6 +343,7 @@ router.delete('/vehicles/:id', admin, a(resource.removeVehicle));
 router.patch('/vehicles/:id/location', v(s.location), a(resource.location));
 router.get('/reports', management, a(reports));
 router.get('/reports/crews', management, a(crewReports));
+router.get('/reports/vehicles', management, a(vehicleReports));
 router.get('/settings', a(resource.settings));
 router.put('/settings', admin, v(s.settings), a(resource.saveSettings));
 router.get('/cpu', management, a(resource.cpu));

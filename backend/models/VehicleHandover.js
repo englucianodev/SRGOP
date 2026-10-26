@@ -37,4 +37,6 @@ const schema = new mongoose.Schema(
 );
 schema.index({ driver: 1, pendingReturn: 1 });
 schema.index({ vehicle: 1, closedAt: 1 });
+schema.index({ vehicle: 1, 'intake.at': 1 });
+schema.index({ vehicle: 1, 'delivery.at': 1 });
 export default mongoose.model('VehicleHandover', schema);

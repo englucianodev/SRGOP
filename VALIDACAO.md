@@ -1,5 +1,13 @@
 # Validação e impasses — SRGOP
 
+## Relatório de viaturas e retirada do cadastro automático na tela — 25/10/2026
+
+- Retirado o botão Cadastrar S10 por município do controle de Viaturas. Cadastro manual permanece disponível.
+- Relatórios recebe a opção Viaturas, com seleção múltipla, período inicial/final, recebimento/entrega e filtro de checklists com C/A. Exibe seis itens, condições, observações, KM, policial com identificação militar e guarnição do serviço. Exportação CSV e impressão/PDF usam os filtros emitidos.
+- Período aplica-se à data de cada inspeção em Fortaleza, incluindo corretamente limites de dia e entrega posterior ao encerramento do serviço. Pendências não geram inspeções fictícias. API restrita a Oficial/Administrativo, valida filtros e limita consultas a 2.000 registros; índices por veículo/data de recebimento e entrega. CSV preserva aspas/quebras e neutraliza fórmulas.
+
+Validação: **81 testes aprovados, zero falhas**, compilação de produção e formatação aprovadas. Chrome headless conferiu botão removido, seleção de viatura/data/fase/C/A, observações de entrada/saída, identificação militar, download e conteúdo do CSV, acionamento da impressão e filtros ocultos no modo de impressão, estado vazio e visualização móvel sem erros JavaScript ou rolagem horizontal. Testes usam banco temporário; não houve alteração de cadastros persistentes.
+
 ## Identificação militar e apresentação das guarnições — 25/10/2026
 
 - Composição das equipes, piloto, garupa, motorista convencional e seleção no gerenciamento exibem Posto/Graduação + Nome de Guerra. APIs de guarnições/dashboard incluem esses campos nas referências populadas; cadastros antigos sem nome de guerra mantêm o nome disponível.
@@ -127,7 +135,7 @@ As verificações visuais mencionadas nas seções seguintes são registros hist
 
 Código organizado em `frontend` e `backend`, com banco MongoDB, API, permissões no servidor, interface por perfil e dados demonstrativos. Instruções de instalação, variáveis e deploy estão no [README](README.md).
 
-Última execução da suíte: **74 testes aprovados, zero falhas**. Build de produção do frontend concluído com sucesso. Essas verificações não substituem homologação com os usuários do batalhão nem testes de carga em infraestrutura de produção.
+Última execução da suíte: **81 testes aprovados, zero falhas**. Build de produção do frontend concluído com sucesso. Essas verificações não substituem homologação com os usuários do batalhão nem testes de carga em infraestrutura de produção.
 
 ## Verificações automatizadas
 

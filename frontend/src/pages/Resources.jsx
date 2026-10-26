@@ -106,21 +106,6 @@ export default function Resources({ type }) {
       >
         {admin && (
           <>
-            {!isUser && (
-              <Button
-                variant="secondary"
-                onClick={() =>
-                  app.run(async () => {
-                    const r = await api.post('/vehicles/provision-defaults');
-                    app.setToast(
-                      `${r.data.created} S10 provisória(s) cadastrada(s). Complete os dados reais antes do serviço.`,
-                    );
-                  })
-                }
-              >
-                Cadastrar S10 por município
-              </Button>
-            )}
             <Button onClick={() => edit()}>
               <Plus size={17} />
               {isUser ? 'Cadastrar usuário' : 'Cadastrar viatura'}
