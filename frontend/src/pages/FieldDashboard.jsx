@@ -1,6 +1,6 @@
 import { isOnDuty, dutyClock } from '../utils/duty';
 import { Link } from 'react-router-dom';
-import { Plus, Shield, Radio, ArrowRight, Clock3 } from 'lucide-react';
+import { Shield, Radio, ArrowRight, Clock3 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { useData } from '../hooks/useData';
 import { duration, fmtDateTime } from '../utils/format';
@@ -15,16 +15,7 @@ export default function FieldDashboard({ data }) {
   const { data: recent } = useData(`/occurrences?createdBy=${app.user._id}&limit=5`, { items: [] });
   return (
     <>
-      <PageTitle
-        eyebrow="MEU SERVIÇO"
-        title={militaryLabel(app.user)}
-        description={new Intl.DateTimeFormat('pt-BR', { dateStyle: 'full' }).format(app.now)}
-      >
-        <Link className="button primary" to="/ocorrencias?nova=1">
-          <Plus size={17} />
-          Registrar ocorrência
-        </Link>
-      </PageTitle>
+      <PageTitle eyebrow="MEU SERVIÇO" title={militaryLabel(app.user)} />
       <div className="field-welcome">
         <div className="round-icon">
           <Shield size={28} />

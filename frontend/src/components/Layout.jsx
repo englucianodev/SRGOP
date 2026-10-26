@@ -26,7 +26,7 @@ import logo from '../assets/logo.svg';
 import InstitutionLogo from './InstitutionLogo';
 import { useApp } from '../context/AppContext';
 import { useData } from '../hooks/useData';
-import { fmtTime, fmtDateTime, duration } from '../utils/format';
+import { fmtTime, fmtDate, fmtDateTime, duration } from '../utils/format';
 import { Button, Modal, Empty } from './UI';
 import { api } from '../services/api';
 import GpsControl from './GpsControl';
@@ -201,6 +201,9 @@ export default function Layout() {
             <strong>{title}</strong>
           </div>
           <div className="header-actions">
+            {location.pathname === '/dashboard' && (
+              <span className="dashboard-date">{fmtDate(app.now)}</span>
+            )}
             <div
               className={`inactivity ${app.remaining < 60 ? 'warning' : ''}`}
               title="Tempo restante até sair por inatividade"

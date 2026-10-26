@@ -2,7 +2,6 @@ import { isOnDuty, dutyClock } from '../utils/duty';
 import { Link } from 'react-router-dom';
 import {
   ArrowUpRight,
-  Plus,
   Siren,
   Shield,
   Car,
@@ -18,7 +17,7 @@ import { useApp } from '../context/AppContext';
 import { useData } from '../hooks/useData';
 import { api } from '../services/api';
 import { duration, fmtTime, fmtDate } from '../utils/format';
-import { PageTitle, Panel, Badge, Loading, Button, Empty } from '../components/UI';
+import { Panel, Badge, Loading, Button, Empty } from '../components/UI';
 import OperationalMap from '../components/OperationalMap';
 import FieldDashboard from './FieldDashboard';
 export default function Dashboard() {
@@ -75,19 +74,12 @@ export default function Dashboard() {
   ];
   return (
     <>
-      <PageTitle
-        title="Visão geral da operação"
-        description={new Intl.DateTimeFormat('pt-BR', { dateStyle: 'full' }).format(app.now)}
-      >
+      <div className="dashboard-live">
         <span className="live-label">
           <i className={`live-dot ${app.online ? '' : 'offline'}`} />
           {app.online ? 'Atualização em tempo real' : 'Conectando'}
         </span>
-        <Link className="button primary" to="/ocorrencias?nova=1">
-          <Plus size={17} />
-          Nova ocorrência
-        </Link>
-      </PageTitle>
+      </div>
       {app.user.role === 'Praça' ? (
         <div className="field-welcome">
           <div className="round-icon">
