@@ -161,11 +161,11 @@ npm run dev --prefix frontend
 
 Acesse **http://localhost:5173**. A API roda em **http://localhost:5000/api**.
 
-| Perfil de demonstração | E-mail | Senha padrão apenas do modo temporário |
-|---|---|---|
-| Administrativo | `admin@srgop.local` | `DemoSRGOP!2026` |
-| Oficial | `oficial@srgop.local` | `DemoSRGOP!2026` |
-| Praça | `praca@srgop.local` | `DemoSRGOP!2026` |
+| Perfil de demonstração | E-mail                | Senha padrão apenas do modo temporário |
+| ---------------------- | --------------------- | -------------------------------------- |
+| Administrativo         | `admin@srgop.local`   | `DemoSRGOP!2026`                       |
+| Oficial                | `oficial@srgop.local` | `DemoSRGOP!2026`                       |
+| Praça                  | `praca@srgop.local`   | `DemoSRGOP!2026`                       |
 
 No modo normal, a senha inicial vem de `SEED_PASSWORD`, não dessa tabela. Use perfis de navegador separados, janelas anônimas ou navegadores distintos para testar usuários simultâneos: abas do mesmo perfil compartilham o cookie de sessão.
 
@@ -294,26 +294,26 @@ Abra **http://localhost:5173**. Utilize `localhost` tanto para a interface quant
 
 ## Perfis e permissões
 
-| Capacidade | Administrativo | Oficial | Praça |
-|---|---|---|---|
-| Dashboard | Completo | Completo | Painel simplificado |
-| Criar/consultar ocorrências | Sim | Sim | Sim |
-| Editar ocorrência não finalizada | Todas | Todas | Somente a própria |
-| Excluir/cancelar ocorrência em aberto | Sim | Sim | Não |
-| Despachar/reencaminhar | Sim | Sim | Não |
-| Aceitar/rejeitar atendimento | Sim | Sim | Da sua guarnição ativa |
-| Encerrar atendimento | Sim | Sim | Somente o que aceitou |
-| Solicitar apoio | Sim | Sim | No atendimento da própria guarnição |
-| Autorizar apoio | Sim | Sim | Não |
-| Ingressar em guarnição | Sim | Sim | Sim |
-| Encerrar turno antecipadamente | Sim, com motivo | Sim, com motivo | Não |
-| CRUD de guarnições/viaturas | Sim | Consulta | Não |
-| Usuários | Gerencia | Consulta | Não |
-| Assumir CPU | Administra a indicação | Assume | Não |
-| Mapa operacional | Sim | Sim | Sim |
-| Relatórios | Sim | Sim | Não |
-| Parâmetros/cidades/tipos/auditoria | Sim | Não | Não |
-| Preferências de tema/som | Sim | Sim | Tema no cabeçalho |
+| Capacidade                            | Administrativo         | Oficial         | Praça                               |
+| ------------------------------------- | ---------------------- | --------------- | ----------------------------------- |
+| Dashboard                             | Completo               | Completo        | Painel simplificado                 |
+| Criar/consultar ocorrências           | Sim                    | Sim             | Sim                                 |
+| Editar ocorrência não finalizada      | Todas                  | Todas           | Somente a própria                   |
+| Excluir/cancelar ocorrência em aberto | Sim                    | Sim             | Não                                 |
+| Despachar/reencaminhar                | Sim                    | Sim             | Não                                 |
+| Aceitar/rejeitar atendimento          | Sim                    | Sim             | Da sua guarnição ativa              |
+| Encerrar atendimento                  | Sim                    | Sim             | Somente o que aceitou               |
+| Solicitar apoio                       | Sim                    | Sim             | No atendimento da própria guarnição |
+| Autorizar apoio                       | Sim                    | Sim             | Não                                 |
+| Ingressar em guarnição                | Sim                    | Sim             | Sim                                 |
+| Encerrar turno antecipadamente        | Sim, com motivo        | Sim, com motivo | Não                                 |
+| CRUD de guarnições/viaturas           | Sim                    | Consulta        | Não                                 |
+| Usuários                              | Gerencia               | Consulta        | Não                                 |
+| Assumir CPU                           | Administra a indicação | Assume          | Não                                 |
+| Mapa operacional                      | Sim                    | Sim             | Sim                                 |
+| Relatórios                            | Sim                    | Sim             | Não                                 |
+| Parâmetros/cidades/tipos/auditoria    | Sim                    | Não             | Não                                 |
+| Preferências de tema/som              | Sim                    | Sim             | Tema no cabeçalho                   |
 
 **Decisão de segurança:** o cadastro público registra o perfil solicitado, mas cria uma conta **Praça e inativa**, aguardando aprovação. Somente o Administrativo ativa ou altera o perfil. Oficial consulta usuários e frota; não altera perfis nem dados administrativos. A matriz é fixa no middleware, e a atribuição dos perfis é gerenciada em Usuários; não há editor de permissões arbitrárias.
 
@@ -359,48 +359,48 @@ Exemplo de erro:
 
 Prefixo `/api`. IDs são ObjectIds MongoDB. Campos e enums usam os valores escritos no código, inclusive acentos. Endpoints protegidos recebem o cookie da sessão; clientes HTTP precisam preservá-lo e enviar `Origin` autorizado nas mutações.
 
-| Método | Endpoint | Finalidade / acesso |
-|---|---|---|
-| GET | `/health` | Saúde pública da API |
-| GET | `/auth/cities` | Municípios ativos para cadastro público |
-| POST | `/auth/register` | Solicitar cadastro |
-| POST | `/auth/login` | Login e cookie HttpOnly |
-| GET | `/auth/me` | Usuário, configurações e última atividade |
-| POST | `/auth/activity` | Renovar atividade da sessão |
-| POST | `/auth/logout` | Revogar sessão |
-| GET | `/dashboard` | Indicadores de hoje |
-| GET/POST | `/occurrences` | Listar / cadastrar |
-| GET/PUT/DELETE | `/occurrences/:id` | Detalhar / editar / excluir logicamente |
-| POST | `/occurrences/:id/cancel` | Cancelar ocorrência em aberto |
-| POST | `/occurrences/:id/attachments` | Anexar via multipart, campo `file` |
-| GET | `/attachments/:id` | Download autenticado |
-| GET/POST | `/dispatches` | Histórico / despachar ou reencaminhar |
-| GET | `/attendances` | Atendimentos pendentes/ativos acessíveis |
-| POST | `/attendances/:id/accept` | Aceitar exclusivamente |
-| POST | `/attendances/:id/reject` | Rejeitar com `reason` |
-| POST | `/attendances/:id/notes` | Observação em `text` |
-| POST | `/attendances/:id/close` | Encerrar com resumo e resultados |
-| POST | `/attendances/:id/support` | Pedir apoio: `targetCrew`, `reason` |
-| GET | `/attendances/support/requests` | Pedidos de apoio |
-| POST | `/attendances/support/:id/authorize` | Autorizar apoio |
-| POST | `/attendances/support/:id/reject` | Recusar apoio |
-| GET/POST | `/crews` | Listar / cadastrar guarnição |
-| PUT/DELETE | `/crews/:id` | Editar / excluir equipe inativa sem ocorrências |
-| POST | `/crews/:id/join` | Ingressar: `{ "driver": true/false }` |
-| POST | `/crews/:id/end-shift` | Encerrar turno com `reason` |
-| GET/POST | `/vehicles` | Consultar / cadastrar viatura |
-| PUT/DELETE | `/vehicles/:id` | Editar / excluir viatura sem vínculos |
-| PATCH | `/vehicles/:id/location` | Latitude, longitude e quilometragem opcional |
-| GET/POST | `/users` | Consultar / cadastrar usuário |
-| PUT/DELETE | `/users/:id` | Editar/redefinir senha / desativar |
-| GET/POST | `/cities` | Consultar / criar município |
-| PUT | `/cities/:id` | Editar ou desativar município |
-| GET/PUT | `/settings` | Consultar / configurar parâmetros |
-| GET/POST/PUT | `/cpu` | Consultar / assumir / administrar CPU de hoje |
-| GET | `/reports` | Relatório JSON; `format=csv` para download |
-| GET | `/notifications` | Notificações do próprio usuário |
-| PATCH | `/notifications/:id/read` | Marcar como lida |
-| GET | `/audit-logs` | Últimas 200 ações; Administrativo |
+| Método         | Endpoint                             | Finalidade / acesso                             |
+| -------------- | ------------------------------------ | ----------------------------------------------- |
+| GET            | `/health`                            | Saúde pública da API                            |
+| GET            | `/auth/cities`                       | Municípios ativos para cadastro público         |
+| POST           | `/auth/register`                     | Solicitar cadastro                              |
+| POST           | `/auth/login`                        | Login e cookie HttpOnly                         |
+| GET            | `/auth/me`                           | Usuário, configurações e última atividade       |
+| POST           | `/auth/activity`                     | Renovar atividade da sessão                     |
+| POST           | `/auth/logout`                       | Revogar sessão                                  |
+| GET            | `/dashboard`                         | Indicadores de hoje                             |
+| GET/POST       | `/occurrences`                       | Listar / cadastrar                              |
+| GET/PUT/DELETE | `/occurrences/:id`                   | Detalhar / editar / excluir logicamente         |
+| POST           | `/occurrences/:id/cancel`            | Cancelar ocorrência em aberto                   |
+| POST           | `/occurrences/:id/attachments`       | Anexar via multipart, campo `file`              |
+| GET            | `/attachments/:id`                   | Download autenticado                            |
+| GET/POST       | `/dispatches`                        | Histórico / despachar ou reencaminhar           |
+| GET            | `/attendances`                       | Atendimentos pendentes/ativos acessíveis        |
+| POST           | `/attendances/:id/accept`            | Aceitar exclusivamente                          |
+| POST           | `/attendances/:id/reject`            | Rejeitar com `reason`                           |
+| POST           | `/attendances/:id/notes`             | Observação em `text`                            |
+| POST           | `/attendances/:id/close`             | Encerrar com resumo e resultados                |
+| POST           | `/attendances/:id/support`           | Pedir apoio: `targetCrew`, `reason`             |
+| GET            | `/attendances/support/requests`      | Pedidos de apoio                                |
+| POST           | `/attendances/support/:id/authorize` | Autorizar apoio                                 |
+| POST           | `/attendances/support/:id/reject`    | Recusar apoio                                   |
+| GET/POST       | `/crews`                             | Listar / cadastrar guarnição                    |
+| PUT/DELETE     | `/crews/:id`                         | Editar / excluir equipe inativa sem ocorrências |
+| POST           | `/crews/:id/join`                    | Ingressar: `{ "driver": true/false }`           |
+| POST           | `/crews/:id/end-shift`               | Encerrar turno com `reason`                     |
+| GET/POST       | `/vehicles`                          | Consultar / cadastrar viatura                   |
+| PUT/DELETE     | `/vehicles/:id`                      | Editar / excluir viatura sem vínculos           |
+| PATCH          | `/vehicles/:id/location`             | Latitude, longitude e quilometragem opcional    |
+| GET/POST       | `/users`                             | Consultar / cadastrar usuário                   |
+| PUT/DELETE     | `/users/:id`                         | Editar/redefinir senha / desativar              |
+| GET/POST       | `/cities`                            | Consultar / criar município                     |
+| PUT            | `/cities/:id`                        | Editar ou desativar município                   |
+| GET/PUT        | `/settings`                          | Consultar / configurar parâmetros               |
+| GET/POST/PUT   | `/cpu`                               | Consultar / assumir / administrar CPU de hoje   |
+| GET            | `/reports`                           | Relatório JSON; `format=csv` para download      |
+| GET            | `/notifications`                     | Notificações do próprio usuário                 |
+| PATCH          | `/notifications/:id/read`            | Marcar como lida                                |
+| GET            | `/audit-logs`                        | Últimas 200 ações; Administrativo               |
 
 Filtros de ocorrência: `search`, `city`, `priority`, `status`, `crimeType`, `from`, `to`, `crew`, `vehicle`, `createdBy`, `page`, `limit`. Datas `YYYY-MM-DD`. Listagem paginada: `{ items, total, page, pages }`. Limite máximo de 100 registros por página. Relatórios limitam a consulta a 10.000 ocorrências; para volumes maiores, reduza o período. Turnos do relatório são limitados aos 1.000 mais recentes, e usuários da tela aos 1.000 mais recentes.
 
@@ -599,3 +599,10 @@ O CPU recebe aviso também das ocorrências iniciadas automaticamente. O botão 
 ## Aviso de uso
 
 Projeto de referência para avaliação acadêmica/institucional. Não representa produto oficialmente homologado pela Polícia Militar do Maranhão e não confere autorização para tratamento de dados reais. A instituição responsável deve definir a licença de distribuição, autorização de uso, política de acesso e implantação. Não há licença permissiva de redistribuição presumida. Dados e identidades do seed são fictícios.
+
+## Atualização de 26/10/2026 — parâmetros institucionais e numeração
+
+- Administrador configura a inatividade fora de serviço (1–60 minutos) e em serviço (1–1440 minutos, padrão 360). O prazo em serviço abrange guarnições e CPU e respeita o vencimento absoluto da sessão.
+- Logo institucional JPEG/PNG de até 2 MB, com prévia, substituição e remoção em Configurações. Aparece no login público e junto à Central de operações na lateral; somente administrador pode alterá-la.
+- Novas ocorrências recebem número imutável `XXX-DDMMAAAA`, com sequência anual a partir de 001 e data do cadastro em America/Fortaleza. O contador é persistente e transacional, inclusive sob concorrência. Ocorrências históricas mantêm sua identificação anterior.
+- O formato estrito de três dígitos comporta 999 ocorrências por ano; ao atingir esse limite, o sistema recusa novos números com mensagem explícita, sem reutilizá-los. Ampliação de dígitos exige redefinir esse formato.

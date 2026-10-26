@@ -1,12 +1,12 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, ArrowRight, ShieldCheck, LockKeyhole } from 'lucide-react';
-import logo from '../assets/logo.svg';
 import { useApp } from '../context/AppContext';
 import { useData } from '../hooks/useData';
 import { api } from '../services/api';
 import { Button, Input, Select, Modal } from '../components/UI';
 import PersonalFields, { personalDefaults } from '../components/PersonalFields';
+import InstitutionLogo from '../components/InstitutionLogo';
 export default function Login({ register = false }) {
   const app = useApp();
   const navigate = useNavigate();
@@ -14,6 +14,19 @@ export default function Login({ register = false }) {
   const [busy, setBusy] = useState(false);
   const [forgot, setForgot] = useState(false);
   const [validation, setValidation] = useState('');
+  const [branding, setBranding] = useState({});
+  useEffect(() => {
+    let current = true;
+    api
+      .get('/branding', { quiet: true })
+      .then((r) => {
+        if (current) setBranding(r.data);
+      })
+      .catch(() => {});
+    return () => {
+      current = false;
+    };
+  }, []);
   const { data: cities } = useData(register ? '/auth/cities' : null, []);
   const [form, setForm] = useState({
     name: '',
@@ -61,7 +74,10 @@ export default function Login({ register = false }) {
         <b>18º BPM</b>
       </div>
       <main className={`auth-card ${register ? 'register-card' : ''}`}>
-        <img className="auth-logo" src={logo} alt="Logotipo SRGOP" />
+        <InstitutionLogo
+          className={`auth-logo ${branding.logoVersion ? 'custom-institution-logo' : ''}`}
+          version={branding.logoVersion}
+        />
         <span className="auth-wordmark">SRGOP</span>
         <h1>Sistema de Recebimento e Gerenciamento de Ocorrências Policiais</h1>
         <div className="auth-divider" />

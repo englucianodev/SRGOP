@@ -3,7 +3,7 @@ import { STATUSES, PRIORITIES } from '../utils/constants.js';
 const ref = (name) => ({ type: mongoose.Schema.Types.ObjectId, ref: name });
 const schema = new mongoose.Schema(
   {
-    protocol: { type: String, required: true, unique: true },
+    protocol: { type: String, required: true, unique: true, immutable: true },
     occurredAt: { type: Date, required: true, index: true },
     city: { ...ref('City'), required: true, index: true },
     crimeType: { type: String, required: true, maxlength: 200, index: true },

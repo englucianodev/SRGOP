@@ -5,6 +5,7 @@ import { useData } from '../hooks/useData';
 import { api } from '../services/api';
 import { dateKey } from '../utils/format';
 import { PageTitle, Panel, Button, Input, Select, Textarea, Loading } from '../components/UI';
+import InstitutionBranding from '../components/InstitutionBranding';
 const modules = [
   'Alertas',
   'Operações',
@@ -22,10 +23,11 @@ export default function Settings() {
   const [types, setTypes] = useState('');
   const [busy, setBusy] = useState(false);
   useEffect(() => {
-    if (data) {
+    if (data && !form) {
       const {
         institution,
         inactivityMinutes,
+        onDutyInactivityMinutes,
         alertMinutes,
         soundEnabled,
         notificationsEnabled,
@@ -36,6 +38,7 @@ export default function Settings() {
       setForm({
         institution,
         inactivityMinutes,
+        onDutyInactivityMinutes: onDutyInactivityMinutes || 360,
         alertMinutes,
         soundEnabled,
         notificationsEnabled,
@@ -150,13 +153,23 @@ export default function Settings() {
                 <div className="form-grid">
                   <Input
                     label="Inatividade fora de serviço (minutos)"
-                    hint="Em serviço, o limite é de 6 horas. Fora de serviço, aplica-se este valor."
+                    hint="Fora de serviço, aplica-se este valor. O prazo em serviço é definido ao lado."
                     type="number"
                     required
                     min="1"
                     max="60"
                     value={form.inactivityMinutes}
                     onChange={(e) => set('inactivityMinutes', Number(e.target.value))}
+                  />
+                  <Input
+                    label="Inatividade em serviço (minutos)"
+                    type="number"
+                    required
+                    min="1"
+                    max="1440"
+                    value={form.onDutyInactivityMinutes}
+                    onChange={(e) => set('onDutyInactivityMinutes', Number(e.target.value))}
+                    hint="Padrão: 360 minutos (6 horas). Aplicado às guarnições e ao CPU do serviço."
                   />
                   <Input
                     label="Alerta de ocorrência sem despacho (minutos)"
@@ -168,6 +181,7 @@ export default function Settings() {
                     onChange={(e) => set('alertMinutes', Number(e.target.value))}
                   />
                 </div>
+                <InstitutionBranding />
                 <div className="checkbox-row">
                   <label className="checkbox">
                     <input

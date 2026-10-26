@@ -11,6 +11,8 @@ export default mongoose.model(
         maxlength: 150,
       },
       inactivityMinutes: { type: Number, default: 5, min: 1, max: 60 },
+      onDutyInactivityMinutes: { type: Number, default: 360, min: 1, max: 1440 },
+      logoVersion: { type: String, default: '' },
       alertMinutes: { type: Number, default: 10, min: 1, max: 120 },
       soundEnabled: { type: Boolean, default: true },
       notificationsEnabled: { type: Boolean, default: true },

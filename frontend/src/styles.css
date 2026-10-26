@@ -3594,3 +3594,51 @@ select {
     display: none;
   }
 }
+.institution-branding {
+  margin: 22px 0;
+  padding: 22px 0;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+.institution-branding > p {
+  margin: 10px 0 18px;
+  line-height: 1.7;
+  color: var(--muted);
+}
+.institution-logo-editor {
+  display: flex;
+  gap: 24px;
+  align-items: flex-start;
+}
+.institution-logo-editor > div {
+  flex: 1;
+  min-width: 0;
+}
+.institution-logo-preview {
+  width: 140px;
+  height: 140px;
+  object-fit: contain;
+  background: var(--surface-alt);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px;
+}
+.unit-logo {
+  width: 42px;
+  height: 42px;
+  object-fit: contain;
+  flex: 0 0 42px;
+}
+.auth-logo.custom-institution-logo {
+  width: 110px;
+  height: 110px;
+  object-fit: contain;
+}
+@media (max-width: 600px) {
+  .institution-logo-editor {
+    flex-direction: column;
+  }
+  .institution-logo-editor > div {
+    width: 100%;
+  }
+}

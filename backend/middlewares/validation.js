@@ -211,6 +211,7 @@ export const schemas = {
     .object({
       institution: text(3, 150),
       inactivityMinutes: z.number().int().min(1).max(60),
+      onDutyInactivityMinutes: z.number().int().min(1).max(1440).optional(),
       alertMinutes: z.number().int().min(1).max(120),
       soundEnabled: z.boolean(),
       notificationsEnabled: z.boolean(),

@@ -23,7 +23,7 @@ export async function inactivityPolicy(user, settings) {
         : null;
   return {
     onDuty,
-    inactivityMinutes: onDuty ? 360 : offDutyInactivityMinutes,
+    inactivityMinutes: onDuty ? settings?.onDutyInactivityMinutes || 360 : offDutyInactivityMinutes,
     offDutyInactivityMinutes,
     dutyEndsAt,
   };

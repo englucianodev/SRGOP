@@ -13,6 +13,7 @@ import * as chat from '../controllers/chatController.js';
 import * as gps from '../controllers/gpsController.js';
 import * as inspections from '../controllers/inspectionController.js';
 import * as emergency from '../controllers/emergencyController.js';
+import * as branding from '../controllers/brandingController.js';
 import { reports } from '../controllers/reportController.js';
 import { crewReports } from '../controllers/crewReportController.js';
 import { vehicleReports } from '../controllers/vehicleReportController.js';
@@ -58,6 +59,8 @@ router.param('id', (req, res, next, value) =>
     : next(new AppError('Identificador inválido.', 422, 'Parâmetros da API')),
 );
 router.get('/health', (req, res) => res.json({ status: 'ok', service: 'SRGOP' }));
+router.get('/branding', a(branding.metadata));
+router.get('/branding/logo', a(branding.logo));
 router.get(
   '/auth/cities',
   a(async (req, res) =>
@@ -347,6 +350,16 @@ router.get('/reports/crews', management, a(crewReports));
 router.get('/reports/vehicles', management, a(vehicleReports));
 router.get('/settings', a(resource.settings));
 router.put('/settings', admin, v(s.settings), a(resource.saveSettings));
+router.put(
+  '/settings/logo',
+  admin,
+  multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 2 * 1024 * 1024, files: 1 },
+  }).single('logo'),
+  a(branding.upload),
+);
+router.delete('/settings/logo', admin, a(branding.remove));
 router.get('/cpu', management, a(resource.cpu));
 router.post('/cpu', allow('Oficial'), a(resource.assumeCpu));
 router.put('/cpu', admin, v(s.cpu), a(resource.updateCpu));

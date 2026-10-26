@@ -23,6 +23,7 @@ import {
   Clock3,
 } from 'lucide-react';
 import logo from '../assets/logo.svg';
+import InstitutionLogo from './InstitutionLogo';
 import { useApp } from '../context/AppContext';
 import { useData } from '../hooks/useData';
 import { fmtTime, fmtDateTime, duration } from '../utils/format';
@@ -143,7 +144,11 @@ export default function Layout() {
           </button>
         </div>
         <div className="unit">
-          <span className="unit-mark">18</span>
+          {app.settings?.logoVersion ? (
+            <InstitutionLogo version={app.settings.logoVersion} className="unit-logo" />
+          ) : (
+            <span className="unit-mark">18</span>
+          )}
           <div>
             <strong>Central de operações</strong>
             <span>Polícia Militar do Maranhão</span>

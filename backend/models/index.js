@@ -20,3 +20,4 @@ export { default as CrewMessage } from './CrewMessage.js';
 export { default as CrewChat } from './CrewChat.js';
 export { default as ChatMessage } from './ChatMessage.js';
 export { default as ChatAccess } from './ChatAccess.js';
+export { default as InstitutionLogo } from './InstitutionLogo.js';

@@ -178,18 +178,18 @@ Verificação visual realizada durante o desenvolvimento: login e Dashboard admi
 
 ## Principais impasses e soluções
 
-| Impasse | Tratamento implementado |
-| --- | --- |
-| Dois usuários aceitando a mesma ocorrência | Atualizações condicionais, transações e índices de exclusividade. |
-| Dois oficiais assumindo CPU no mesmo dia | Índice único por dia e resposta de conflito. |
-| Turno expirando durante o atendimento | Conclusão preservada e rotina de liberação dos integrantes. |
-| Apoio mantendo equipe ocupada após conclusão | Encerramento dos pedidos e liberação da equipe na transação. |
-| Exclusão quebrando referências históricas | Exclusão bloqueada quando a guarnição possui histórico. |
-| Encerramentos de fatos antigos ausentes nos indicadores do dia | Resultados calculados pela data de conclusão. |
-| Sessão e alertas inconsistentes entre abas e reconexões | Atividade sincronizada, consulta de despachos pendentes ao reconectar e salas por sessão. |
-| MongoDB standalone sem suporte às transações necessárias | Compose com replica set e orientação para MongoDB Atlas. |
-| Banco temporário excedendo o prazo inicial nos testes | Prazo de inicialização ampliado para 60 segundos; suíte reexecutada com sucesso. |
-| Código pouco legível após a implementação inicial | Formatação padronizada com Prettier e separação por responsabilidade. |
+| Impasse                                                        | Tratamento implementado                                                                   |
+| -------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| Dois usuários aceitando a mesma ocorrência                     | Atualizações condicionais, transações e índices de exclusividade.                         |
+| Dois oficiais assumindo CPU no mesmo dia                       | Índice único por dia e resposta de conflito.                                              |
+| Turno expirando durante o atendimento                          | Conclusão preservada e rotina de liberação dos integrantes.                               |
+| Apoio mantendo equipe ocupada após conclusão                   | Encerramento dos pedidos e liberação da equipe na transação.                              |
+| Exclusão quebrando referências históricas                      | Exclusão bloqueada quando a guarnição possui histórico.                                   |
+| Encerramentos de fatos antigos ausentes nos indicadores do dia | Resultados calculados pela data de conclusão.                                             |
+| Sessão e alertas inconsistentes entre abas e reconexões        | Atividade sincronizada, consulta de despachos pendentes ao reconectar e salas por sessão. |
+| MongoDB standalone sem suporte às transações necessárias       | Compose com replica set e orientação para MongoDB Atlas.                                  |
+| Banco temporário excedendo o prazo inicial nos testes          | Prazo de inicialização ampliado para 60 segundos; suíte reexecutada com sucesso.          |
+| Código pouco legível após a implementação inicial              | Formatação padronizada com Prettier e separação por responsabilidade.                     |
 
 ## Pendências de implantação e evolução
 
@@ -210,3 +210,10 @@ npm run build
 ```
 
 Para verificar a formatação, instale também as dependências da raiz (`npm install`) e execute `npm run format:check`.
+
+## Atualização de 26/10/2026 — parâmetros institucionais e numeração
+
+- Administrador configura a inatividade fora de serviço (1–60 minutos) e em serviço (1–1440 minutos, padrão 360). O prazo em serviço abrange guarnições e CPU e respeita o vencimento absoluto da sessão.
+- Logo institucional JPEG/PNG de até 2 MB, com prévia, substituição e remoção em Configurações. Aparece no login público e junto à Central de operações na lateral; somente administrador pode alterá-la.
+- Novas ocorrências recebem número imutável `XXX-DDMMAAAA`, com sequência anual a partir de 001 e data do cadastro em America/Fortaleza. O contador é persistente e transacional, inclusive sob concorrência. Ocorrências históricas mantêm sua identificação anterior.
+- O formato estrito de três dígitos comporta 999 ocorrências por ano; ao atingir esse limite, o sistema recusa novos números com mensagem explícita, sem reutilizá-los. Ampliação de dígitos exige redefinir esse formato.

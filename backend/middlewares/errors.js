@@ -16,9 +16,11 @@ export function errorHandler(err, req, res, next) {
   }
   if (err.name === 'MulterError') {
     status = 422;
-    message = req.path.includes('/auth/me/photo')
-      ? 'Foto inválida. Envie um único JPEG ou PNG de até 2 MB.'
-      : 'Anexo inválido. Envie um único arquivo de até 5 MB.';
+    message = req.path.includes('/settings/logo')
+      ? 'Logo inválida. Envie um único JPEG ou PNG de até 2 MB.'
+      : req.path.includes('/auth/me/photo')
+        ? 'Foto inválida. Envie um único JPEG ou PNG de até 2 MB.'
+        : 'Anexo inválido. Envie um único arquivo de até 5 MB.';
     origin = 'Upload';
   }
   if (status >= 500)

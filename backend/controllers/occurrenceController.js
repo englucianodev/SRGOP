@@ -1,5 +1,9 @@
 import { activeDuty, onDuty } from '../utils/duty.js';
-import { randomUUID } from 'node:crypto';
+import {
+  occurrenceNumberDate,
+  prepareOccurrenceSequence,
+  nextOccurrenceNumber,
+} from '../services/occurrenceNumber.js';
 import {
   Occurrence,
   City,
@@ -141,12 +145,15 @@ async function references(input) {
 }
 export async function create(req, res) {
   await references(req.input);
+  const numberingDate = occurrenceNumberDate();
+  await prepareOccurrenceSequence(numberingDate.year);
   const row = await transaction(async (session) => {
+    const protocol = await nextOccurrenceNumber(numberingDate, session);
     const [created] = await Occurrence.create(
       [
         {
           ...req.input,
-          protocol: `OP-${new Date().getFullYear()}-${randomUUID().slice(0, 8).toUpperCase()}`,
+          protocol,
           createdBy: req.user._id,
           history: [history(req.user, 'Cadastro')],
         },

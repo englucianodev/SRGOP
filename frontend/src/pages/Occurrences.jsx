@@ -134,7 +134,7 @@ export default function Occurrences() {
               <table>
                 <thead>
                   <tr>
-                    <th>Protocolo / ocorrência</th>
+                    <th>Número da ocorrência</th>
                     <th>Município</th>
                     <th>Prioridade</th>
                     <th>Status</th>
@@ -260,7 +260,8 @@ export default function Occurrences() {
         >
           <form onSubmit={save}>
             <p className="form-note">
-              O protocolo é gerado automaticamente ao registrar. Campos com * são obrigatórios.
+              O número é gerado automaticamente no formato 001-DDMMAAAA. A sequência reinicia a cada
+              ano e não pode ser editada. Campos com * são obrigatórios.
             </p>
             <div className="form-grid">
               <Input

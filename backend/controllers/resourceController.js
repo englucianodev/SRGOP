@@ -508,6 +508,7 @@ export async function saveSettings(req, res) {
   });
   await audit(req.user, 'Configurações alteradas', 'SystemSetting', row._id);
   changed('settings');
+  serviceChanged();
   res.json(row);
 }
 export async function cpu(req, res) {
