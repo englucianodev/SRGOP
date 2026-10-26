@@ -312,8 +312,6 @@ strong {
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid #35506d;
-  border-radius: 6px;
   padding: 12px 10px;
   margin-bottom: 30px;
 }
@@ -3601,10 +3599,19 @@ select {
   padding: 8px;
 }
 .unit-logo {
-  width: 80px;
-  height: 80px;
+  width: 104px;
+  height: 104px;
   object-fit: contain;
-  flex: 0 0 80px;
+  flex: 0 0 104px;
+  transition:
+    transform 220ms ease,
+    filter 220ms ease;
+}
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .unit-logo:hover {
+    transform: translateY(-2px) scale(1.06);
+    filter: drop-shadow(0 5px 10px rgb(112 186 255 / 35%));
+  }
 }
 .auth-logo.custom-institution-logo {
   width: 110px;
