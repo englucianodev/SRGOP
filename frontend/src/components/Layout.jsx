@@ -110,7 +110,7 @@ export default function Layout() {
   const title =
     location.pathname === '/minha-conta'
       ? 'Minha conta'
-      : links.find((l) => location.pathname.startsWith(l[0]))?.[1] || 'Central de operações';
+      : links.find((l) => location.pathname.startsWith(l[0]))?.[1] || 'SRGOP';
   return (
     <div className="app-shell">
       <a className="skip-link" href="#main-content">
@@ -147,9 +147,7 @@ export default function Layout() {
         <div className="unit">
           <InstitutionLogo version={app.settings?.logoVersion} className="unit-logo" />
         </div>
-        <span className="nav-caption">
-          {app.user.role === 'Praça' ? 'MEU SERVIÇO' : 'OPERACIONAL'}
-        </span>
+        {app.user.role !== 'Praça' && <span className="nav-caption">OPERACIONAL</span>}
         <nav aria-label="Menu principal">
           {allowed.map(([path, label, Icon]) => (
             <NavLink key={path} to={path} onClick={() => setDrawer(false)}>

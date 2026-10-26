@@ -44,7 +44,7 @@ export default function MotorcycleExit({ crew }) {
           setOpen(true);
         }}
       >
-        Encerrar meu serviço de motocicleta
+        Encerrar serviço de motocicleta
       </Button>
       {open && (
         <Modal title="Saída do serviço de motocicleta" onClose={() => setOpen(false)}>

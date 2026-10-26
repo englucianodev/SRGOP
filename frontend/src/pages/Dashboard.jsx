@@ -74,12 +74,6 @@ export default function Dashboard() {
   ];
   return (
     <>
-      <div className="dashboard-live">
-        <span className="live-label">
-          <i className={`live-dot ${app.online ? '' : 'offline'}`} />
-          {app.online ? 'Atualização em tempo real' : 'Conectando'}
-        </span>
-      </div>
       {app.user.role === 'Praça' ? (
         <div className="field-welcome">
           <div className="round-icon">
@@ -104,6 +98,10 @@ export default function Dashboard() {
           <span>
             <Shield size={17} />
             <b>18º BPM</b> <span className="muted">Área operacional</span>
+            <span className="live-label" role="status">
+              <i className={`live-dot ${app.online ? '' : 'offline'}`} />
+              {app.online ? 'Atualização em tempo real' : 'Conectando'}
+            </span>
           </span>
           <span>
             <MapPin size={15} />

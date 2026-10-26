@@ -15,7 +15,7 @@ export default function FieldDashboard({ data }) {
   const { data: recent } = useData(`/occurrences?createdBy=${app.user._id}&limit=5`, { items: [] });
   return (
     <>
-      <PageTitle eyebrow="MEU SERVIÇO" title={militaryLabel(app.user)} />
+      <PageTitle title={militaryLabel(app.user)} />
       <div className="field-welcome">
         <div className="round-icon">
           <Shield size={28} />

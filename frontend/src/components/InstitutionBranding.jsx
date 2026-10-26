@@ -43,8 +43,8 @@ export default function InstitutionBranding() {
     <section className="institution-branding">
       <h3>Logo institucional do batalhão</h3>
       <p>
-        A imagem aparece no login e na lateral, junto à Central de operações. JPEG ou PNG de até 2
-        MB; transparência e proporção são preservadas.
+        A imagem aparece no login e na lateral do sistema. JPEG ou PNG de até 2 MB; transparência e
+        proporção são preservadas.
       </p>
       <div className="institution-logo-editor">
         {preview ? (

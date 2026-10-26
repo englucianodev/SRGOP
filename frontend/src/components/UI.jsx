@@ -130,11 +130,11 @@ export function GlobalFeedback() {
     </>
   );
 }
-export function PageTitle({ eyebrow = 'CENTRAL DE OPERAÇÕES', title, description, children }) {
+export function PageTitle({ eyebrow, title, description, children }) {
   return (
     <div className="page-title">
       <div>
-        <span className="eyebrow">{eyebrow}</span>
+        {eyebrow && <span className="eyebrow">{eyebrow}</span>}
         <h1>{title}</h1>
         {description && <p>{description}</p>}
       </div>
