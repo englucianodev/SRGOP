@@ -32,6 +32,7 @@ import { api } from '../services/api';
 import GpsControl from './GpsControl';
 import ProfileMenu from './ProfileMenu';
 import ServiceCpu from './ServiceCpu';
+import DayOperations from './DayOperations';
 import OperationalSafety from './OperationalSafety';
 const links = [
   ['/dashboard', 'Dashboard', LayoutDashboard, 'all'],
@@ -237,7 +238,15 @@ export default function Layout() {
         )}
         <main id="main-content" tabIndex={-1}>
           <OperationalSafety />
-          {app.user.role === 'Praça' && <ServiceCpu />}
+          {app.user.role === 'Praça' &&
+            (location.pathname === '/dashboard' ? (
+              <div className="service-overview">
+                <ServiceCpu />
+                <DayOperations />
+              </div>
+            ) : (
+              <ServiceCpu />
+            ))}
           <GpsControl />
           <Outlet />
         </main>

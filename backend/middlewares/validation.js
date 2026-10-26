@@ -19,7 +19,14 @@ const personal = {
   serviceNumber: text(0, 40).optional(),
   registration: text(0, 40).optional(),
   phone: text(0, 30)
-    .refine((value) => !value || /^[+\d().\s-]{8,30}$/.test(value), 'Informe um telefone válido.')
+    .refine(
+      (value) => !value || /^(?:\d{11}|\(\d{2}\)\s?\d{5}-\d{4})$/.test(value),
+      'Informe o telefone com DDD no formato (DD)99999-9999.',
+    )
+    .transform((value) => {
+      const digits = value.replace(/\D/g, '');
+      return digits ? `(${digits.slice(0, 2)})${digits.slice(2, 7)}-${digits.slice(7)}` : '';
+    })
     .optional(),
 };
 const condition = z

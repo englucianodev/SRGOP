@@ -1,6 +1,7 @@
 import { Phone, ShieldCheck } from 'lucide-react';
 import { useData } from '../hooks/useData';
 import { militaryLabel } from './PersonalFields';
+import { formatPhone } from '../utils/phone';
 export default function ServiceCpu() {
   const { data: cpu } = useData('/service-cpu');
   const phone = cpu?.officer?.phone;
@@ -20,7 +21,7 @@ export default function ServiceCpu() {
       {phone ? (
         <a href={`tel:${phone.replace(/[^+\d]/g, '')}`}>
           <Phone size={16} />
-          {phone}
+          {formatPhone(phone)}
         </a>
       ) : (
         <span>Telefone não informado</span>

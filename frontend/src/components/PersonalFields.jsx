@@ -1,4 +1,5 @@
 import { Input, Select } from './UI';
+import { formatPhone } from '../utils/phone';
 export const ranks = [
   'Soldado',
   'Cabo',
@@ -58,9 +59,13 @@ export default function PersonalFields({ value, onChange }) {
         label="Telefone"
         type="tel"
         autoComplete="tel"
-        maxLength={30}
-        value={value.phone || ''}
-        onChange={(e) => onChange('phone', e.target.value)}
+        inputMode="tel"
+        placeholder="(98)99999-9999"
+        maxLength={14}
+        pattern={'\\([0-9]{2}\\)[0-9]{5}-[0-9]{4}'}
+        title="Informe o telefone com DDD no formato (DD)99999-9999."
+        value={formatPhone(value.phone || '')}
+        onChange={(e) => onChange('phone', formatPhone(e.target.value))}
       />
     </>
   );

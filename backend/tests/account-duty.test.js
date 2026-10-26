@@ -280,7 +280,7 @@ test('ocorrência aberta avisa somente o CPU do serviço e entra nos alertas ind
   });
   const contact = await operator.agent.get('/api/service-cpu');
   assert.equal(contact.status, 200);
-  assert.equal(contact.body.officer.phone, '98988881234');
+  assert.equal(contact.body.officer.phone, '(98)98888-1234');
   assert.equal(contact.body.officer.callSign, 'Pontes');
   assert.equal(contact.body.officer.email, undefined);
 });
