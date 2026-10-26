@@ -238,15 +238,12 @@ export default function Layout() {
         )}
         <main id="main-content" tabIndex={-1}>
           <OperationalSafety />
-          {app.user.role === 'Praça' &&
-            (location.pathname === '/dashboard' ? (
-              <div className="service-overview">
-                <ServiceCpu />
-                <DayOperations />
-              </div>
-            ) : (
+          {app.user.role === 'Praça' && location.pathname === '/dashboard' && (
+            <div className="service-overview">
               <ServiceCpu />
-            ))}
+              <DayOperations />
+            </div>
+          )}
           <GpsControl />
           <Outlet />
         </main>
