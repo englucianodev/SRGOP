@@ -311,34 +311,11 @@ strong {
 .unit {
   display: flex;
   align-items: center;
-  gap: 10px;
+  justify-content: center;
   border: 1px solid #35506d;
   border-radius: 6px;
   padding: 12px 10px;
   margin-bottom: 30px;
-}
-.unit-mark {
-  display: grid;
-  place-items: center;
-  border: 1px solid #506882;
-  border-radius: 5px;
-  width: 28px;
-  height: 30px;
-  font-size: 13px;
-  color: #b9ccdc;
-  font-weight: 650;
-}
-.unit strong {
-  display: block;
-  font-size: 10px;
-  color: #dfe7f0;
-  font-weight: 550;
-}
-.unit div span {
-  font-size: 8px;
-  color: #8fa6bb;
-  display: block;
-  margin-top: 5px;
 }
 .nav-caption {
   font-size: 8px;
@@ -3624,10 +3601,10 @@ select {
   padding: 8px;
 }
 .unit-logo {
-  width: 42px;
-  height: 42px;
+  width: 80px;
+  height: 80px;
   object-fit: contain;
-  flex: 0 0 42px;
+  flex: 0 0 80px;
 }
 .auth-logo.custom-institution-logo {
   width: 110px;

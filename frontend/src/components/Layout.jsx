@@ -144,15 +144,7 @@ export default function Layout() {
           </button>
         </div>
         <div className="unit">
-          {app.settings?.logoVersion ? (
-            <InstitutionLogo version={app.settings.logoVersion} className="unit-logo" />
-          ) : (
-            <span className="unit-mark">18</span>
-          )}
-          <div>
-            <strong>Central de operações</strong>
-            <span>Polícia Militar do Maranhão</span>
-          </div>
+          <InstitutionLogo version={app.settings?.logoVersion} className="unit-logo" />
         </div>
         <span className="nav-caption">
           {app.user.role === 'Praça' ? 'MEU SERVIÇO' : 'OPERACIONAL'}

@@ -81,7 +81,7 @@ export default function Login({ register = false }) {
         <span className="auth-wordmark">SRGOP</span>
         <h1>Sistema de Recebimento e Gerenciamento de Ocorrências Policiais</h1>
         <div className="auth-divider" />
-        <h2>{register ? 'Solicitar acesso' : 'Bem-vindo à central'}</h2>
+        <h2>{register ? 'Solicitar acesso' : 'Bem-vindo'}</h2>
         <p className="muted">
           {register
             ? 'Preencha seus dados para análise do Administrativo.'
