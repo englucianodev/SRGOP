@@ -33,6 +33,7 @@ export default function Dashboard() {
   const inService = data.crews.filter(
     (c) => c.status !== 'Fora de serviço' && isOnDuty(c, app.now),
   );
+  const deployedPolice = new Set(inService.flatMap((crew) => crew.members.map((m) => m._id))).size;
   const myCrew = data.crews.find((c) => c.members.some((m) => m._id === app.user._id));
   const modules = app.settings?.modules || [];
   const metrics = [
@@ -119,6 +120,9 @@ export default function Dashboard() {
           <span>
             <UsersRound size={16} />
             <b>{inService.length}</b> guarnições em serviço
+          </span>
+          <span>
+            <b>{deployedPolice}</b> Policiais
           </span>
           <span className="strip-last">
             <Clock3 size={15} />

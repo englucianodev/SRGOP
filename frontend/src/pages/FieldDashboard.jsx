@@ -49,6 +49,25 @@ export default function FieldDashboard({ data }) {
           <ArrowRight size={16} />
         </Link>
       </div>
+      <Panel title="Operação do dia">
+        {data.operations?.length ? (
+          <div className="operation-card">
+            <div className="operation-icon">
+              <Shield size={21} />
+            </div>
+            <div>
+              {data.operations.map((operation) => (
+                <div key={operation._id}>
+                  <h3>{operation.name}</h3>
+                  <p>{operation.objective}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <Empty text="Nenhuma operação programada para hoje." />
+        )}
+      </Panel>
       <Panel
         title="Ocorrências destinadas à sua equipe"
         subtitle={`${assigned.length} atendimento(s) pendente(s) ou em andamento`}
