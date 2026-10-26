@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { api } from '../services/api';
 import { Button, Modal, Select, Textarea } from './UI';
+import { militaryLabel } from './PersonalFields';
 
 export default function CrewManagement({ crew }) {
   const app = useApp();
@@ -40,14 +41,14 @@ export default function CrewManagement({ crew }) {
           setReason('');
         }}
       >
-        Gerenciar integrantes
+        Gerenciar guarnição
       </Button>
       {open && (
         <Modal title={`Gerenciar ${crew.name}`} onClose={() => setOpen(false)}>
           <form onSubmit={save}>
             <Select label="Ação" value={action} onChange={(e) => setAction(e.target.value)}>
               {!motorcycle && <option value="Motorista">Definir motorista atual</option>}
-              <option value="Saída">Autorizar saída de integrante</option>
+              <option value="Saída">Autorizar saída de policial</option>
               {app.user.role === 'Administrativo' && (
                 <>
                   <option value="Indisponível">Marcar como indisponível</option>
@@ -57,7 +58,7 @@ export default function CrewManagement({ crew }) {
             </Select>
             {['Motorista', 'Saída'].includes(action) && (
               <Select
-                label="Integrante"
+                label="Policial da guarnição"
                 required
                 value={member}
                 onChange={(e) => setMember(e.target.value)}
@@ -65,7 +66,7 @@ export default function CrewManagement({ crew }) {
                 <option value="">Selecione</option>
                 {crew.members.map((m) => (
                   <option key={m._id} value={m._id}>
-                    {m.name}
+                    {militaryLabel(m)}
                   </option>
                 ))}
               </Select>

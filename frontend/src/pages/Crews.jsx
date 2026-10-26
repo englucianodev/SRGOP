@@ -3,6 +3,7 @@ import { useState } from 'react';
 import CrewManagement from '../components/CrewManagement';
 import JoinCrewDialog from '../components/JoinCrewDialog';
 import MotorcycleExit from '../components/MotorcycleExit';
+import { militaryLabel } from '../components/PersonalFields';
 import { Link } from 'react-router-dom';
 import {
   Plus,
@@ -97,6 +98,10 @@ export default function Crews() {
           .map((c) => {
             const mine = c.members.some((m) => m._id === app.user._id);
             const active = c.status !== 'Fora de serviço' && isOnDuty(c, app.now);
+            const motorcycle =
+              c.type === 'Motocicleta' ||
+              c.shiftMode === 'Motocicleta' ||
+              c.vehicle?.type === 'Motocicleta';
             return (
               <Panel className={`crew-card ${mine ? 'my-crew' : ''}`} key={c._id}>
                 <div className="card-top">
@@ -114,12 +119,12 @@ export default function Crews() {
                 {!(c.motorcycleSeats || []).length &&
                   (c.motorcycleDrivers || []).map((r) => (
                     <p key={r.vehicle._id}>
-                      {r.driver?.name} · {r.vehicle.prefix}
+                      {militaryLabel(r.driver)} · {r.vehicle.prefix}
                     </p>
                   ))}
                 {(c.motorcycleSeats || []).map((s) => (
                   <p key={s.member?._id}>
-                    {s.vehicle?.prefix} · {s.role}: {s.member?.name}
+                    {s.vehicle?.prefix} · {s.role}: {militaryLabel(s.member)}
                   </p>
                 ))}
                 {c.inspectionBlocked && (
@@ -127,25 +132,27 @@ export default function Crews() {
                     Viatura retida até a conclusão dos checklists dos motoristas.
                   </p>
                 )}
-                <div className="crew-meta">
-                  <span>
-                    <Car size={17} />
-                    {c.vehicle?.prefix || 'Sem viatura associada'}
-                  </span>
-                  <span>
-                    <Shield size={17} />
-                    {c.driver?.name || 'Motorista não definido'}
-                  </span>
-                </div>
+                {!motorcycle && (
+                  <div className="crew-meta">
+                    <span>
+                      <Car size={17} />
+                      {c.vehicle?.prefix || 'Sem viatura associada'}
+                    </span>
+                    <span>
+                      <Shield size={17} />
+                      {c.driver ? militaryLabel(c.driver) : 'Motorista não definido'}
+                    </span>
+                  </div>
+                )}
                 <div className="crew-members">
                   <span className="eyebrow">
-                    INTEGRANTES · {c.members.length}
+                    GUARNIÇÃO · {c.members.length}
                     {c.type !== 'Motocicleta' && c.vehicle?.type !== 'Motocicleta' ? '/4' : ''}
                   </span>
                   {c.members.length ? (
                     c.members.map((m) => (
                       <span key={m._id}>
-                        {m.name}
+                        {militaryLabel(m)}
                         {c.motorcycleSeats?.some((s) => s.member?._id === m._id) ? (
                           <small>
                             {c.motorcycleSeats.find((s) => s.member?._id === m._id).role}
@@ -156,7 +163,7 @@ export default function Crews() {
                       </span>
                     ))
                   ) : (
-                    <p>Nenhum integrante no turno.</p>
+                    <p>Guarnição sem policiais no turno.</p>
                   )}
                 </div>
                 <div className="shift-timer">

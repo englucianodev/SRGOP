@@ -1,5 +1,13 @@
 # Validação e impasses — SRGOP
 
+## Identificação militar e apresentação das guarnições — 25/10/2026
+
+- Composição das equipes, piloto, garupa, motorista convencional e seleção no gerenciamento exibem Posto/Graduação + Nome de Guerra. APIs de guarnições/dashboard incluem esses campos nas referências populadas; cadastros antigos sem nome de guerra mantêm o nome disponível.
+- Título da composição passa de Integrantes para Guarnição; gerenciamento usa Gerenciar guarnição e Policial da guarnição.
+- Equipes de moto não exibem o bloco convencional de viatura associada/motorista definido. Permanecem as identificações de moto, piloto e garupa. Equipes convencionais preservam o bloco de veículo e motorista.
+
+Validação desta alteração de apresentação: compilação de produção, formatação e Chrome headless com dados temporários. Conferidos nomes militares em cartões e seletor, equipes de moto ocupadas e vazias sem metadados convencionais, convencional preservada, zero erros JavaScript e sem rolagem horizontal móvel.
+
 ## Piloto/garupa por moto e capacidade das viaturas — 25/10/2026
 
 - Todo ingresso em equipe de moto exige veículo e função Piloto/Garupa explícitos. Cada pessoa ocupa uma moto e cada moto aceita no máximo um piloto e um garupa, independentemente de quantas motos estejam na equipe. A reserva transacional impede excesso e duplicidade de função sob concorrência.

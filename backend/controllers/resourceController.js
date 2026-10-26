@@ -122,13 +122,13 @@ export async function listCrews(req, res) {
       'vehicle',
       'prefix plate latitude longitude brand model year type mileage provisional',
     )
-    .populate('members driver', 'name role')
-    .populate('motorcycleSeats.member', 'name')
+    .populate('members driver', 'name role rank callSign')
+    .populate('motorcycleSeats.member', 'name rank callSign')
     .populate('motorcycleSeats.vehicle', 'prefix plate mileage type')
     .sort({ name: 1 })
     .lean();
   const records = await VehicleHandover.find({ closedAt: null, intake: { $exists: true } })
-    .populate('driver', 'name')
+    .populate('driver', 'name rank callSign')
     .populate('vehicle', 'prefix mileage type')
     .lean();
   res.json(
@@ -565,11 +565,11 @@ export async function dashboard(req, res) {
         },
       ]),
       Crew.find()
-        .populate('motorcycleSeats.member', 'name')
+        .populate('motorcycleSeats.member', 'name rank callSign')
         .populate('motorcycleSeats.vehicle', 'prefix')
         .populate('city', 'name')
         .populate('vehicle', 'prefix')
-        .populate('members driver', 'name'),
+        .populate('members driver', 'name rank callSign'),
       Occurrence.find({ deleted: false })
         .populate('city', 'name')
         .populate('crew', 'name')
