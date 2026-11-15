@@ -3676,3 +3676,33 @@ select {
     width: 100%;
   }
 }
+
+.app-installation {
+  position: fixed;
+  z-index: 10000;
+  bottom: max(16px, env(safe-area-inset-bottom));
+  left: max(16px, env(safe-area-inset-left));
+  right: max(16px, env(safe-area-inset-right));
+  margin: auto;
+  max-width: 640px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 12px;
+  background: #132d4d;
+  color: white;
+  box-shadow: 0 4px 24px #0004;
+}
+.app-installation span {
+  flex: 1 1 220px;
+}
+.app-installation button {
+  padding: 10px 14px;
+  border: 0;
+  border-radius: 8px;
+  background: #6ed6c0;
+  color: #132d4d;
+  cursor: pointer;
+}

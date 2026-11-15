@@ -1,0 +1,7 @@
+{
+  "appId": "br.com.srgop.app",
+  "appName": "SRGOP",
+  "webDir": "dist",
+  "server": { "androidScheme": "https" },
+  "android": { "allowMixedContent": false }
+}

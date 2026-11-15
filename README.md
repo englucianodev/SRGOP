@@ -606,3 +606,7 @@ Projeto de referência para avaliação acadêmica/institucional. Não represent
 - Logo institucional JPEG/PNG de até 2 MB, com prévia, substituição e remoção em Configurações. Aparece no login público e junto à Central de operações na lateral; somente administrador pode alterá-la.
 - Novas ocorrências recebem número imutável `XXX-DDMMAAAA`, com sequência anual a partir de 001 e data do cadastro em America/Fortaleza. O contador é persistente e transacional, inclusive sob concorrência. Ocorrências históricas mantêm sua identificação anterior.
 - O formato estrito de três dígitos comporta 999 ocorrências por ano; ao atingir esse limite, o sistema recusa novos números com mensagem explícita, sem reutilizá-los. Ampliação de dígitos exige redefinir esse formato.
+
+## Aplicativo Android e PWA
+
+Base React + Capacitor e instalação pelo navegador: consulte [MOBILE.md](MOBILE.md) para configuração, geração do APK e validação em aparelho.
