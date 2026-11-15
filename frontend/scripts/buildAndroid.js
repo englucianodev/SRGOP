@@ -1,4 +1,6 @@
 import { build, loadEnv } from 'vite';
+import { rmSync } from 'node:fs';
+import { resolve, sep } from 'node:path';
 const env = { ...loadEnv('android', process.cwd(), ''), ...process.env };
 for (const key of ['VITE_API_URL', 'VITE_SOCKET_URL']) {
   let url;
@@ -15,3 +17,7 @@ for (const key of ['VITE_API_URL', 'VITE_SOCKET_URL']) {
   }
 }
 await build({ mode: 'android' });
+// O instalador é distribuído pela web, nunca dentro do próprio aplicativo.
+const downloadsDir = resolve('dist/downloads');
+if (!downloadsDir.startsWith(process.cwd() + sep)) throw new Error('Diret�rio de sa�da inv�lido.');
+rmSync(downloadsDir, { recursive: true, force: true });

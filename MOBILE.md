@@ -57,3 +57,7 @@ Neste computador, o Java do sistema é 25, incompatível com o Gradle 8.14.3 ger
 ## Validação realizada
 
 Build PWA concluído; manifesto, ícones e exclusão da API do cache verificados. Build Android concluído com `:app:assembleDebug`; assinatura do APK de teste e URL da API dentro do pacote verificadas. Auditoria npm das dependências de produção: zero vulnerabilidades reportadas. Ainda falta a validação funcional em um aparelho Android.
+
+## Download pelo login
+
+A página de login da web oferece o APK em `/downloads/srgop-android.apk`, incluído em `frontend/public/downloads`. O aviso de instalação do PWA só aparece em dispositivos móveis. O APK não entra no cache do PWA nem é incluído no pacote nativo. `npm run android:apk` atualiza a cópia pública após gerar um novo APK. Para disponibilizar o download, envie também o arquivo APK de `public/downloads` ao repositório e faça novo deploy na Vercel.

@@ -2169,6 +2169,52 @@ select {
   font-weight: 600;
   margin-left: 5px;
 }
+.auth-android {
+  display: flex;
+  gap: 12px;
+  margin: 0 0 22px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  text-align: left;
+  background: #f3f8fc;
+  color: #132d4d;
+}
+.auth-android > svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.auth-android h3 {
+  margin: 0 0 6px;
+  font-size: 14px;
+}
+.auth-android p {
+  margin: 0 0 12px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.auth-android a {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #132d4d;
+  color: white;
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: none;
+}
+.auth-android a:focus-visible {
+  outline: 3px solid #238b78;
+  outline-offset: 3px;
+}
+.auth-android small {
+  display: block;
+  margin-top: 10px;
+  font-size: 11px;
+  line-height: 1.5;
+}
 .secure-note {
   padding-top: 20px;
   border-top: 1px solid var(--border);

@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process';
-import { existsSync, readdirSync } from 'node:fs';
+import { existsSync, readdirSync, mkdirSync, copyFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 const env = { ...process.env };
 const localJdk = resolve('../.runtime/android-tools/jdk21');
@@ -25,3 +25,9 @@ const result = spawnSync(
 if (result.error) throw result.error;
 if (result.status !== 0) process.exit(result.status || 1);
 console.log('APK de teste: android/app/build/outputs/apk/debug/app-debug.apk');
+mkdirSync(resolve('public/downloads'), { recursive: true });
+copyFileSync(
+  resolve('android/app/build/outputs/apk/debug/app-debug.apk'),
+  resolve('public/downloads/srgop-android.apk'),
+);
+console.log('Download web atualizado: public/downloads/srgop-android.apk');

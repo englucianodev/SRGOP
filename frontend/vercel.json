@@ -1,7 +1,7 @@
 {
   "rewrites": [
     {
-      "source": "/((?!favicon.svg|assets/|sw.js|workbox-|manifest.webmanifest|icon-).*)",
+      "source": "/((?!downloads/|favicon.svg|assets/|sw.js|workbox-|manifest.webmanifest|icon-).*)",
       "destination": "/index.html"
     }
   ],
@@ -26,6 +26,23 @@
     {
       "source": "/sw.js",
       "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache"
+        }
+      ]
+    },
+    {
+      "source": "/downloads/srgop-android.apk",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "application/vnd.android.package-archive"
+        },
+        {
+          "key": "Content-Disposition",
+          "value": "attachment; filename=\"SRGOP-Android.apk\""
+        },
         {
           "key": "Cache-Control",
           "value": "no-cache"

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Capacitor } from '@capacitor/core';
+import { isMobileDevice } from '../utils/device';
 export default function AppInstallation() {
   const [install, setInstall] = useState(null);
   const [update, setUpdate] = useState(null);
@@ -10,7 +11,7 @@ export default function AppInstallation() {
     const connection = () => setOnline(navigator.onLine);
     const prompt = (event) => {
       event.preventDefault();
-      setInstall(event);
+      if (isMobileDevice()) setInstall(event);
     };
     const installed = () => setInstall(null);
     window.addEventListener('online', connection);
@@ -63,7 +64,7 @@ export default function AppInstallation() {
         <button onClick={() => update(true)}>Atualizar</button>
       </aside>
     );
-  if (!install || dismissed || Capacitor.isNativePlatform()) return null;
+  if (!install || dismissed || Capacitor.isNativePlatform() || !isMobileDevice()) return null;
   return (
     <aside className="app-installation">
       <span>Instale o SRGOP na tela inicial do celular.</span>

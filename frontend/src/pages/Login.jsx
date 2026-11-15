@@ -1,6 +1,15 @@
 import { useState, useEffect } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, ArrowRight, ShieldCheck, LockKeyhole } from 'lucide-react';
+import {
+  Eye,
+  EyeOff,
+  ArrowRight,
+  ShieldCheck,
+  LockKeyhole,
+  Smartphone,
+  Download,
+} from 'lucide-react';
+import { Capacitor } from '@capacitor/core';
 import { useApp } from '../context/AppContext';
 import { useData } from '../hooks/useData';
 import { api } from '../services/api';
@@ -200,6 +209,21 @@ export default function Login({ register = false }) {
             {register ? 'Entrar no sistema' : 'Criar cadastro'}
           </Link>
         </p>
+        {!register && !Capacitor.isNativePlatform() && (
+          <section className="auth-android" aria-labelledby="android-app-title">
+            <Smartphone size={22} aria-hidden="true" />
+            <div>
+              <h3 id="android-app-title">SRGOP também no Android</h3>
+              <p>Use sua conta e acesse os mesmos dados do sistema web no celular.</p>
+              <a href="/downloads/srgop-android.apk" download="SRGOP-Android.apk">
+                <Download size={16} aria-hidden="true" /> Baixar para Android
+              </a>
+              <small>
+                Versão de teste. Baixe no celular Android e abra o arquivo para instalar.
+              </small>
+            </div>
+          </section>
+        )}
         <div className="secure-note">
           <LockKeyhole size={13} /> Ambiente de acesso restrito e autenticado
         </div>
