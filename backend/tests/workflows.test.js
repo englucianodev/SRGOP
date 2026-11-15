@@ -185,7 +185,7 @@ test('ocorrência valida entrada, protege autor e registra histórico de ediçã
   const r = await post(soldierAgent, '/occurrences', body);
   assert.equal(r.status, 201, JSON.stringify(r.body));
   occurrence = r.body;
-  assert.match(occurrence.protocol, /^\d{3}-\d{8}$/);
+  assert.match(occurrence.protocol, /^\d{5}-\d{8}$/);
   assert.equal(
     (
       await put(soldier2Agent, `/occurrences/${occurrence._id}`, {

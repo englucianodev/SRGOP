@@ -20,16 +20,19 @@ export async function prepareOccurrenceSequence(year) {
   }
 }
 
+export const OCCURRENCE_NUMBER_DIGITS = 5;
+const OCCURRENCE_NUMBER_MAX = 10 ** OCCURRENCE_NUMBER_DIGITS - 1;
+
 export async function nextOccurrenceNumber({ year, suffix }, session) {
   const counter = await OccurrenceSequence.findOneAndUpdate(
-    { _id: year, value: { $lt: 999 } },
+    { _id: year, value: { $lt: OCCURRENCE_NUMBER_MAX } },
     { $inc: { value: 1 } },
     { new: true, session },
   );
   requireValue(
     counter,
-    'Limite anual de 999 ocorrências atingido para a numeração de três dígitos.',
+    `Limite anual de ${OCCURRENCE_NUMBER_MAX.toLocaleString('pt-BR')} ocorrências atingido para a numeração de ${OCCURRENCE_NUMBER_DIGITS} dígitos.`,
     422,
   );
-  return `${String(counter.value).padStart(3, '0')}-${suffix}`;
+  return `${String(counter.value).padStart(OCCURRENCE_NUMBER_DIGITS, '0')}-${suffix}`;
 }

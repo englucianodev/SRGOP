@@ -296,18 +296,32 @@ export async function cancel(req, res) {
   changed('occurrences');
   res.json(row);
 }
+export const DAILY_UPLOAD_LIMIT = 50;
+// Checks the start and end markers of each format, so truncated or disguised files are refused.
+function attachmentMime(bytes) {
+  const head = bytes.subarray(0, 8).toString('hex');
+  if (head.startsWith('25504446') && bytes.subarray(-1024).includes('%%EOF'))
+    return 'application/pdf';
+  if (head.startsWith('ffd8ff') && bytes.subarray(-2).toString('hex') === 'ffd9')
+    return 'image/jpeg';
+  if (head === '89504e470d0a1a0a' && bytes.subarray(-8, -4).toString() === 'IEND')
+    return 'image/png';
+  return null;
+}
 export async function upload(req, res) {
   requireValue(req.file, 'Selecione um arquivo PDF, JPEG ou PNG de até 5 MB.', 422, 'Anexos');
   const file = req.file;
-  const head = file.buffer.subarray(0, 8).toString('hex');
-  const mime = head.startsWith('25504446')
-    ? 'application/pdf'
-    : head.startsWith('ffd8ff')
-      ? 'image/jpeg'
-      : head === '89504e470d0a1a0a'
-        ? 'image/png'
-        : null;
+  const mime = attachmentMime(file.buffer);
   requireValue(mime, 'Formato não permitido. Use PDF, JPEG ou PNG.', 422, 'Anexos');
+  requireValue(
+    (await Attachment.countDocuments({
+      uploadedBy: req.user._id,
+      createdAt: { $gte: new Date(Date.now() - 86400000) },
+    })) < DAILY_UPLOAD_LIMIT,
+    `Limite de ${DAILY_UPLOAD_LIMIT} anexos por usuário em 24 horas atingido.`,
+    429,
+    'Anexos',
+  );
   const attachment = await transaction(async (session) => {
     const row = await getOccurrence(req.params.id, session);
     requireValue(

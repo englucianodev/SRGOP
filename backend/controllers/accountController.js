@@ -3,14 +3,21 @@ import { randomUUID } from 'node:crypto';
 import { User, Session, ProfilePhoto } from '../models/index.js';
 import { transaction } from '../services/operations.js';
 import { audit } from '../services/audit.js';
-import { changed, disconnectUser, serviceChanged } from '../services/realtime.js';
+import {
+  changed,
+  disconnectSession,
+  disconnectUser,
+  serviceChanged,
+} from '../services/realtime.js';
 import { requireValue } from '../utils/errors.js';
 
 export async function update(req, res) {
+  let revoked = [];
   await transaction(async (session) => {
     const user = await User.findById(req.user._id).select('+password').session(session);
     const { currentPassword, ...input } = req.input;
-    if (input.email.toLowerCase() !== user.email)
+    const emailChanged = input.email.toLowerCase() !== user.email;
+    if (emailChanged)
       requireValue(
         currentPassword && (await bcrypt.compare(currentPassword, user.password)),
         'Informe a senha atual para alterar o e-mail.',
@@ -18,8 +25,21 @@ export async function update(req, res) {
       );
     Object.assign(user, input);
     await user.save({ session });
-    await audit(user, 'Atualização da própria conta', 'User', user._id, '', session);
+    if (emailChanged) {
+      const others = { user: user._id, _id: { $ne: req.session._id } };
+      revoked = await Session.find(others).distinct('_id').session(session);
+      await Session.deleteMany(others, { session });
+    }
+    await audit(
+      user,
+      'Atualização da própria conta',
+      'User',
+      user._id,
+      revoked.length ? 'E-mail alterado; outras sessões revogadas.' : '',
+      session,
+    );
   });
+  revoked.forEach(disconnectSession);
   changed('users', [req.user._id]);
   if (req.user.role === 'Oficial') serviceChanged();
   res.json({ user: await User.findById(req.user._id).populate('city', 'name') });

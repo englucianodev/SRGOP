@@ -19,6 +19,7 @@ import {
   VehicleHandover,
 } from '../models/index.js';
 import { requireValue } from '../utils/errors.js';
+import { id } from '../middlewares/validation.js';
 import { audit } from '../services/audit.js';
 import { changed, disconnectUser, serviceChanged } from '../services/realtime.js';
 import { transaction } from '../services/operations.js';
@@ -131,14 +132,27 @@ export async function listCrews(req, res) {
     .populate('driver', 'name rank callSign')
     .populate('vehicle', 'prefix mileage type')
     .lean();
-  res.json(
-    crews.map((c) => ({
-      ...c,
-      motorcycleDrivers: records
-        .filter((r) => String(r.crew) === String(c._id) && r.vehicle?.type === 'Motocicleta')
-        .map((r) => ({ driver: r.driver, vehicle: r.vehicle })),
-    })),
-  );
+  const rows = crews.map((c) => ({
+    ...c,
+    motorcycleDrivers: records
+      .filter((r) => String(r.crew) === String(c._id) && r.vehicle?.type === 'Motocicleta')
+      .map((r) => ({ driver: r.driver, vehicle: r.vehicle })),
+  }));
+  res.json(req.user.role === 'Praça' ? rows.map((c) => limitForeignCrew(c, req.user._id)) : rows);
+}
+const withoutKeys = (value, keys) =>
+  value && Object.fromEntries(Object.entries(value).filter(([k]) => !keys.includes(k)));
+// Praça keeps what joining, the map and support need from other crews (prefix, plate, mileage,
+// position, names and call signs), but not the vehicle registry or the members' access profile.
+function limitForeignCrew(crew, userId) {
+  if (crew.members.some((m) => String(m._id) === String(userId))) return crew;
+  const person = (m) => withoutKeys(m, ['role']);
+  return {
+    ...crew,
+    vehicle: withoutKeys(crew.vehicle, ['brand', 'model', 'year']),
+    members: crew.members.map(person),
+    driver: person(crew.driver),
+  };
 }
 export async function motorcycles(req, res) {
   const crew = await Crew.findById(req.params.id);
@@ -622,7 +636,10 @@ export async function dashboard(req, res) {
 }
 export async function auditLogs(req, res) {
   const filter = {};
-  if (req.query.user) filter.actor = req.query.user;
+  if (req.query.user) {
+    requireValue(id.safeParse(req.query.user).success, 'Usuário inválido.', 422, 'Auditoria');
+    filter.actor = req.query.user;
+  }
   res.json(
     await AuditLog.find(filter).populate('actor', 'name').sort({ createdAt: -1 }).limit(200),
   );

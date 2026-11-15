@@ -30,9 +30,9 @@ export function createApp() {
   app.use(cookieParser());
   app.use((req, res, next) => {
     res.set('Cache-Control', 'no-store');
+    // Also covers cookieless requests such as login and registration (login CSRF).
     if (
       !['GET', 'HEAD', 'OPTIONS'].includes(req.method) &&
-      req.cookies.srgop_session &&
       !allowedOrigins().includes(req.headers.origin)
     )
       return next(new AppError('Origem da requisição não autorizada.', 403, 'Proteção CSRF'));

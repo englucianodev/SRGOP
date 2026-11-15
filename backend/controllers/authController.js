@@ -11,6 +11,9 @@ const cookieOptions = () => ({
   sameSite: process.env.COOKIE_SAME_SITE || 'lax',
   path: '/',
 });
+const REGISTER_MESSAGE = 'Cadastro recebido. Aguarde a aprovação do Administrativo para entrar.';
+// Compared against when the e-mail does not exist, so response time does not reveal accounts.
+const DUMMY_HASH = bcrypt.hashSync('srgop-conta-inexistente', 12);
 export async function register(req, res) {
   const v = req.input;
   requireValue(
@@ -18,6 +21,11 @@ export async function register(req, res) {
     'Município não está disponível.',
     422,
   );
+  // Same answer for an existing e-mail, so registration does not reveal accounts.
+  if (await User.exists({ email: v.email.toLowerCase() })) {
+    await bcrypt.hash(v.password, 12);
+    return res.status(201).json({ message: REGISTER_MESSAGE });
+  }
   const user = await User.create({
     callSign: v.callSign,
     rank: v.rank,
@@ -33,18 +41,12 @@ export async function register(req, res) {
     active: false,
   });
   await audit(user, 'Cadastro solicitado', 'User', user._id);
-  res
-    .status(201)
-    .json({ message: 'Cadastro recebido. Aguarde a aprovação do Administrativo para entrar.' });
+  res.status(201).json({ message: REGISTER_MESSAGE });
 }
 export async function login(req, res) {
   const user = await User.findOne({ email: req.input.email.toLowerCase() }).select('+password');
-  requireValue(
-    user && (await bcrypt.compare(req.input.password, user.password)),
-    'E-mail ou senha incorretos.',
-    401,
-    'Login',
-  );
+  const valid = await bcrypt.compare(req.input.password, user?.password || DUMMY_HASH);
+  requireValue(user && valid, 'E-mail ou senha incorretos.', 401, 'Login');
   requireValue(user.active, 'Cadastro aguardando aprovação ou desativado.', 403, 'Login');
   const lifetime = req.input.remember ? 7 * 86400000 : 12 * 3600000;
   const session = await Session.create({

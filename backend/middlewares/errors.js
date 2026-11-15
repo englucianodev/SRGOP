@@ -23,7 +23,9 @@ export function errorHandler(err, req, res, next) {
         : 'Anexo inválido. Envie um único arquivo de até 5 MB.';
     origin = 'Upload';
   }
-  if (status >= 500)
+  if (status >= 500) {
     message = 'Não foi possível concluir a operação. Tente novamente ou contate o administrador.';
+    origin = 'Servidor';
+  }
   res.status(status).json({ message, origin, redirect: '/dashboard' });
 }

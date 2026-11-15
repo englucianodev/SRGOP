@@ -38,11 +38,11 @@ test('concurrent creation gets unique increasing numbers and keeps counting acro
   );
   assert.deepEqual(
     values.sort(),
-    Array.from({ length: 8 }, (_, i) => `${String(i + 1).padStart(3, '0')}-26102026`),
+    Array.from({ length: 8 }, (_, i) => `${String(i + 1).padStart(5, '0')}-26102026`),
   );
-  assert.equal(await allocate({ year: 2026, suffix: '27102026' }), '009-27102026');
+  assert.equal(await allocate({ year: 2026, suffix: '27102026' }), '00009-27102026');
   await prepareOccurrenceSequence(2027);
-  assert.equal(await allocate({ year: 2027, suffix: '01012027' }), '001-01012027');
+  assert.equal(await allocate({ year: 2027, suffix: '01012027' }), '00001-01012027');
 });
 test('rollback does not consume a number', async () => {
   await assert.rejects(
@@ -52,14 +52,19 @@ test('rollback does not consume a number', async () => {
     }),
     /rollback/,
   );
-  assert.equal(await allocate({ year: 2027, suffix: '02012027' }), '002-02012027');
+  assert.equal(await allocate({ year: 2027, suffix: '02012027' }), '00002-02012027');
 });
-test('three digit limit never wraps or duplicates a number', async () => {
+test('counter started under the old three digit format continues with five digits', async () => {
+  await prepareOccurrenceSequence(2029);
+  await Sequence.updateOne({ _id: 2029 }, { value: 999 });
+  assert.equal(await allocate({ year: 2029, suffix: '01062029' }), '01000-01062029');
+});
+test('five digit limit never wraps or duplicates a number', async () => {
   await prepareOccurrenceSequence(2028);
-  await Sequence.updateOne({ _id: 2028 }, { value: 998 });
-  assert.equal(await allocate({ year: 2028, suffix: '31122028' }), '999-31122028');
+  await Sequence.updateOne({ _id: 2028 }, { value: 99998 });
+  assert.equal(await allocate({ year: 2028, suffix: '31122028' }), '99999-31122028');
   await assert.rejects(allocate({ year: 2028, suffix: '31122028' }), /Limite anual/);
-  assert.equal((await Sequence.findById(2028)).value, 999);
+  assert.equal((await Sequence.findById(2028)).value, 99999);
 });
 
 test('occurrence number cannot be changed through model updates', async () => {

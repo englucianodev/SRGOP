@@ -9,9 +9,12 @@
     "build": "npm run build --prefix frontend",
     "test": "npm test --prefix backend",
     "format": "prettier --write frontend/src backend",
-    "format:check": "prettier --check frontend/src backend"
+    "format:check": "prettier --check frontend/src backend",
+    "test:e2e": "playwright test --config e2e/playwright.config.js",
+    "test:web": "npm test --prefix frontend"
   },
   "devDependencies": {
+    "@playwright/test": "1.56",
     "prettier": "^3.9.8"
   },
   "dependencies": {
