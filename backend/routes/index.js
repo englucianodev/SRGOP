@@ -39,12 +39,14 @@ import { manageMember, setAvailability, sendCrewMessage } from '../services/crew
 import { provisionDefaultFleet } from '../services/defaultFleet.js';
 import { requireDriverReturn } from '../services/vehicleInspections.js';
 import { transaction } from '../services/operations.js';
+import { isSimulationLogin } from '../middlewares/rateLimitBypass.js';
 const router = Router();
 const management = allow('Administrativo', 'Oficial');
 const admin = allow('Administrativo');
 const authLimit = rateLimit({
   windowMs: 15 * 60000,
   limit: 30,
+  skip: isSimulationLogin,
   standardHeaders: 'draft-8',
   legacyHeaders: false,
   message: {

@@ -6,6 +6,7 @@ import rateLimit from 'express-rate-limit';
 import routes from './routes/index.js';
 import { errorHandler } from './middlewares/errors.js';
 import { AppError } from './utils/errors.js';
+import { isSimulationRequest } from './middlewares/rateLimitBypass.js';
 export const allowedOrigins = () =>
   (process.env.CLIENT_URL || 'http://localhost:5173').split(',').map((s) => s.trim());
 export function createApp() {
@@ -43,6 +44,7 @@ export function createApp() {
     rateLimit({
       windowMs: 60000,
       limit: 300,
+      skip: isSimulationRequest,
       standardHeaders: 'draft-8',
       legacyHeaders: false,
       message: {
