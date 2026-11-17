@@ -1,6 +1,6 @@
 import { activeDuty, onDuty } from '../utils/duty.js';
 import { mileageFilter } from '../utils/mileage.js';
-import bcrypt from 'bcryptjs';
+import bcrypt from 'bcrypt';
 import {
   User,
   City,

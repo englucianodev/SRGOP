@@ -1,5 +1,5 @@
 import 'dotenv/config';
-import bcrypt from 'bcryptjs';
+import bcrypt from 'bcrypt';
 import mongoose from 'mongoose';
 import { connectDatabase } from './config/database.js';
 import { User, City, Vehicle, Crew, Occurrence, SystemSetting } from './models/index.js';

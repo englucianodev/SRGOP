@@ -1,4 +1,4 @@
-import bcrypt from 'bcryptjs';
+import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { User, City, Session, SystemSetting } from '../models/index.js';
 import { requireValue } from '../utils/errors.js';

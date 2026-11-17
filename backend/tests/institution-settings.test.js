@@ -1,7 +1,7 @@
 import test, { before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import mongoose from 'mongoose';
-import bcrypt from 'bcryptjs';
+import bcrypt from 'bcrypt';
 import request from 'supertest';
 import { MongoMemoryReplSet } from 'mongodb-memory-server';
 import { createApp } from '../app.js';
