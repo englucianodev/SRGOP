@@ -17,6 +17,7 @@ export function createConnectionMonitor({
   let current = 'online';
   let announced = false;
   let timer = null;
+  let probing = false;
   let probeFn = probe;
   const listeners = new Set();
 
@@ -33,13 +34,32 @@ export function createConnectionMonitor({
   // With the socket up, nothing else may clear a failed request while the app is idle:
   // probe the API quietly every RECONNECT_SHOW_DELAY_MS until a request succeeds.
   const canProbe = () => current === 'reconectando' && networkFailed && !socketDown && probeFn;
+  // The next probe is only scheduled once the current one settles, so a hung API
+  // (20 s request timeout) never piles up requests and exhausts the connection pool.
+  const settleProbe = () => {
+    probing = false;
+    scheduleProbe();
+  };
+  const runProbe = () => {
+    probing = true;
+    let result;
+    try {
+      result = probeFn();
+    } catch {
+      result = undefined;
+    }
+    if (result && typeof result.then === 'function') {
+      Promise.resolve(result).then(settleProbe, settleProbe);
+    } else {
+      settleProbe();
+    }
+  };
   const scheduleProbe = () => {
-    if (timer !== null || !canProbe()) return;
+    if (timer !== null || probing || !canProbe()) return;
     timer = setTimer(() => {
       timer = null;
       if (!canProbe()) return;
-      probeFn();
-      scheduleProbe();
+      runProbe();
     }, RECONNECT_SHOW_DELAY_MS);
   };
   const startTimer = (ms, next) => {

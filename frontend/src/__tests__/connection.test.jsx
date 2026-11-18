@@ -119,6 +119,36 @@ describe('connection monitor', () => {
     expect(m.state()).toBe('reconectando');
   });
 
+  it('não empilha testes quando o anterior ainda não terminou', () => {
+    const clock = makeClock();
+    const probe = vi.fn(() => new Promise(() => {}));
+    const m = createConnectionMonitor({ ...clock, probe });
+    m.setSocketOnline(true);
+    m.requestFailed();
+    clock.advance(RECONNECT_SHOW_DELAY_MS);
+    clock.advance(30000);
+    m.requestFailed();
+    expect(probe).toHaveBeenCalledTimes(1);
+  });
+
+  it('agenda o próximo teste cerca de 3 s depois que o anterior termina', async () => {
+    const clock = makeClock();
+    let finish;
+    const probe = vi.fn(() => new Promise((resolve) => { finish = resolve; }));
+    const m = createConnectionMonitor({ ...clock, probe });
+    m.setSocketOnline(true);
+    m.requestFailed();
+    clock.advance(2 * RECONNECT_SHOW_DELAY_MS);
+    expect(probe).toHaveBeenCalledTimes(1);
+    finish();
+    await Promise.resolve();
+    await Promise.resolve();
+    clock.advance(RECONNECT_SHOW_DELAY_MS - 1);
+    expect(probe).toHaveBeenCalledTimes(1);
+    clock.advance(1);
+    expect(probe).toHaveBeenCalledTimes(2);
+  });
+
   it('502, 503 e 504 contam como falha de rede; outros status não', () => {
     expect(isNetworkFailure(undefined)).toBe(true);
     for (const status of [502, 503, 504]) expect(isNetworkFailure(status)).toBe(true);
