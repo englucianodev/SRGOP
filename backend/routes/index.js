@@ -10,6 +10,7 @@ import * as authentication from '../controllers/authController.js';
 import * as account from '../controllers/accountController.js';
 import * as occurrence from '../controllers/occurrenceController.js';
 import * as resource from '../controllers/resourceController.js';
+import { requestTransfer, answerTransfer, cancelTransfer } from '../services/cpuTransfer.js';
 import * as chat from '../controllers/chatController.js';
 import * as gps from '../controllers/gpsController.js';
 import * as inspections from '../controllers/inspectionController.js';
@@ -20,6 +21,7 @@ import { reports } from '../controllers/reportController.js';
 import { health, live } from '../controllers/healthController.js';
 import { crewReports } from '../controllers/crewReportController.js';
 import { vehicleReports } from '../controllers/vehicleReportController.js';
+import { listCpuShifts, cpuShiftReport, dutyDayReport } from '../controllers/cpuShiftController.js';
 import {
   dispatchOccurrence,
   acceptOccurrence,
@@ -367,6 +369,9 @@ router.patch('/vehicles/:id/location', v(s.location), a(resource.location));
 router.get('/reports', management, a(reports));
 router.get('/reports/crews', management, a(crewReports));
 router.get('/reports/vehicles', management, a(vehicleReports));
+router.get('/reports/cpu-shifts', management, a(listCpuShifts));
+router.get('/reports/cpu-shifts/:id', management, a(cpuShiftReport));
+router.get('/reports/duty-days/:day', management, a(dutyDayReport));
 router.get('/settings', a(resource.settings));
 router.put('/settings', admin, v(s.settings), a(resource.saveSettings));
 router.put(
@@ -387,6 +392,23 @@ router.get(
 );
 router.post('/cpu', allow('Oficial'), a(resource.assumeCpu));
 router.put('/cpu', admin, v(s.cpu), a(resource.updateCpu));
+router.post(
+  '/cpu/transfer',
+  allow('Oficial'),
+  v(s.cpuTransfer),
+  a(async (req, res) => res.json(await requestTransfer(req.user, req.input))),
+);
+router.post(
+  '/cpu/transfer/answer',
+  allow('Oficial'),
+  v(s.cpuTransferAnswer),
+  a(async (req, res) => res.json(await answerTransfer(req.user, req.input.accept))),
+);
+router.delete(
+  '/cpu/transfer',
+  allow('Oficial'),
+  a(async (req, res) => res.json(await cancelTransfer(req.user))),
+);
 router.get('/notifications', a(resource.notifications));
 router.patch('/notifications/:id/read', a(resource.markNotification));
 router.get('/audit-logs', admin, a(resource.auditLogs));

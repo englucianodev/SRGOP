@@ -1,4 +1,4 @@
-import { activeDuty, onDuty } from '../utils/duty.js';
+import { onDutyOrAttending, onDuty, attendingPastShift } from '../utils/duty.js';
 import { Server } from 'socket.io';
 import { authenticateToken } from '../middlewares/auth.js';
 import { Notification, Crew, User, ChatAccess } from '../models/index.js';
@@ -52,8 +52,10 @@ export function changed(kind = 'data', users = []) {
 }
 export async function crewChatChanged(chat) {
   const crews = await Crew.find({
-    $or: chat.memberships.map((m) => ({ _id: m.crew, shift: m.shift })),
-    ...activeDuty(),
+    $and: [
+      { $or: chat.memberships.map((m) => ({ _id: m.crew, shift: m.shift })) },
+      onDutyOrAttending(),
+    ],
   }).select('members');
   const users = new Set(crews.flatMap((c) => c.members.map(String)));
   // No contents, sender, preview or room metadata is broadcast to the command room.
@@ -88,7 +90,7 @@ export async function queueCrewNotifications(
   message = 'Nova ocorrência encaminhada à sua guarnição.',
 ) {
   const crew = await Crew.findById(crewId).session(session);
-  if (!onDuty(crew)) return [];
+  if (!onDuty(crew) && !attendingPastShift(crew)) return [];
   const members = await User.find({ _id: { $in: crew.members }, active: true, crew: crew._id })
     .select('_id')
     .session(session);
@@ -103,12 +105,14 @@ export async function queueCrewNotifications(
     { session },
   );
 }
+// Only these kinds send a crew to an occurrence; the app rings and opens the attendance screen.
+const DISPATCH_KINDS = ['despacho', 'apoio'];
 export function deliverNotifications(rows) {
   // Reaches devices whose app is closed. Not awaited: sendPush handles its own failures.
   void sendPush(rows);
   for (const row of rows) {
     io?.to(`user:${row.user}`).emit('notification', row);
-    if (['chat', 'pendente', 'automatico', 'urgencia'].includes(row.kind)) continue;
+    if (!row.occurrence || !DISPATCH_KINDS.includes(row.kind)) continue;
     io?.to(`user:${row.user}`).emit('dispatch:new', {
       occurrenceId: row.occurrence,
       kind: row.kind,

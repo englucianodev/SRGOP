@@ -8,6 +8,7 @@ import {
   Dispatch,
   Attendance,
   CrewShift,
+  Notification,
   SupportRequest,
   City,
   VehicleHandover,
@@ -237,10 +238,12 @@ export async function closeOccurrence(actor, id, input) {
       status: { $in: ['Autorizado', 'Pendente'] },
     }).session(session);
     const supportMembers = [];
+    const supportCrews = [];
     for (const support of supports) {
       const crew = await Crew.findById(support.targetCrew).session(session);
       if (support.status === 'Autorizado') {
         supportMembers.push(...(crew?.members || []));
+        supportCrews.push(support.targetCrew);
         await releaseCrew(support.targetCrew, occurrence._id, session);
       }
       support.status = 'Concluído';
@@ -248,11 +251,27 @@ export async function closeOccurrence(actor, id, input) {
       await support.save({ session });
     }
     await audit(actor, 'Encerramento', 'Occurrence', id, input.summary.slice(0, 1900), session);
-    return { occurrence, supportMembers };
+    return { occurrence, supportMembers, crews: [occurrence.crew, ...supportCrews] };
   });
   attendanceChanged(row.occurrence);
   attendanceChanged({ ...row.occurrence.toObject(), assignedMembers: row.supportMembers });
+  await leaveExpiredCrews(row.crews);
   return row.occurrence;
+}
+// Crews freed by a closed attendance whose shift already ended leave service now.
+async function leaveExpiredCrews(crewIds) {
+  const rows = await Crew.find({
+    _id: { $in: crewIds.filter(Boolean) },
+    shiftEnd: { $lte: new Date() },
+    $or: [{ status: { $ne: 'Fora de serviço' } }, { 'members.0': { $exists: true } }],
+  }).select('_id');
+  for (const row of rows) {
+    try {
+      await endShift(row._id, null, 'Saída após atendimento com turno encerrado', true);
+    } catch (e) {
+      if (e.status !== 409) console.error('Turnos:', e.message);
+    }
+  }
 }
 export async function joinCrew(actor, id, driver, input = {}) {
   const crew = await transaction(async (session) => {
@@ -404,7 +423,7 @@ export async function joinCrew(actor, id, driver, input = {}) {
       row.dutyPeriod = motorcycle ? input.dutyPeriod : '';
       row.shiftStart = motorcycle ? new Date() : duty.start;
       row.location = { sharing: false };
-      row.shiftEnd = motorcycle ? null : duty.end;
+      row.shiftEnd = duty.end;
       const [shift] = await CrewShift.create(
         [
           {
@@ -519,7 +538,13 @@ export async function joinCrew(actor, id, driver, input = {}) {
   changed('crews', crew.members);
   return crew;
 }
-export async function endShift(id, actor, reason = 'Encerramento automático às 8h') {
+// `exitNow` records the real exit time instead of the planned shift end (exit after attending).
+export async function endShift(
+  id,
+  actor,
+  reason = 'Encerramento automático às 8h',
+  exitNow = false,
+) {
   const result = await transaction(async (session) => {
     const crew = await Crew.findById(id).session(session);
     requireValue(crew, 'Guarnição não encontrada.', 404);
@@ -530,15 +555,13 @@ export async function endShift(id, actor, reason = 'Encerramento automático às
     );
     if (!actor)
       requireValue(
-        crew.shiftMode !== 'Motocicleta' && crew.shiftEnd && +crew.shiftEnd <= Date.now(),
+        crew.shiftEnd && +crew.shiftEnd <= Date.now(),
         'Este turno não tem encerramento automático ou já foi renovado.',
         409,
       );
     const members = [...crew.members];
     const endedAt =
-      crew.shiftMode !== 'Motocicleta' && crew.shiftEnd && +crew.shiftEnd <= Date.now()
-        ? crew.shiftEnd
-        : new Date();
+      !exitNow && crew.shiftEnd && +crew.shiftEnd <= Date.now() ? crew.shiftEnd : new Date();
     await requireDriverReturn(crew, reason, session);
     const pending = await Occurrence.findOne({ crew: id, status: 'Despachada' }).session(session);
     if (pending) {
@@ -614,15 +637,47 @@ export async function endShift(id, actor, reason = 'Encerramento automático às
   if (result.pending) attendanceChanged(result.pending);
   return result.crew;
 }
-export async function expireShifts() {
+const EXPIRY_NOTICE =
+  'Seu turno encerrou. Finalize o atendimento o mais rápido possível para a próxima equipe assumir.';
+// Warns the crew once while an accepted attendance keeps the expired shift open.
+async function noticeExpiredShift(crewId) {
+  const result = await transaction(async (session) => {
+    const crew = await Crew.findById(crewId).session(session);
+    if (!crew?.shift) return null;
+    const marked = await CrewShift.findOneAndUpdate(
+      { _id: crew.shift, expiryNoticeAt: null },
+      { $set: { expiryNoticeAt: new Date() } },
+      { session },
+    );
+    if (!marked) return null;
+    const members = await User.find({ _id: { $in: crew.members }, active: true, crew: crew._id })
+      .select('_id')
+      .session(session);
+    return Notification.insertMany(
+      members.map((u) => ({
+        user: u._id,
+        title: 'Turno encerrado',
+        message: EXPIRY_NOTICE,
+        occurrence: crew.currentOccurrence,
+        kind: 'turno-expirado',
+      })),
+      { session },
+    );
+  });
+  if (result?.length) deliverNotifications(result);
+}
+export async function expireShifts(now = new Date()) {
   const rows = await Crew.find({
-    shiftMode: { $ne: 'Motocicleta' },
-    shiftEnd: { $lte: new Date() },
+    shiftEnd: { $lte: now },
     $or: [{ status: { $ne: 'Fora de serviço' } }, { 'members.0': { $exists: true } }],
-  }).select('_id');
+  }).select('_id currentOccurrence');
   for (const row of rows) {
     try {
-      await endShift(row._id, null);
+      const attending =
+        row.currentOccurrence &&
+        (await Occurrence.exists({ _id: row.currentOccurrence, status: 'Em atendimento' }));
+      if (attending) await noticeExpiredShift(row._id);
+      else await endShift(row._id, null);
     } catch (e) {
       if (e.status !== 409) console.error('Turnos:', e.message);
     }
@@ -637,15 +692,18 @@ export async function alignActiveShifts() {
     await transaction(async (session) => {
       const crew = await Crew.findById(row._id).session(session);
       const shift = crew?.shift ? await CrewShift.findById(crew.shift).session(session) : null;
-      if (!crew || crew.shiftMode === 'Motocicleta' || shift?.dutyDay || shift?.end) return;
+      // Legacy shifts have no end (open motorcycle shifts) or no dutyDay (24 h shifts).
+      if (!crew || shift?.end || (shift?.dutyDay && crew.shiftEnd)) return;
+      const motorcycle = crew.shiftMode === 'Motocicleta';
       const duty = serviceWindow(new Date(shift?.start || crew.shiftStart || Date.now()));
-      crew.shiftStart = duty.start;
+      // Motorcycles keep their real start; only the end moves to the 08h boundary.
+      if (!motorcycle) crew.shiftStart = duty.start;
       crew.shiftEnd = duty.end;
       await crew.save({ session });
       if (shift) {
-        shift.start = duty.start;
+        if (!motorcycle) shift.start = duty.start;
         shift.plannedEnd = duty.end;
-        shift.dutyDay = duty.day;
+        shift.dutyDay = shift.dutyDay || duty.day;
         await shift.save({ session });
       }
       await audit(null, 'Adequação do turno às 8h', 'Crew', crew._id, duty.day, session);

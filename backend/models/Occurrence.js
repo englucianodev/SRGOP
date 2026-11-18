@@ -44,6 +44,7 @@ const schema = new mongoose.Schema(
     description: { type: String, required: true, maxlength: 10000 },
     priority: { type: String, enum: PRIORITIES, required: true },
     status: { type: String, enum: STATUSES, default: 'Em aberto', index: true },
+    dutyDay: { type: String, index: true },
     createdBy: { ...ref('User'), required: true },
     crew: ref('Crew'),
     vehicle: ref('Vehicle'),

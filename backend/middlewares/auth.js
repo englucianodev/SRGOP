@@ -1,5 +1,6 @@
 import jwt from 'jsonwebtoken';
-import { Session, User, SystemSetting, Attendance, VehicleHandover } from '../models/index.js';
+import { Session, User, Attendance, VehicleHandover } from '../models/index.js';
+import { getGeneralSettings } from '../services/settingsCache.js';
 import { AppError, asyncRoute } from '../utils/errors.js';
 import { audit } from '../services/audit.js';
 import { inactivityPolicy, dutySessionExpiry } from '../services/sessionPolicy.js';
@@ -18,7 +19,7 @@ export async function authenticateToken(token) {
   // Independent reads: one round trip to the database instead of three on every request.
   const [session, settings, user] = await Promise.all([
     Session.findById(payload.sid),
-    SystemSetting.findOne({ key: 'general' }),
+    getGeneralSettings(),
     User.findById(payload.sub).populate('city', 'name'),
   ]);
   const policy = user?.active ? await inactivityPolicy(user, settings) : null;

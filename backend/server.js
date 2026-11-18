@@ -5,6 +5,7 @@ import { connectDatabase } from './config/database.js';
 import { createApp, allowedOrigins } from './app.js';
 import { configureSocket } from './services/realtime.js';
 import { expireShifts, alignActiveShifts } from './services/operations.js';
+import { migrateDailyOfficer, backfillDutyDay, sweepCpuShift } from './services/cpuShift.js';
 import { serviceWindow } from './utils/time.js';
 import { serviceChanged } from './services/realtime.js';
 import { SystemSetting } from './models/index.js';
@@ -18,6 +19,8 @@ export async function startServer({ initialize } = {}) {
   await connectDatabase();
   await Promise.all(Object.values(mongoose.models).map((model) => model.init()));
   if (initialize) await initialize();
+  await migrateDailyOfficer();
+  await backfillDutyDay();
   await SystemSetting.updateOne(
     { key: 'general' },
     { $setOnInsert: { key: 'general' } },
@@ -27,12 +30,18 @@ export async function startServer({ initialize } = {}) {
   const io = configureSocket(server, allowedOrigins());
   await alignActiveShifts();
   await expireShifts();
+  try {
+    await sweepCpuShift();
+  } catch (error) {
+    console.error('Turno do CPU:', error.message);
+  }
   let boundaryTimer;
   const boundary = () => {
     boundaryTimer = setTimeout(
       async () => {
         try {
           await expireShifts();
+          await sweepCpuShift();
           serviceChanged();
         } catch (error) {
           console.error('Mudança de serviço:', error.message);
@@ -49,6 +58,7 @@ export async function startServer({ initialize } = {}) {
     expiring = true;
     try {
       await expireShifts();
+      await sweepCpuShift();
     } catch (err) {
       console.error('Turnos:', err.message);
     } finally {

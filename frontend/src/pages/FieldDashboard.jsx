@@ -6,6 +6,7 @@ import { useData } from '../hooks/useData';
 import { duration, fmtDateTime } from '../utils/format';
 import { PageTitle, Panel, Badge, Empty } from '../components/UI';
 import { militaryLabel } from '../components/PersonalFields';
+import ShiftExpiredBanner from '../components/ShiftExpiredBanner';
 
 export default function FieldDashboard({ data }) {
   const app = useApp();
@@ -16,6 +17,7 @@ export default function FieldDashboard({ data }) {
   return (
     <>
       <PageTitle title={militaryLabel(app.user)} />
+      <ShiftExpiredBanner crew={crew} now={app.now} />
       <div className="field-welcome">
         <div className="round-icon">
           <Shield size={28} />

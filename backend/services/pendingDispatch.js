@@ -1,10 +1,8 @@
-import { DailyOfficer, User, Notification, Occurrence } from '../models/index.js';
-import { serviceWindow } from '../utils/time.js';
+import { User, Notification, Occurrence } from '../models/index.js';
+import { currentCpu } from './cpuShift.js';
 import { deliverNotifications } from './realtime.js';
 export async function queuePendingDispatch(occurrence, session, officerId, kind = 'pendente') {
-  const cpu =
-    officerId ||
-    (await DailyOfficer.findOne({ day: serviceWindow().day }).session(session || null))?.officer;
+  const cpu = officerId || (await currentCpu(session))?.officer?._id;
   let users = cpu
     ? await User.find({ _id: cpu, role: 'Oficial', active: true }).session(session || null)
     : [];
@@ -41,4 +39,12 @@ export async function notifyPendingForCpu(officerId) {
     .limit(100);
   for (const occurrence of pending)
     deliverNotifications(await queuePendingDispatch(occurrence, null, officerId));
+}
+/** Post-commit re-notification after the CPU changed: the change already stands, so only log. */
+export async function notifyPendingAfterCpuChange(officerId) {
+  try {
+    await notifyPendingForCpu(officerId);
+  } catch (error) {
+    console.error('CPU: falha ao reenviar ocorrências pendentes:', error.message);
+  }
 }

@@ -20,13 +20,21 @@ import { api } from '../services/api';
 import { duration, fmtTime, fmtDate } from '../utils/format';
 import { Panel, Badge, Loading, Button, Empty } from '../components/UI';
 import OperationalMap from '../components/OperationalMap';
+import OperationLegend from '../components/OperationLegend';
 import HandoverDialog from '../components/HandoverSummary';
+import { useConnectionState } from '../components/ConnectionStatus';
+import CpuTransferDialog from '../components/cpu/CpuTransferDialog';
+import CpuPendingList from '../components/cpu/CpuPendingList';
 import FieldDashboard from './FieldDashboard';
 export default function Dashboard() {
   const app = useApp();
+  const connectionState = useConnectionState();
   const { data, loading } = useData('/dashboard');
   const { data: cities } = useData('/cities', []);
   const [handoverOpen, setHandoverOpen] = useState(false);
+  const [transferOpen, setTransferOpen] = useState(false);
+  // /dashboard carries no pending items; /cpu does, and is for managers only.
+  const { data: cpuDetail } = useData(app.user.role === 'Praça' ? null : '/cpu');
   // The officer who assumes sees what is pending right away.
   const assumeCpu = async () => {
     const assumed = await app.run(() => api.post('/cpu'), 'Você assumiu o CPU de hoje.');
@@ -43,6 +51,11 @@ export default function Dashboard() {
   const deployedPolice = new Set(inService.flatMap((crew) => crew.members.map((m) => m._id))).size;
   const myCrew = data.crews.find((c) => c.members.some((m) => m._id === app.user._id));
   const modules = app.settings?.modules || [];
+  const cpu = cpuDetail || data.cpu;
+  const isMyCpu = !!cpu && String(cpu.officer?._id ?? cpu.officer) === String(app.user._id);
+  const shiftOver = !!cpu?.plannedEnd && +new Date(cpu.plannedEnd) <= app.now;
+  const cancelTransfer = () =>
+    app.run(() => api.delete('/cpu/transfer'), 'Passagem cancelada.');
   const metrics = [
     {
       name: 'Alertas',
@@ -108,7 +121,11 @@ export default function Dashboard() {
             <b>18º BPM</b> <span className="muted">Área operacional</span>
             <span className="live-label" role="status">
               <i className={`live-dot ${app.online ? '' : 'offline'}`} />
-              {app.online ? 'Atualização em tempo real' : 'Conectando'}
+              {app.online
+                ? 'Atualização em tempo real'
+                : connectionState === 'reconectando'
+                  ? 'Reconectando…'
+                  : 'Conectando'}
             </span>
           </span>
           <span>
@@ -192,23 +209,46 @@ export default function Dashboard() {
                 <Shield size={22} />
               </div>
               <small>CPU do dia</small>
-              <h2>{data.cpu?.officer?.name || 'Aguardando responsável'}</h2>
+              <h2>{cpu?.officer?.name || 'Aguardando responsável'}</h2>
               <p>
-                {data.cpu
-                  ? `${fmtDate(data.cpu.assumedAt)} · Assumiu às ${fmtTime(data.cpu.assumedAt)}`
+                {cpu
+                  ? `${fmtDate(cpu.assumedAt)} · Assumiu às ${fmtTime(cpu.assumedAt)}`
                   : 'Nenhum Oficial assumiu o serviço de hoje.'}
               </p>
+              {cpu && (
+                <p className="cpu-shift-state">
+                  {shiftOver
+                    ? 'Turno encerrado: aguardando o fechamento.'
+                    : `Turno em andamento até ${fmtTime(cpu.plannedEnd)}`}
+                </p>
+              )}
+              {shiftOver && <CpuPendingList pending={cpu.pending} />}
+              {cpu?.transfer && (
+                <p className="cpu-transfer-pending">
+                  Passagem enviada, aguardando aceite.
+                  {isMyCpu && (
+                    <Button variant="light" onClick={cancelTransfer}>
+                      Cancelar
+                    </Button>
+                  )}
+                </p>
+              )}
               <div className="cpu-actions">
-                {app.user.role === 'Oficial' && !data.cpu && (
+                {app.user.role === 'Oficial' && !cpu && (
                   <Button variant="light" onClick={assumeCpu}>
                     Assumir CPU <ArrowUpRight size={16} />
+                  </Button>
+                )}
+                {isMyCpu && !cpu.transfer && (
+                  <Button variant="light" onClick={() => setTransferOpen(true)}>
+                    Passar serviço
                   </Button>
                 )}
                 <Button variant="light" onClick={() => setHandoverOpen(true)}>
                   Passagem de serviço
                 </Button>
               </div>
-              {data.cpu && (
+              {cpu && (
                 <span className="cpu-active">
                   <i className="live-dot" />
                   Responsável pelo serviço
@@ -285,29 +325,22 @@ export default function Dashboard() {
         </Panel>
         {app.user.role !== 'Praça' && (
           <Panel
-            title="Área de cobertura"
+            title="Mapa da operação"
             actions={
-              <Link className="panel-link" to="/mapa">
+              <Link className="panel-link" to="/operacao">
                 Ampliar <ArrowUpRight size={16} />
               </Link>
             }
           >
-            <OperationalMap cities={cities} occurrences={data.recent} crews={data.crews} compact />
-            <div className="map-legend">
-              <span>
-                <i className="legend-dot red" />
-                Alta
-              </span>
-              <span>
-                <i className="legend-dot amber" />
-                Média
-              </span>
-              <span>
-                <i className="legend-dot blue" />
-                Baixa
-              </span>
-              <span>{cities.filter((c) => c.active).length} cidades</span>
-            </div>
+            <OperationalMap
+              mode="operation"
+              cities={cities}
+              occurrences={data.open || []}
+              crews={data.crews}
+              now={app.now}
+              compact
+            />
+            <OperationLegend />
           </Panel>
         )}
       </div>
@@ -358,6 +391,7 @@ export default function Dashboard() {
           </div>
         </Panel>
       )}
+      {transferOpen && <CpuTransferDialog onClose={() => setTransferOpen(false)} />}
       {handoverOpen && <HandoverDialog onClose={() => setHandoverOpen(false)} />}
     </>
   );

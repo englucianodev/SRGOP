@@ -45,6 +45,8 @@ export default mongoose.model(
         },
       },
       end: Date,
+      expiryNoticeAt: Date,
+      overtimeAlertAt: Date,
       endedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
       reason: String,
     },

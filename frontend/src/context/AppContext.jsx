@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { io } from 'socket.io-client';
 import { api } from '../services/api';
+import { connection, isNetworkFailure } from '../services/connection';
 import { whenServerReady } from '../services/startup';
 const Context = createContext(null);
 export const useApp = () => useContext(Context);
@@ -54,7 +55,7 @@ export function AppProvider({ children }) {
     // While the server wakes up (or its database reconnects) the startup screen stays on
     // and the request is repeated; no error dialog is shown for that.
     const control = new AbortController();
-    whenServerReady(() => api.get('/auth/me', { quiet: true, signal: control.signal }), {
+    whenServerReady(() => api.get('/auth/me', { quiet: true, retry: false, signal: control.signal }), {
       signal: control.signal,
       onWaiting: () => setWaitingServer(true),
     })
@@ -77,6 +78,8 @@ export function AppProvider({ children }) {
   useEffect(() => {
     const listener = (e) => {
       if (e.detail?.status === 401 && loggedOut.current) return;
+      // One network-error notice per outage, none while the reconnect indicator is showing.
+      if (isNetworkFailure(e.detail?.status) && !connection.announceNetworkError()) return;
       setError(e.detail);
     };
     window.addEventListener('srgop:error', listener);
@@ -197,6 +200,7 @@ export function AppProvider({ children }) {
     };
     socket.on('connect', () => {
       setOnline(true);
+      connection.setSocketOnline(true);
       scheduleRefresh();
       api
         .get('/attendances')
@@ -210,6 +214,7 @@ export function AppProvider({ children }) {
     });
     socket.on('disconnect', (reason) => {
       setOnline(false);
+      connection.setSocketOnline(false);
       if (reason === 'io server disconnect' && !loggedOut.current)
         api.get('/auth/me', { quiet: true }).catch((error) => {
           if (error.response?.status === 401 && !loggedOut.current)
@@ -230,6 +235,13 @@ export function AppProvider({ children }) {
       if (n.kind === 'urgencia') {
         setNotificationRevision((v) => v + 1);
         scheduleRefresh();
+        return;
+      }
+      if (['turno-cpu', 'passagem-cpu', 'turno-expirado'].includes(n.kind)) {
+        setNotificationRevision((v) => v + 1);
+        if (notifications && settings?.notificationsEnabled !== false)
+          setToast(`${n.title}: ${n.message}`);
+        refresh();
         return;
       }
       if (['chat', 'pendente', 'automatico'].includes(n.kind)) {

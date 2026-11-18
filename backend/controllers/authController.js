@@ -1,6 +1,7 @@
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
-import { User, City, Session, SystemSetting } from '../models/index.js';
+import { User, City, Session } from '../models/index.js';
+import { getGeneralSettings } from '../services/settingsCache.js';
 import { requireValue } from '../utils/errors.js';
 import { audit } from '../services/audit.js';
 import { disconnectSession } from '../services/realtime.js';
@@ -75,7 +76,7 @@ export async function login(req, res) {
     ...cookieOptions(),
     ...(req.input.remember ? { maxAge: lifetime } : {}),
   });
-  const settings = await SystemSetting.findOne({ key: 'general' });
+  const settings = await getGeneralSettings();
   res.json({
     user: await User.findById(user._id).populate('city', 'name'),
     settings,
@@ -86,7 +87,7 @@ export async function login(req, res) {
 export async function me(req, res) {
   res.json({
     user: req.user,
-    settings: await SystemSetting.findOne({ key: 'general' }),
+    settings: await getGeneralSettings(),
     lastActivity: req.session.lastActivity,
     inactivityPolicy: req.inactivityPolicy,
   });

@@ -17,6 +17,8 @@ import MapPage from './pages/MapPage';
 import Reports from './pages/Reports';
 import Settings from './pages/Settings';
 import Administration from './pages/Administration';
+import Operation from './pages/Operation';
+import CpuShiftReport from './pages/CpuShiftReport';
 function Protected({ roles }) {
   const { user, ready, activeAttendance } = useApp();
   const location = useLocation();
@@ -68,9 +70,12 @@ export default function App() {
             <Route path="/chat-operacional" element={<OperationalChat />} />
             <Route path="/mapa" element={<MapPage />} />
             <Route element={<Protected roles={['Oficial', 'Administrativo']} />}>
+              <Route path="/operacao" element={<Operation />} />
               <Route path="/despachos" element={<Dispatches />} />
               <Route path="/viaturas" element={<Resources key="vehicles" type="vehicles" />} />
               <Route path="/relatorios" element={<Reports />} />
+              <Route path="/relatorios/turno-cpu/:id" element={<CpuShiftReport />} />
+              <Route path="/relatorios/dia/:day" element={<CpuShiftReport />} />
               <Route path="/usuarios" element={<Resources key="users" type="users" />} />
               <Route path="/configuracoes" element={<Settings />} />
             </Route>

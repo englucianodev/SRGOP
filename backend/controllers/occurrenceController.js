@@ -7,16 +7,16 @@ import {
 import {
   Occurrence,
   City,
-  SystemSetting,
   Attachment,
   Attendance,
   SupportRequest,
   Crew,
   User,
 } from '../models/index.js';
+import { getGeneralSettings } from '../services/settingsCache.js';
 import { requireValue } from '../utils/errors.js';
 import { describeChanges } from '../utils/occurrenceDetails.js';
-import { dayRange } from '../utils/time.js';
+import { dayRange, serviceWindow } from '../utils/time.js';
 import { audit } from '../services/audit.js';
 import { changed, attendanceChanged, deliverNotifications } from '../services/realtime.js';
 import { queuePendingDispatch } from '../services/pendingDispatch.js';
@@ -127,7 +127,7 @@ async function references(input) {
     'Município não disponível.',
     422,
   );
-  const settings = await SystemSetting.findOne({ key: 'general' });
+  const settings = await getGeneralSettings();
   requireValue(
     settings?.crimeTypes.includes(input.crimeType),
     'Tipo de crime não cadastrado.',
@@ -155,6 +155,7 @@ export async function create(req, res) {
         {
           ...req.input,
           protocol,
+          dutyDay: serviceWindow().day,
           createdBy: req.user._id,
           history: [history(req.user, 'Cadastro')],
         },

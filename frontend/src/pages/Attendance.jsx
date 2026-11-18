@@ -31,6 +31,7 @@ import {
 } from '../components/UI';
 import OccurrenceDetail from '../components/OccurrenceDetail';
 import InvolvedEditor from '../components/InvolvedEditor';
+import ShiftExpiredBanner from '../components/ShiftExpiredBanner';
 import SeizureEditor from '../components/SeizureEditor';
 import {
   editablePeople,
@@ -61,6 +62,7 @@ export default function Attendance() {
     approaches: 0,
   });
   const [details, setDetails] = useState({ involved: [], seizures: [], policeStation: '' });
+  const myCrew = crews.find((c) => c.members?.some((m) => String(m._id ?? m) === app.user._id));
   const manager = app.user.role !== 'Praça';
   const open = (kind, row) => {
     setAction({ kind, row });
@@ -115,6 +117,7 @@ export default function Attendance() {
           </Button>
         )}
       </PageTitle>
+      <ShiftExpiredBanner crew={myCrew} now={app.now} />
       {loading && !rows.length ? (
         <Loading />
       ) : !rows.length ? (

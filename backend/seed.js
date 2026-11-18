@@ -3,7 +3,7 @@ import bcrypt from 'bcrypt';
 import mongoose from 'mongoose';
 import { connectDatabase } from './config/database.js';
 import { User, City, Vehicle, Crew, Occurrence, SystemSetting } from './models/index.js';
-import { dayKey } from './utils/time.js';
+import { dayKey, serviceWindow } from './utils/time.js';
 // Base demonstrativa editável. Não representa a circunscrição oficial validada do 18º BPM.
 export const demoCities = [
   ['Presidente Dutra', -5.2898, -44.495],
@@ -131,6 +131,7 @@ export async function seed() {
             'Registro fictício criado exclusivamente para testar os fluxos do SRGOP. Não corresponde a uma ocorrência real.',
           priority: ['Média', 'Alta', 'Baixa'][i % 3],
           status: 'Em aberto',
+          dutyDay: serviceWindow().day,
           createdBy: admin._id,
           history: [{ action: 'Cadastro demonstrativo', actor: admin._id }],
         },

@@ -29,7 +29,11 @@ export async function registerLoginFailure(email) {
   if (row.failures < MAX_LOGIN_FAILURES) return;
   await LoginThrottle.updateOne(
     { _id: row._id },
-    { failures: 0, lockedUntil: new Date(now + LOGIN_LOCK_MS), expiresAt: new Date(now + LOGIN_LOCK_MS) },
+    {
+      failures: 0,
+      lockedUntil: new Date(now + LOGIN_LOCK_MS),
+      expiresAt: new Date(now + LOGIN_LOCK_MS),
+    },
   );
 }
 

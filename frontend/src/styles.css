@@ -3758,3 +3758,131 @@ select {
   color: #132d4d;
   cursor: pointer;
 }
+.connection-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: fit-content;
+  margin: 0 0 12px;
+  padding: 7px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+}
+.connection-status.reconectando {
+  border-color: var(--amber);
+  color: var(--amber);
+}
+.connection-status.restabelecida {
+  border-color: var(--green);
+  color: var(--green);
+}
+.reconnect-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: reconnect-spin 0.8s linear infinite;
+}
+@keyframes reconnect-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .reconnect-spinner {
+    animation: none;
+    border-right-color: currentColor;
+    opacity: 0.6;
+  }
+}
+.operation-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+}
+.operation-tabs button {
+  padding: 10px 18px;
+  border: 0;
+  border-bottom: 3px solid transparent;
+  background: none;
+  color: var(--muted);
+  font-weight: 600;
+  cursor: pointer;
+}
+.operation-tabs button.active {
+  color: var(--text);
+  border-bottom-color: var(--blue);
+}
+.operation-page {
+  display: grid;
+  gap: 16px;
+}
+.operation-counters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+}
+.operation-counters > div,
+.operation-card,
+.staff-crew {
+  display: grid;
+  gap: 4px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.operation-counters b {
+  font-size: 1.6rem;
+}
+.operation-counters span,
+.operation-timeline small {
+  color: var(--muted);
+}
+.operation-cards,
+.staff-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+}
+.staff-crew header {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+.staff-crew p {
+  margin: 0;
+}
+.operation-timeline {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.operation-timeline li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.service-banner.expired {
+  background: #fdecea;
+  border-bottom-color: #f2b8b5;
+  color: #8a1f17;
+}
+.cpu-pending {
+  margin: 6px 0;
+  padding-left: 18px;
+  font-size: 12px;
+}
+.cpu-transfer-pending {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}

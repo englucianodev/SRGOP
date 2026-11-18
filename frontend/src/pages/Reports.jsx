@@ -1,10 +1,11 @@
 import { useState, lazy, Suspense } from 'react';
+import { Link } from 'react-router-dom';
 import { Download, Printer, FileChartColumn } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { useData } from '../hooks/useData';
 import { downloadFile } from '../services/api';
-import { params, duration, fmtDateTime } from '../utils/format';
-import { PageTitle, Panel, Button, Badge, Loading, Select } from '../components/UI';
+import { params, duration, fmtDateTime, serviceDayKey } from '../utils/format';
+import { PageTitle, Panel, Button, Badge, Loading, Select, Input, Empty } from '../components/UI';
 import OccurrenceFilters from '../components/OccurrenceFilters';
 const CrewTraceReport = lazy(() => import('../components/CrewTraceReport'));
 const VehicleReport = lazy(() => import('../components/VehicleReport'));
@@ -49,6 +50,74 @@ export default function Reports() {
     </>
   );
 }
+const CLOSE_LABEL = (shift) => shift.closeReason || (shift.end ? 'Encerrado' : 'Em andamento');
+
+/** CPU shifts of the filter period, each linking to its report, plus a duty-day report by date. */
+function CpuShiftsPanel({ from, to }) {
+  const [day, setDay] = useState(serviceDayKey);
+  const { data, loading } = useData(`/reports/cpu-shifts?${params({ from, to })}`);
+  const shifts = data || [];
+  return (
+    <Panel
+      title="Turnos do CPU"
+      subtitle="Relatório sintético e analítico de cada turno no período"
+      className="no-print"
+      actions={
+        <div className="title-actions">
+          <Input
+            label="Dia de serviço"
+            type="date"
+            value={day}
+            onChange={(e) => setDay(e.target.value)}
+          />
+          {day && (
+            <Link className="button secondary" to={`/relatorios/dia/${day}?modo=sintetico`}>
+              Relatório do dia
+            </Link>
+          )}
+        </div>
+      }
+    >
+      {loading && !data ? (
+        <Loading />
+      ) : shifts.length ? (
+        <div className="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>Dia</th>
+                <th>Oficial</th>
+                <th>Início</th>
+                <th>Fim</th>
+                <th>Situação</th>
+                <th>Relatório</th>
+              </tr>
+            </thead>
+            <tbody>
+              {shifts.map((shift) => (
+                <tr key={shift._id}>
+                  <td>{shift.day}</td>
+                  <td>{shift.officer || '—'}</td>
+                  <td>{fmtDateTime(shift.start)}</td>
+                  <td>{fmtDateTime(shift.end)}</td>
+                  <td>{CLOSE_LABEL(shift)}</td>
+                  <td>
+                    <Link to={`/relatorios/turno-cpu/${shift._id}?modo=sintetico`}>Sintético</Link>
+                    {' · '}
+                    <Link to={`/relatorios/turno-cpu/${shift._id}?modo=analitico`}>Analítico</Link>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <Empty text="Nenhum turno do CPU no período." />
+      )}
+    </Panel>
+  );
+}
+
 function GeneralReports() {
   const app = useApp();
   const [filters, setFilters] = useState({});
@@ -81,6 +150,7 @@ function GeneralReports() {
       <Panel className="no-print">
         <OccurrenceFilters value={filters} onChange={setFilters} reports />
       </Panel>
+      <CpuShiftsPanel from={filters.from} to={filters.to} />
       {loading && !data ? (
         <Loading />
       ) : (

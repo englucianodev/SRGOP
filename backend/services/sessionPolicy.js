@@ -1,6 +1,7 @@
-import { Crew, DailyOfficer } from '../models/index.js';
-import { activeDuty } from '../utils/duty.js';
-import { serviceWindow } from '../utils/time.js';
+import { Crew } from '../models/index.js';
+import { onDutyOrAttending } from '../utils/duty.js';
+import { CpuShift } from '../models/index.js';
+import { cpuDutyEnd } from './cpuShift.js';
 
 const HOUR_MS = 3600000;
 /** Longest a session can ever last; also the lifetime of the signed token. */
@@ -23,19 +24,26 @@ export function dutySessionExpiry(policy, expiresAt, limit, now = Date.now()) {
   return target > +expiresAt ? new Date(target) : null;
 }
 
+const openCpu = (user) =>
+  CpuShift.findOne({ status: 'Aberto', officer: user._id }).select('plannedEnd');
+
 export async function inactivityPolicy(user, settings) {
   const offDutyInactivityMinutes = settings?.inactivityMinutes || 5;
-  const duty = serviceWindow();
   const [crew, cpu] = await Promise.all([
     user.crew
-      ? Crew.findOne({ _id: user.crew, members: user._id, ...activeDuty() }).select(
+      ? Crew.findOne({ _id: user.crew, members: user._id, ...onDutyOrAttending() }).select(
           'shiftMode shiftEnd',
         )
       : null,
-    user.role === 'Oficial' ? DailyOfficer.exists({ officer: user._id, day: duty.day }) : null,
+    user.role === 'Oficial' ? openCpu(user) : null,
   ]);
   const onDuty = Boolean(crew || cpu);
-  const ends = [crew?.shiftEnd, cpu ? duty.end : null].filter(Boolean);
+  // Attending past the shift end: keep the session alive for another hour, renewed on each check.
+  const crewEnd =
+    crew?.shiftEnd && +crew.shiftEnd <= Date.now()
+      ? new Date(Date.now() + DUTY_GRACE_MS)
+      : crew?.shiftEnd;
+  const ends = [crewEnd, cpu ? cpuDutyEnd(cpu) : null].filter(Boolean);
   const dutyEndsAt =
     crew?.shiftMode === 'Motocicleta' && !crew.shiftEnd
       ? null

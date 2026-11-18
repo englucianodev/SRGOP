@@ -311,19 +311,23 @@ test('opções e chaves enviadas são aceitas pela biblioteca web-push real', as
   assert.equal((await PushSubscription.findOne()).failures, 0);
 });
 
-test('sendPush cobre apoio, urgência e pendente com o destino correto', async () => {
+test('sendPush cobre apoio, urgência, pendente, turno expirado e passagem do CPU com o destino correto', async () => {
   await subscribe(soldier);
   const emergency = objectId();
   await sendPush([
     await notify(soldier.user, 'apoio'),
     await notify(soldier.user, 'urgencia', { emergency, occurrence: undefined, priority: 'Máxima' }),
     await notify(soldier.user, 'pendente'),
+    await notify(soldier.user, 'turno-expirado'),
+    await notify(soldier.user, 'passagem-cpu', { occurrence: undefined }),
   ]);
   const urls = Object.fromEntries(sent.map((s) => [s.payload.kind, s.payload.url]));
   assert.deepEqual(urls, {
     apoio: '/atendimento',
     urgencia: `/mapa?emergency=${emergency}`,
     pendente: '/despachos',
+    'turno-expirado': '/atendimento',
+    'passagem-cpu': '/dashboard',
   });
 });
 

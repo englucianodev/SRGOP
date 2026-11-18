@@ -1,12 +1,12 @@
-import { Emergency, Crew, User, DailyOfficer, Notification } from '../models/index.js';
-import { activeDuty } from '../utils/duty.js';
-import { serviceWindow } from '../utils/time.js';
+import { Emergency, Crew, User, Notification } from '../models/index.js';
+import { onDutyOrAttending } from '../utils/duty.js';
+import { currentCpu, isCpu } from '../services/cpuShift.js';
 import { requireValue } from '../utils/errors.js';
 import { transaction } from '../services/operations.js';
 import { audit } from '../services/audit.js';
 import { emergencyChanged, deliverNotifications } from '../services/realtime.js';
 const currentCrew = (actor, session) =>
-  Crew.findOne({ _id: actor.crew, members: actor._id, ...activeDuty() })
+  Crew.findOne({ _id: actor.crew, members: actor._id, ...onDutyOrAttending() })
     .populate('city', 'name')
     .session(session || null);
 async function permitted(actor, row) {
@@ -25,13 +25,13 @@ export async function create(req, res) {
       session,
     );
     if (existing) return { row: existing, notifications: [], existing: true };
-    const crews = await Crew.find(activeDuty()).session(session);
-    const cpu = await DailyOfficer.findOne({ day: serviceWindow().day }).session(session);
+    const crews = await Crew.find(onDutyOrAttending()).session(session);
+    const cpu = await currentCpu(session);
     const users = await User.find({
       active: true,
       $or: [
         ...crews.map((c) => ({ crew: c._id, _id: { $in: c.members } })),
-        ...(cpu ? [{ _id: cpu.officer }] : []),
+        ...(cpu ? [{ _id: cpu.officer?._id || cpu.officer }] : []),
       ],
     }).session(session);
     const gps =
@@ -85,7 +85,7 @@ export async function create(req, res) {
 }
 export async function list(req, res) {
   const duty = await currentCrew(req.user);
-  const cpu = await DailyOfficer.exists({ officer: req.user._id, day: serviceWindow().day });
+  const cpu = await isCpu(req.user._id);
   res.json(
     await Emergency.find({ resolvedAt: null, ...(duty || cpu ? {} : { recipients: req.user._id }) })
       .sort({ createdAt: -1 })

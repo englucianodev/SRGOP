@@ -1,4 +1,4 @@
-import { activeDuty, onDuty } from '../utils/duty.js';
+import { onDutyOrAttending, onDuty } from '../utils/duty.js';
 import { Crew, CrewChat, ChatMessage, ChatAccess, User, Notification } from '../models/index.js';
 import { requireValue } from '../utils/errors.js';
 import { transaction } from '../services/operations.js';
@@ -10,7 +10,7 @@ const activeCrew = (actor, session) =>
   Crew.findOne({
     _id: actor.crew,
     members: actor._id,
-    ...activeDuty(),
+    ...onDutyOrAttending(),
     status: { $ne: 'Fora de serviço' },
   }).session(session || null);
 const belongs = (chat, crew) =>
@@ -36,7 +36,7 @@ async function activeMemberships(crewIds, session) {
   const ids = [...new Set(crewIds.map(String))];
   const crews = await Crew.find({
     _id: { $in: ids },
-    ...activeDuty(),
+    ...onDutyOrAttending(),
     shift: { $ne: null },
     'members.0': { $exists: true },
     status: { $ne: 'Fora de serviço' },
@@ -187,8 +187,10 @@ export async function send(req, res) {
     chat.updatedAt = new Date();
     await chat.save({ session });
     const crews = await Crew.find({
-      $or: chat.memberships.map((m) => ({ _id: m.crew, shift: m.shift })),
-      ...activeDuty(),
+      $and: [
+        { $or: chat.memberships.map((m) => ({ _id: m.crew, shift: m.shift })) },
+        onDutyOrAttending(),
+      ],
       status: { $ne: 'Fora de serviço' },
     }).session(session);
     const recipients = await User.find({

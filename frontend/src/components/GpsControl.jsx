@@ -68,7 +68,7 @@ export default function GpsControl() {
       pending = api.patch(
         `/crews/${crewId}/gps`,
         { enabled: true, latitude, longitude, accuracy },
-        { quiet: true },
+        { quiet: true, retry: true },
       );
       try {
         await pending;

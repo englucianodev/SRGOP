@@ -15,11 +15,13 @@ import {
   CrewShift,
   Session,
   DailyOfficer,
+  CpuShift,
   Notification,
   Attendance,
   AuditLog,
   SystemSetting,
 } from '../models/index.js';
+import { openCpuShift } from '../services/cpuShift.js';
 import { serviceWindow } from '../utils/time.js';
 import { expireShifts, alignActiveShifts } from '../services/operations.js';
 import { configureSocket } from '../services/realtime.js';
@@ -261,7 +263,7 @@ test('turnos ativos antigos são adequados uma vez sem alterar o horário de ing
   );
 });
 test('ocorrência aberta avisa somente o CPU do serviço e entra nos alertas independentemente da data do fato', async () => {
-  await DailyOfficer.create({ day: serviceWindow().day, officer: cpu.user._id });
+  await openCpuShift(cpu.user._id);
   const response = await post(operator.agent, '/occurrences', body());
   assert.equal(response.status, 201);
   assert.equal(response.body.status, 'Em aberto');
@@ -312,6 +314,7 @@ test('atendimento automático dispensa alerta de despacho e Minha conta funciona
 });
 test('sem CPU o Administrativo recebe aviso e o novo CPU recupera as pendências', async () => {
   await DailyOfficer.deleteMany({});
+  await CpuShift.deleteMany({});
   const response = await post(operator.agent, '/occurrences', body(otherCity._id));
   assert.equal(response.status, 201);
   const alerts = await Notification.find({ occurrence: response.body._id, kind: 'pendente' });

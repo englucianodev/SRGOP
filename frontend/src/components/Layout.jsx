@@ -21,6 +21,7 @@ import {
   Bell,
   ChevronRight,
   Clock3,
+  Activity,
 } from 'lucide-react';
 import logo from '../assets/logo.svg';
 import InstitutionLogo from './InstitutionLogo';
@@ -35,9 +36,13 @@ import ProfileMenu from './ProfileMenu';
 import ServiceCpu from './ServiceCpu';
 import DayOperations from './DayOperations';
 import OperationalSafety from './OperationalSafety';
+import ConnectionStatus from './ConnectionStatus';
+import CpuTransferPrompt from './cpu/CpuTransferPrompt';
+import CpuShiftClosed from './cpu/CpuShiftClosed';
 const links = [
   ['/dashboard', 'Dashboard', LayoutDashboard, 'all'],
   ['/ocorrencias', 'Ocorrências', FileText, 'all'],
+  ['/operacao', 'Operação', Activity, 'management'],
   ['/despachos', 'Despachos', Send, 'management'],
   ['/atendimento', 'Atendimento', Radio, 'all'],
   ['/guarnicoes', 'Guarnições', UsersRound, 'all'],
@@ -239,12 +244,19 @@ export default function Layout() {
           </div>
         )}
         <main id="main-content" tabIndex={-1}>
+          <ConnectionStatus />
           <OperationalSafety />
           {app.user.role === 'Praça' && location.pathname === '/dashboard' && (
             <div className="service-overview">
               <ServiceCpu />
               <DayOperations />
             </div>
+          )}
+          {app.user.role === 'Oficial' && (
+            <>
+              <CpuTransferPrompt />
+              <CpuShiftClosed notifications={notifications} />
+            </>
           )}
           <GpsControl />
           <PushControl />

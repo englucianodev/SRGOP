@@ -90,7 +90,7 @@ describe('GpsControl', () => {
       expect(mocks.patch).toHaveBeenCalledWith(
         '/crews/c1/gps',
         { enabled: true, latitude: -2.5, longitude: -44.3, accuracy: 8 },
-        { quiet: true },
+        { quiet: true, retry: true },
       ),
     );
     expect(await screen.findByText(/GPS compartilhado às/)).toBeInTheDocument();

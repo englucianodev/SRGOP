@@ -17,11 +17,11 @@ import {
   VehicleHandover,
   Occurrence,
   Notification,
-  DailyOfficer,
   Emergency,
   SystemSetting,
 } from '../models/index.js';
 import { expireShifts } from '../services/operations.js';
+import { openCpuShift } from '../services/cpuShift.js';
 import { serviceWindow } from '../utils/time.js';
 import { roundHour } from '../utils/duty.js';
 import { configureSocket } from '../services/realtime.js';
@@ -83,7 +83,7 @@ before(async () => {
   biker = await account('Motociclista');
   mate = await account('Apoio');
   offDuty = await account('ForaServico');
-  await DailyOfficer.create({ day: serviceWindow().day, officer: cpu.user._id });
+  await openCpuShift(cpu.user._id);
   vehicle = await Vehicle.create({
     prefix: 'S10-REAL',
     plate: 'ABC1D23',
@@ -263,7 +263,7 @@ test('troca de motorista exige entrega anterior e recebimento pelo novo condutor
   );
   assert.equal((await Crew.findById(crew._id)).inspectionBlocked, false);
 });
-test('motocicleta exige turno e continua em serviço sem prazo de 24h', async () => {
+test('motocicleta exige turno e tem fim às 08h como as viaturas', async () => {
   assert.equal(
     (
       await post(biker.agent, `/crews/${motoCrew._id}/join`, {
@@ -283,7 +283,7 @@ test('motocicleta exige turno e continua em serviço sem prazo de 24h', async ()
   });
   assert.equal(r.status, 200, JSON.stringify(r.body));
   assert.equal(r.body.shiftMode, 'Motocicleta');
-  assert.equal(r.body.shiftEnd, null);
+  assert.equal(r.body.shiftEnd, serviceWindow().end.toISOString());
   assert.ok(+new Date(r.body.shiftStart) >= before);
   await expireShifts();
   assert.equal(String((await User.findById(biker.user._id)).crew), String(motoCrew._id));

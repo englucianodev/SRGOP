@@ -8,7 +8,16 @@ import request from 'supertest';
 import { io as connect } from 'socket.io-client';
 import { MongoMemoryReplSet } from 'mongodb-memory-server';
 import { createApp } from '../app.js';
-import { User, City, Crew, Session, SystemSetting, DailyOfficer } from '../models/index.js';
+import {
+  User,
+  City,
+  Crew,
+  Session,
+  SystemSetting,
+  DailyOfficer,
+  CpuShift,
+} from '../models/index.js';
+import { openCpuShift } from '../services/cpuShift.js';
 import { serviceWindow } from '../utils/time.js';
 import { configureSocket } from '../services/realtime.js';
 let mongo, app, city;
@@ -122,13 +131,16 @@ test('encerramento do serviço volta imediatamente ao prazo comum sem renovar at
 });
 test('CPU do serviço também recebe seis horas e perde a extensão quando deixa a escala atual', async () => {
   const p = await person('CPUDoPlantao', 'Oficial');
-  await DailyOfficer.create({ day: serviceWindow().day, officer: p.user._id });
+  await openCpuShift(p.user._id);
   await idle(p, 60);
   let r = await p.agent.get('/api/auth/me');
   assert.equal(r.status, 200);
   assert.equal(r.body.inactivityPolicy.inactivityMinutes, 360);
-  assert.equal(r.body.inactivityPolicy.dutyEndsAt, serviceWindow().end.toISOString());
+  // Same rule as the policy: the shift end, or one hour from now when that is later.
+  const expected = Math.max(+serviceWindow().end, Date.now() + 3600000);
+  assert.ok(Math.abs(+new Date(r.body.inactivityPolicy.dutyEndsAt) - expected) < 60000);
   await DailyOfficer.deleteMany({ officer: p.user._id });
+  await CpuShift.deleteMany({ officer: p.user._id });
   assert.equal((await p.agent.get('/api/auth/me')).status, 401);
 });
 test('login e atividade retornam o mesmo prazo e somente atividade renova o relógio', async () => {

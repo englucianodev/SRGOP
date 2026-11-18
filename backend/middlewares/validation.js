@@ -288,6 +288,8 @@ export const schemas = {
     })
     .strict(),
   cpu: z.object({ officer: id, reason: text(5, 1000) }).strict(),
+  cpuTransfer: z.object({ to: id, reason: text(1, 300).optional() }).strict(),
+  cpuTransferAnswer: z.object({ accept: z.boolean() }).strict(),
   // The server posts to this URL, so only real browser push services are accepted (SSRF).
   pushSubscription: z
     .object({

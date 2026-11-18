@@ -4,7 +4,14 @@ import { PushSubscription, Session } from '../models/index.js';
 import { isAllowedPushEndpoint } from '../utils/pushEndpoint.js';
 
 // Only alerts that need the officer immediately leave the app; chat and system notes do not.
-export const PUSH_KINDS = ['despacho', 'apoio', 'urgencia', 'pendente'];
+export const PUSH_KINDS = [
+  'despacho',
+  'apoio',
+  'urgencia',
+  'pendente',
+  'turno-expirado',
+  'passagem-cpu',
+];
 export const MAX_PUSH_FAILURES = 5;
 export const MAX_SUBSCRIPTIONS_PER_USER = 10;
 // A dispatch delivered much later than this is stale; the app shows the current state on open.
@@ -20,6 +27,8 @@ const PUSH_URLS = {
   despacho: () => '/atendimento',
   apoio: () => '/atendimento',
   pendente: () => '/despachos',
+  'turno-expirado': () => '/atendimento',
+  'passagem-cpu': () => '/dashboard',
   urgencia: (row) => (row.emergency ? `/mapa?emergency=${row.emergency}` : '/mapa'),
 };
 
@@ -40,7 +49,13 @@ function readConfig(publicKey, privateKey, subject) {
   if (!publicKey || !privateKey || !subject) return DISABLED;
   try {
     // Signing a throwaway header makes web-push validate the three values.
-    webpush.getVapidHeaders('https://fcm.googleapis.com', subject, publicKey, privateKey, 'aes128gcm');
+    webpush.getVapidHeaders(
+      'https://fcm.googleapis.com',
+      subject,
+      publicKey,
+      privateKey,
+      'aes128gcm',
+    );
     if (!isKeyPair(publicKey, privateKey)) throw new Error('chaves não formam um par');
     return { enabled: true, publicKey, vapidDetails: { subject, publicKey, privateKey } };
   } catch {
@@ -123,8 +138,7 @@ async function liveSubscriptions(subscriptions) {
 
 async function recordFailure(subscription, error) {
   const status = Number(error?.statusCode) || 0;
-  if (GONE_STATUSES.includes(status))
-    return PushSubscription.deleteOne({ _id: subscription._id });
+  if (GONE_STATUSES.includes(status)) return PushSubscription.deleteOne({ _id: subscription._id });
   // The endpoint is a capability URL and is never written to the log.
   console.error('Push:', status ? `serviço de push respondeu ${status}` : error?.message);
   // Network errors, rate limits and 5xx are temporary; only a refusal counts against the device.

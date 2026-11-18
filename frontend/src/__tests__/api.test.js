@@ -30,7 +30,7 @@ describe('api client', () => {
   it('uses a connection message when there is no response and stays silent for quiet requests', async () => {
     const listener = vi.fn();
     window.addEventListener('srgop:error', listener);
-    await expect(rejectWith({ config: { url: '/crews' } })).rejects.toBeDefined();
+    await expect(rejectWith({ config: { url: '/crews', __attempt: 3 } })).rejects.toBeDefined();
     await expect(rejectWith({ config: { quiet: true } })).rejects.toBeDefined();
     window.removeEventListener('srgop:error', listener);
     expect(listener).toHaveBeenCalledTimes(1);

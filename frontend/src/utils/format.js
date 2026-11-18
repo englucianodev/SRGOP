@@ -17,13 +17,16 @@ export const localInput = (value = new Date()) => {
   const d = new Date(value);
   return new Date(+d - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
 };
-export const dateKey = () =>
+export const dateKey = (date = new Date()) =>
   new Intl.DateTimeFormat('en-CA', {
     timeZone: 'America/Fortaleza',
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
-  }).format(new Date());
+  }).format(date);
+const SERVICE_DAY_START_MS = 8 * 3600000;
+// Service day runs 08h→08h in Fortaleza: before 08h it is still the previous day.
+export const serviceDayKey = (date = new Date()) => dateKey(new Date(+date - SERVICE_DAY_START_MS));
 export const params = (obj) =>
   new URLSearchParams(
     Object.entries(obj).filter(([, v]) => v !== '' && v !== undefined && v !== null),

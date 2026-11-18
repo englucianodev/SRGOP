@@ -7,6 +7,7 @@ import { params, statuses } from '../utils/format';
 import { filterCrews } from '../utils/crewFilters';
 import { PageTitle, Panel, Select, Button, Input, Loading } from '../components/UI';
 import OperationalMap from '../components/OperationalMap';
+import OperationLegend from '../components/OperationLegend';
 import CrimeSelect from '../components/CrimeSelect';
 export default function MapPage() {
   const app = useApp();
@@ -17,7 +18,8 @@ export default function MapPage() {
     : '';
   const { data: emergency } = useData(emergencyId ? `/emergencies/${emergencyId}` : null);
   const { data: cities } = useData('/cities', []),
-    { data: crews } = useData('/crews', []);
+    { data: dashboard } = useData('/dashboard');
+  const crews = dashboard?.crews || [];
   const [mode, setMode] = useState('crews');
   const [crewFilters, setCrewFilters] = useState({
     crew: requestedCrew,
@@ -262,40 +264,17 @@ export default function MapPage() {
           mode={mode}
           cities={cities.filter((c) => !cityFilter || c._id === cityFilter)}
           crews={visibleCrews}
+          now={app.now}
           occurrences={occurrences.items}
           focusCrew={mode === 'crews' ? crewFilters.crew : ''}
           emergency={mode === 'crews' && emergencyId ? emergency : null}
           fitKey={JSON.stringify(mode === 'crews' ? crewFilters : occFilters)}
         />
-        <div className="map-legend">
-          {mode === 'crews' ? (
-            <>
-              <span>
-                <i className="legend-dot green" />
-                GPS ativo
-              </span>
-              <span>
-                <i className="legend-dot gray" />
-                Última posição conhecida
-              </span>
-            </>
-          ) : (
-            <>
-              <span>
-                <i className="legend-dot red" />
-                Alta prioridade
-              </span>
-              <span>
-                <i className="legend-dot amber" />
-                Média prioridade
-              </span>
-              <span>
-                <i className="legend-dot blue" />
-                Baixa prioridade
-              </span>
-            </>
-          )}
-        </div>
+        {mode === 'crews' ? (
+          <OperationLegend priorities={false} staleNote />
+        ) : (
+          <OperationLegend situations={false} />
+        )}
       </Panel>
       <p className="form-note">
         {mode === 'crews'

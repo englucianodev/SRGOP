@@ -9,6 +9,7 @@ export { default as Emergency } from './Emergency.js';
 export { default as Dispatch } from './Dispatch.js';
 export { default as Attendance } from './Attendance.js';
 export { default as DailyOfficer } from './DailyOfficer.js';
+export { default as CpuShift } from './CpuShift.js';
 export { default as Notification } from './Notification.js';
 export { default as AuditLog } from './AuditLog.js';
 export { default as SystemSetting } from './SystemSetting.js';

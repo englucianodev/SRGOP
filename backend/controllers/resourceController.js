@@ -10,7 +10,7 @@ import {
   AuditLog,
   Occurrence,
   SystemSetting,
-  DailyOfficer,
+  CpuShift,
   SupportRequest,
   Notification,
   Attendance,
@@ -18,14 +18,29 @@ import {
   Dispatch,
   VehicleHandover,
 } from '../models/index.js';
-import { requireValue } from '../utils/errors.js';
+import { getGeneralSettings } from '../services/settingsCache.js';
+import { AppError, requireValue } from '../utils/errors.js';
+import {
+  currentCpu,
+  cpuView,
+  openCpuShift,
+  closeCpuShift,
+  shiftPending,
+  pendingMessage,
+} from '../services/cpuShift.js';
 import { id } from '../middlewares/validation.js';
 import { audit } from '../services/audit.js';
-import { changed, disconnectUser, serviceChanged } from '../services/realtime.js';
+import {
+  changed,
+  disconnectUser,
+  serviceChanged,
+  deliverNotifications,
+} from '../services/realtime.js';
 import { transaction } from '../services/operations.js';
 import { dayKey, dayRange, serviceWindow } from '../utils/time.js';
-import { notifyPendingForCpu } from '../services/pendingDispatch.js';
+import { notifyPendingAfterCpuChange } from '../services/pendingDispatch.js';
 import { buildHandover } from '../services/handover.js';
+import { operationEvents } from '../services/operationEvents.js';
 import { clearLoginFailures } from '../services/loginThrottle.js';
 const validCity = async (city, session) =>
   requireValue(
@@ -516,7 +531,7 @@ export async function removeCity(req, res) {
   });
 }
 export async function settings(req, res) {
-  res.json(await SystemSetting.findOne({ key: 'general' }));
+  res.json(await getGeneralSettings());
 }
 export async function saveSettings(req, res) {
   const row = await SystemSetting.findOneAndUpdate({ key: 'general' }, req.input, {
@@ -529,26 +544,38 @@ export async function saveSettings(req, res) {
   serviceChanged();
   res.json(row);
 }
+// Praça only needs who is on CPU: transfers (with their reason) and pending work stay with management.
+function cpuFor(user, view) {
+  if (!view || user.role !== 'Praça') return view;
+  const { transfer, pending, ...rest } = view;
+  return rest;
+}
 export async function cpu(req, res) {
-  res.json(
-    await DailyOfficer.findOne({ day: serviceWindow().day }).populate(
-      'officer',
-      'name callSign rank phone',
-    ),
-  );
+  const shift = await currentCpu();
+  const pending = req.path === '/cpu' && shift ? await shiftPending(shift) : null;
+  res.json(cpuFor(req.user, cpuView(shift, pending)));
 }
 export async function assumeCpu(req, res) {
-  // The snapshot is stored with the assumption itself and returned as `handover`.
-  const row = await DailyOfficer.create({
-    day: serviceWindow().day,
-    officer: req.user._id,
-    handover: await buildHandover(),
-  });
-  await audit(req.user, 'Assumiu CPU', 'DailyOfficer', row._id);
+  const handover = await buildHandover();
+  let row;
+  try {
+    row = await transaction(async (session) => {
+      const open = await currentCpu(session);
+      if (open) throw new AppError(pendingMessage(await shiftPending(open)), 409, 'CPU');
+      const shift = await openCpuShift(req.user._id, { session, handover });
+      await audit(req.user, 'Assumiu CPU', 'CpuShift', shift._id, '', session);
+      return shift;
+    });
+  } catch (err) {
+    if (err.code !== 11000) throw err;
+    // Lost the race for the unique open-shift index.
+    const open = await currentCpu();
+    throw new AppError(pendingMessage(await shiftPending(open || { day: '' })), 409, 'CPU');
+  }
   changed('cpu');
-  await notifyPendingForCpu(req.user._id);
   serviceChanged();
-  res.status(201).json(await row.populate('officer', 'name'));
+  await notifyPendingAfterCpuChange(req.user._id);
+  res.status(201).json({ ...cpuView(await currentCpu()), handover });
 }
 export async function updateCpu(req, res) {
   requireValue(
@@ -556,23 +583,60 @@ export async function updateCpu(req, res) {
     'Selecione um Oficial ativo.',
     422,
   );
-  const row = await DailyOfficer.findOneAndUpdate(
-    { day: serviceWindow().day },
-    {
-      officer: req.input.officer,
-      reason: req.input.reason,
-      modifiedBy: req.user._id,
-      assumedAt: new Date(),
-      handover: await buildHandover(),
-    },
-    { new: true, upsert: true, runValidators: true },
-  );
-  await audit(req.user, 'CPU administrado', 'DailyOfficer', row._id, req.input.reason);
+  const handover = await buildHandover();
+  let result;
+  try {
+    result = await transaction(async (session) => {
+      const at = new Date();
+      const open = await currentCpu(session);
+      const closed = open
+        ? await closeCpuShift(open, {
+            reason: 'Troca administrativa',
+            session,
+            at,
+            actor: req.user,
+          })
+        : null;
+      const shift = await openCpuShift(req.input.officer, {
+        session,
+        at,
+        previous: open,
+        handover,
+        modifiedBy: req.user._id,
+        reason: req.input.reason,
+      });
+      if (open) await CpuShift.updateOne({ _id: open._id }, { next: shift._id }, { session });
+      await audit(req.user, 'CPU administrado', 'CpuShift', shift._id, req.input.reason, session);
+      return { shift, notification: closed?.notification };
+    });
+  } catch (err) {
+    if (err.code !== 11000) throw err;
+    const open = await currentCpu();
+    throw new AppError(pendingMessage(await shiftPending(open || { day: '' })), 409, 'CPU');
+  }
+  const row = result.shift;
+  if (result.notification) deliverNotifications([result.notification]);
   changed('cpu');
-  await notifyPendingForCpu(req.input.officer);
   serviceChanged();
+  await notifyPendingAfterCpuChange(req.input.officer);
   res.json(row);
 }
+const OPEN_STATUSES = ['Em aberto', 'Despachada', 'Em atendimento'];
+// Events start at the open CPU shift (it may carry over past 08h), else at the service window.
+const eventsSince = async () => (await currentCpu())?.start || serviceWindow().start;
+const managementView = async () => {
+  const since = await eventsSince();
+  const [open, events] = await Promise.all([
+    Occurrence.find({ deleted: false, status: { $in: OPEN_STATUSES } })
+      .populate('city', 'name')
+      .populate('crew', 'name')
+      .select('protocol crimeType priority status city crew latitude longitude createdAt startedAt')
+      .sort({ createdAt: 1 })
+      .lean(),
+    operationEvents(since),
+  ]);
+  return { open, events };
+};
 export async function dashboard(req, res) {
   const today = dayRange();
   const match = { deleted: false, occurredAt: today };
@@ -600,11 +664,8 @@ export async function dashboard(req, res) {
         .populate('crew', 'name')
         .sort({ createdAt: -1 })
         .limit(6),
-      DailyOfficer.findOne({ day: serviceWindow().day }).populate(
-        'officer',
-        'name callSign rank phone',
-      ),
-      SystemSetting.findOne({ key: 'general' }),
+      currentCpu(),
+      getGeneralSettings(),
       SupportRequest.countDocuments({ status: 'Pendente' }),
       Attendance.findOne({ acceptedBy: req.user._id, status: 'Em atendimento' }),
       Occurrence.aggregate([
@@ -634,7 +695,7 @@ export async function dashboard(req, res) {
     results: completedToday[0] || { closed: 0, weapons: 0, recoveredVehicles: 0 },
     crews,
     recent,
-    cpu,
+    cpu: cpuFor(req.user, cpuView(cpu)),
     operations: settings?.operations.filter((o) => o.day === dayKey()) || [],
     ongoing,
     alerts,
@@ -642,6 +703,7 @@ export async function dashboard(req, res) {
     myAttendance,
     day: dayKey(),
     serviceDay: serviceWindow().day,
+    ...(req.user.role !== 'Praça' ? await managementView() : {}),
   });
 }
 export async function auditLogs(req, res) {

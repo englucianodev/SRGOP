@@ -2,6 +2,7 @@ import { isOnDuty } from '../utils/duty';
 import { useEffect, useRef } from 'react';
 import { MapContainer, TileLayer, CircleMarker, Popup, useMap } from 'react-leaflet';
 import { Badge } from './UI';
+import { crewSituation, SITUATION_STYLE } from '../utils/operation';
 function FitPoints({ points, fallback, fitKey }) {
   const map = useMap();
   const signature = JSON.stringify(points);
@@ -20,7 +21,8 @@ function FitPoints({ points, fallback, fitKey }) {
   }, [map, signature, fallbackSignature, fitKey]);
   return null;
 }
-function CrewMarker({ crew: c, focused }) {
+function CrewMarker({ crew: c, focused, now }) {
+  const situation = SITUATION_STYLE[crewSituation(c, now)];
   const marker = useRef(null);
   const live =
     c.members.length > 0 &&
@@ -36,10 +38,10 @@ function CrewMarker({ crew: c, focused }) {
       center={[c.location.latitude, c.location.longitude]}
       radius={10}
       pathOptions={{
-        color: live ? '#098b62' : '#68788a',
+        color: live ? '#16324a' : '#68788a',
         weight: 3,
-        fillColor: live ? '#26c995' : '#aeb8c1',
-        fillOpacity: 0.85,
+        fillColor: situation.color,
+        fillOpacity: live ? 0.9 : 0.45,
       }}
     >
       <Popup>
@@ -48,6 +50,7 @@ function CrewMarker({ crew: c, focused }) {
           {c.city?.name}
           {c.type !== 'Motocicleta' && ` · ${c.vehicle?.prefix || 'Sem viatura'}`}
         </p>
+        <p>{situation.label}</p>
         <p>{live ? 'GPS ativo' : 'Última posição · GPS sem atualização'}</p>
         <p>
           Precisão:{' '}
@@ -70,15 +73,17 @@ export default function OperationalMap({
   compact = false,
   mode = 'occurrences',
   fitKey = '',
+  now = Date.now(),
 }) {
+  // 'operation' shows crews and open occurrences together.
   const shownCrews =
-    mode === 'crews'
+    mode === 'crews' || mode === 'operation'
       ? crews.filter(
           (c) => Number.isFinite(c.location?.latitude) && Number.isFinite(c.location?.longitude),
         )
       : [];
   const shownOccurrences =
-    mode === 'occurrences'
+    mode === 'occurrences' || mode === 'operation'
       ? occurrences.filter((o) => Number.isFinite(o.latitude) && Number.isFinite(o.longitude))
       : [];
   const points = [
@@ -155,14 +160,15 @@ export default function OperationalMap({
               <p>
                 {o.crimeType}
                 <br />
-                {o.address}
+                {o.address || o.city?.name}
+                {o.crew?.name && ` · ${o.crew.name}`}
               </p>
               <Badge>{o.priority}</Badge> <Badge>{o.status}</Badge>
             </Popup>
           </CircleMarker>
         ))}
       {shownCrews.map((c) => (
-        <CrewMarker key={`crew-${c._id}`} crew={c} focused={c._id === focusCrew} />
+        <CrewMarker key={`crew-${c._id}`} crew={c} focused={c._id === focusCrew} now={now} />
       ))}
     </MapContainer>
   );
