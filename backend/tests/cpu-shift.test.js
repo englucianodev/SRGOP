@@ -284,6 +284,22 @@ async function crewAttending(shiftEnd, accepted = true) {
   });
   return { crew, occ };
 }
+test('turno aberto de oficial excluído pode ser trocado pelo Administrativo', async () => {
+  const ghost = new mongoose.Types.ObjectId();
+  const old = await openCpuShift(ghost);
+  assert.equal((await currentCpu()).officer, null);
+  const r = await put(admin.agent, '/cpu', { officer: String(o2.user._id), reason: 'Órfão.' });
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  assert.equal((await CpuShift.findById(old._id)).status, 'Fechado');
+  assert.equal(String((await currentCpu()).officer._id), String(o2.user._id));
+  assert.equal(await Notification.countDocuments({ kind: 'turno-cpu', cpuShift: old._id }), 0);
+});
+test('turno aberto de oficial excluído fecha sozinho depois das 08h', async () => {
+  const shift = await openCpuShift(new mongoose.Types.ObjectId());
+  const result = await sweepCpuShift(new Date(+shift.plannedEnd + 60000));
+  assert.equal(result.closed, true);
+  assert.equal(await CpuShift.countDocuments({ status: 'Aberto' }), 0);
+});
 test('antes das 08h o turno não fecha mesmo sem pendências', async () => {
   await openCpuShift(o1.user._id);
   const result = await sweepCpuShift();

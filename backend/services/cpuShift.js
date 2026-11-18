@@ -22,6 +22,9 @@ export const currentCpu = (session = null) =>
     .populate('officer', OFFICER_FIELDS)
     .session(session || null);
 
+/** Officer id of a shift whether populated or not; null when the officer no longer exists. */
+export const officerIdOf = (shift) => shift?.officer?._id ?? shift?.officer ?? null;
+
 /** Whether this user holds the open CPU shift. */
 export const isCpu = (userId, session = null) =>
   CpuShift.exists({ status: 'Aberto', officer: userId }).session(session || null);
@@ -117,20 +120,24 @@ export async function closeCpuShift(shift, { reason, session, at = new Date(), a
   shift.end = at;
   shift.closeReason = reason;
   shift.reportUntil = reportUntil;
-  const [notification] = await Notification.create(
-    [
-      {
-        user: shift.officer._id || shift.officer,
-        kind: 'turno-cpu',
-        cpuShift: shift._id,
-        title: 'Turno do CPU encerrado',
-        message: `Gere o relatório sintético e analítico do turno de ${shift.day}.`,
-      },
-    ],
-    session ? { session } : {},
-  );
+  // The officer may have been deleted (populate yields null): close anyway, without notifying.
+  const officerId = officerIdOf(shift);
+  const [notification = null] = officerId
+    ? await Notification.create(
+        [
+          {
+            user: officerId,
+            kind: 'turno-cpu',
+            cpuShift: shift._id,
+            title: 'Turno do CPU encerrado',
+            message: `Gere o relatório sintético e analítico do turno de ${shift.day}.`,
+          },
+        ],
+        session ? { session } : {},
+      )
+    : [];
   await audit(
-    actor || shift.officer._id || shift.officer,
+    actor || officerId,
     'Turno do CPU fechado',
     'CpuShift',
     shift._id,
@@ -249,12 +256,13 @@ async function alertOvertime(crew, officerId, now) {
 }
 
 async function alertOvertimeCrews(cpu, now) {
-  if (!cpu) return 0; // no CPU: leave overtimeAlertAt unset so the alert still goes out later
+  const officerId = officerIdOf(cpu);
+  if (!officerId) return 0; // no CPU: leave overtimeAlertAt unset so the alert still goes out later
   const notifications = [];
   for (const crew of await overtimeCrews(now)) {
     // One failing alert must not stop the others nor the auto-close that follows.
     try {
-      const notification = await alertOvertime(crew, cpu.officer._id, now);
+      const notification = await alertOvertime(crew, officerId, now);
       if (notification) notifications.push(notification);
     } catch (error) {
       console.error('Turno do CPU: falha no alerta de guarnição além do turno:', error.message);
@@ -276,7 +284,7 @@ async function closeIfDone(cpu, now) {
     return closeCpuShift(open, { reason: 'Automático', session, at: now });
   });
   if (!result) return false;
-  deliverNotifications([result.notification]);
+  if (result.notification) deliverNotifications([result.notification]);
   serviceChanged();
   return true;
 }

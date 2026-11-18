@@ -1,7 +1,7 @@
 import { CpuShift, Notification, User } from '../models/index.js';
 import { AppError, requireValue } from '../utils/errors.js';
 import { audit } from './audit.js';
-import { closeCpuShift, currentCpu, openCpuShift } from './cpuShift.js';
+import { closeCpuShift, currentCpu, officerIdOf, openCpuShift } from './cpuShift.js';
 import { transaction } from './operations.js';
 import { notifyPendingAfterCpuChange } from './pendingDispatch.js';
 import { changed, deliverNotifications, serviceChanged } from './realtime.js';
@@ -11,6 +11,7 @@ const ORIGIN = 'Passagem do CPU';
 const pendingOf = (shift) => (shift?.transfers || []).find((t) => t.status === 'Pendente');
 
 const notify = async (user, shift, message, session) => {
+  if (!user) return null; // officer no longer exists
   const [notification] = await Notification.create(
     [{ user, kind: 'passagem-cpu', cpuShift: shift._id, title: ORIGIN, message }],
     { session },
@@ -61,7 +62,7 @@ export async function requestTransfer(actor, { to, reason }) {
     const open = await currentCpu(session);
     requireValue(open, 'Não há turno do CPU aberto.', 409, ORIGIN);
     requireValue(
-      String(open.officer._id) === String(actor._id),
+      String(officerIdOf(open)) === String(actor._id),
       'Você não está no CPU.',
       403,
       ORIGIN,
@@ -74,7 +75,7 @@ export async function requestTransfer(actor, { to, reason }) {
     requireValue(modifiedCount, 'Já existe uma passagem do CPU pendente.', 409, ORIGIN);
     return notify(target, open, `${actor.name} quer passar o CPU para você.`, session);
   });
-  deliverNotifications([notification]);
+  if (notification) deliverNotifications([notification]);
   return currentCpu();
 }
 
@@ -94,12 +95,12 @@ async function accept(actor, transferId) {
     await CpuShift.updateOne({ _id: open._id }, { next: shift._id }, { session });
     await audit(actor, 'Passagem do CPU aceita', 'CpuShift', shift._id, '', session);
     const reply = await notify(
-      open.officer._id,
+      officerIdOf(open),
       shift,
       `${actor.name} aceitou a passagem do CPU.`,
       session,
     );
-    return { shift, notifications: [closed.notification, reply] };
+    return { shift, notifications: [closed.notification, reply].filter(Boolean) };
   });
   deliverNotifications(result.notifications);
   changed('cpu');
@@ -112,9 +113,9 @@ async function refuse(actor, transferId) {
   const notification = await transaction(async (session) => {
     const { open, transfer } = await openWithPending(session, transferId);
     await settle(open, transfer, 'Recusada', session);
-    return notify(open.officer._id, open, `${actor.name} recusou a passagem do CPU.`, session);
+    return notify(officerIdOf(open), open, `${actor.name} recusou a passagem do CPU.`, session);
   });
-  deliverNotifications([notification]);
+  if (notification) deliverNotifications([notification]);
   return currentCpu();
 }
 
@@ -137,7 +138,7 @@ export const answerChecked = (actor, acceptIt, transferId) =>
 /** Only the sender (current CPU officer) cancels a pending transfer. */
 export async function cancelTransfer(actor) {
   const { open, transfer } = await openWithPending(null);
-  if (String(open.officer._id) !== String(actor._id))
+  if (String(officerIdOf(open)) !== String(actor._id))
     throw new AppError('Somente quem pediu a passagem pode cancelá-la.', 403, ORIGIN);
   const notification = await transaction(async (session) => {
     await settle(open, transfer, 'Cancelada', session);
