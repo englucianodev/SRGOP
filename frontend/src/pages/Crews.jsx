@@ -259,10 +259,11 @@ export default function Crews() {
                 </div>
               </div>
               <div className="attendance-actions">
-                {Number.isFinite(c.location?.latitude) && Number.isFinite(c.location?.longitude) ? (
+                {app.user.role === 'Praça' ? null : Number.isFinite(c.location?.latitude) &&
+                  Number.isFinite(c.location?.longitude) ? (
                   <Link
                     className="button secondary"
-                    to={`/mapa?crew=${c._id}`}
+                    to={`/operacao?crew=${c._id}`}
                     aria-label={`Ver localização de ${c.name} no mapa`}
                   >
                     <Navigation size={16} /> Ver localização no mapa

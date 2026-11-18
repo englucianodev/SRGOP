@@ -174,7 +174,7 @@ export default function OperationalSafety() {
         ),
       );
       app.refresh();
-      if (map) navigate(`/mapa?emergency=${row._id}`);
+      if (map) navigate(`/operacao?emergency=${row._id}`);
     } catch (e) {
       setError(e.response?.data?.message || 'Não foi possível registrar a ciência.');
     } finally {
@@ -252,9 +252,11 @@ export default function OperationalSafety() {
           </div>
           {error && <p role="alert">{error}</p>}
           <div className="form-actions">
-            <Button variant="danger" busy={busy} onClick={() => acknowledge(alert, true)}>
-              Ver localização no mapa
-            </Button>
+            {app.user.role !== 'Praça' && (
+              <Button variant="danger" busy={busy} onClick={() => acknowledge(alert, true)}>
+                Ver localização no mapa
+              </Button>
+            )}
             <Button variant="secondary" busy={busy} onClick={() => acknowledge(alert)}>
               Dar ciência e silenciar para mim
             </Button>

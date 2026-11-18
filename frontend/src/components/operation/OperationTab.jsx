@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import Kpi from './Kpi';
 import SituationMap from './SituationMap';
 import { crewPeople } from './situationLayers';
 import { useArrivals } from './useArrivals';
@@ -12,19 +12,6 @@ const COUNTERS = [
   ['livres', 'livres', 'ok'],
   ['expirados', 'turno encerrado', 'warn'],
 ];
-
-/** Counter that bumps whenever its value changes after the page opened. */
-function Kpi({ value, label, tone }) {
-  const initial = useRef(value);
-  return (
-    <div className={`kpi ${tone}`}>
-      <b key={value} className={value !== initial.current ? 'bump' : ''}>
-        {value}
-      </b>
-      <span>{label}</span>
-    </div>
-  );
-}
 
 function AttendanceCard({ occurrence: o, crew, now, fresh }) {
   const { commander, driver } = crew ? crewPeople(crew) : {};
@@ -57,7 +44,7 @@ function AttendanceCard({ occurrence: o, crew, now, fresh }) {
   );
 }
 
-export default function OperationTab({ data, cities, now }) {
+export default function OperationTab({ data, cities, now, focusCrew = '', emergency = null }) {
   const crews = data.crews || [];
   const counters = operationCounters(crews, now);
   const attending = (data.open || []).filter((o) => o.status === 'Em atendimento');
@@ -67,7 +54,14 @@ export default function OperationTab({ data, cities, now }) {
   const crewById = new Map(crews.map((c) => [c._id, c]));
   return (
     <section className="sr-operation">
-      <SituationMap crews={crews} occurrences={data.open || []} cities={cities} now={now} />
+      <SituationMap
+        crews={crews}
+        occurrences={data.open || []}
+        cities={cities}
+        now={now}
+        focusCrew={focusCrew}
+        emergency={emergency}
+      />
       <aside className="sr-side">
         <div className="kpis">
           {COUNTERS.map(([key, label, tone]) => (

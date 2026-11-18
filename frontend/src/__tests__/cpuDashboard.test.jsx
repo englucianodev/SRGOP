@@ -22,8 +22,6 @@ const app = vi.hoisted(() => ({
 }));
 vi.mock('../services/api', () => ({ api: { get, post, delete: del } }));
 vi.mock('../context/AppContext', () => ({ useApp: () => app }));
-vi.mock('../components/OperationalMap', () => ({ default: () => null }));
-vi.mock('../components/OperationLegend', () => ({ default: () => null }));
 vi.mock('../components/operation/SituationMap', () => ({ default: () => null }));
 vi.mock('../components/HandoverSummary', () => ({ default: () => null }));
 vi.mock('../components/ConnectionStatus', () => ({ useConnectionState: () => 'conectado' }));

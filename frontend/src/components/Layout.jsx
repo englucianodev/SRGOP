@@ -8,7 +8,6 @@ import {
   UsersRound,
   MessageSquare,
   Car,
-  Map,
   ChartNoAxesCombined,
   Users,
   ShieldCheck,
@@ -48,7 +47,6 @@ const links = [
   ['/guarnicoes', 'Guarnições', UsersRound, 'all'],
   ['/chat-operacional', 'Chat operacional', MessageSquare, 'all'],
   ['/viaturas', 'Viaturas', Car, 'management'],
-  ['/mapa', 'Mapa operacional', Map, 'all'],
   ['/relatorios', 'Relatórios', ChartNoAxesCombined, 'management'],
   ['/usuarios', 'Usuários', Users, 'management'],
   ['/administrativo', 'Administrativo', ShieldCheck, 'admin'],
@@ -110,7 +108,6 @@ export default function Layout() {
           '/atendimento',
           '/guarnicoes',
           '/chat-operacional',
-          '/mapa',
         ].includes(l[0]),
     );
   const title =
@@ -295,10 +292,10 @@ export default function Layout() {
                 <strong>{n.title}</strong>
                 <p>{n.message}</p>
                 <small>{fmtDateTime(n.createdAt)}</small>
-                {n.kind === 'urgencia' && n.emergency && (
+                {n.kind === 'urgencia' && n.emergency && app.user.role !== 'Praça' && (
                   <NavLink
                     className="button danger"
-                    to={`/mapa?emergency=${n.emergency}`}
+                    to={`/operacao?emergency=${n.emergency}`}
                     onClick={() => setBell(false)}
                   >
                     Urgência UU — ver localização

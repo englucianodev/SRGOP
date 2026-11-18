@@ -27,6 +27,21 @@ export const targetIcon = (priority) =>
     iconAnchor: [10, 10],
   });
 
+const PRIORITY_TONE = { Alta: 'alta', Média: 'media', Baixa: 'baixa' };
+export const FINISHED_STATUSES = ['Encerrada', 'Cancelada'];
+
+/** Occurrence bead colored by priority; still-open ones carry a pulsing ring. */
+export const occurrenceIcon = (o) =>
+  L.divIcon({
+    className: '',
+    html: `<div class="occ-pin ${PRIORITY_TONE[o.priority] || 'baixa'}${FINISHED_STATUSES.includes(o.status) ? ' done' : ''}"></div>`,
+    iconSize: [18, 18],
+    iconAnchor: [9, 9],
+  });
+
+export const emergencyIcon = () =>
+  L.divIcon({ className: '', html: '<div class="sr-emergency"></div>', iconSize: [30, 30], iconAnchor: [15, 15] });
+
 /** Small DOM builder: text always goes through textContent, never through HTML. */
 function el(tag, text, className) {
   const node = document.createElement(tag);
@@ -72,6 +87,12 @@ export function crewPopup(crew, now) {
     age == null ? 'GPS: sem sinal registrado' : `GPS: último sinal há ${age} s`,
   );
 }
+
+export const emergencyPopup = (e) =>
+  lines(`URGÊNCIA UU · ${e.actorName}`, [
+    `${e.crewName} · ${e.cityName}`,
+    `Posição registrada: ${new Date(e.locatedAt).toLocaleString('pt-BR')}`,
+  ]);
 
 export const occurrencePopup = (o) =>
   lines(o.protocol, [

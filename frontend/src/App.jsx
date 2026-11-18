@@ -13,7 +13,6 @@ import Crews from './pages/Crews';
 import MyAccount from './pages/MyAccount';
 import OperationalChat from './pages/OperationalChat';
 import Resources from './pages/Resources';
-import MapPage from './pages/MapPage';
 import Reports from './pages/Reports';
 import Settings from './pages/Settings';
 import Administration from './pages/Administration';
@@ -34,11 +33,16 @@ function Protected({ roles }) {
       '/guarnicoes',
       '/chat-operacional',
       '/minha-conta',
-      '/mapa',
     ].includes(location.pathname)
   )
     return <Navigate to="/atendimento" replace />;
   return <Outlet />;
+}
+// The operational map moved into Operação; old links (bookmarks, notifications) still land somewhere useful.
+function OldMapLink() {
+  const { user } = useApp();
+  const { search } = useLocation();
+  return <Navigate to={user.role === 'Praça' ? '/dashboard' : `/operacao${search}`} replace />;
 }
 function Denied({ missing = false }) {
   const { setError } = useApp();
@@ -68,7 +72,7 @@ export default function App() {
             <Route path="/guarnicoes" element={<Crews />} />
             <Route path="/minha-conta" element={<MyAccount />} />
             <Route path="/chat-operacional" element={<OperationalChat />} />
-            <Route path="/mapa" element={<MapPage />} />
+            <Route path="/mapa" element={<OldMapLink />} />
             <Route element={<Protected roles={['Oficial', 'Administrativo']} />}>
               <Route path="/operacao" element={<Operation />} />
               <Route path="/despachos" element={<Dispatches />} />

@@ -7,6 +7,8 @@ import { DEFAULT_CENTER, TILE_ATTRIBUTION, TILE_URL } from '../mapTiles';
 import {
   TRAIL_POINTS,
   crewIcon,
+  emergencyIcon,
+  emergencyPopup,
   crewPopup,
   glide,
   gpsAge,
@@ -30,7 +32,7 @@ const boundsOf = (points) => {
 const located = (p) => Number.isFinite(p?.latitude) && Number.isFinite(p?.longitude);
 
 /** Keeps the Leaflet layers in step with the crews and occurrences, like the simulator panel. */
-function SituationLayers({ crews, occurrences, cities, now, follow, onManual, padding, overviewKey }) {
+function SituationLayers({ crews, occurrences, cities, now, follow, onManual, padding, overviewKey, focusCrew }) {
   const map = useMap();
   const followRef = useRef(follow);
   const store = useRef(null);
@@ -94,7 +96,8 @@ function SituationLayers({ crews, occurrences, cities, now, follow, onManual, pa
     s.active = [];
     for (const crew of crews) {
       const situation = crewSituation(crew, now);
-      if (situation === 'fora' || !located(crew.location)) continue;
+      // Off-duty crews stay off the map, unless someone asked to see exactly that one.
+      if ((situation === 'fora' && crew._id !== focusCrew) || !located(crew.location)) continue;
       const at = L.latLng(crew.location.latitude, crew.location.longitude);
       const tone = SITUATION_STYLE[situation].tone;
       const stale = !gpsLive(crew, now);
@@ -173,6 +176,41 @@ function SituationLayers({ crews, occurrences, cities, now, follow, onManual, pa
   return null;
 }
 
+/**
+ * "Ver localização" (Guarnições) and the UU alert land here: the map stops following, flies to the
+ * crew or to the emergency (red pulse) and opens its card. Without GPS, the emergency's city is shown.
+ */
+function FocusLayer({ crews, cities, focusCrew, emergency, onManual }) {
+  const map = useMap();
+  const crew = crews.find((c) => c._id === focusCrew);
+  const key = `${focusCrew}|${emergency?._id || ''}|${Boolean(crew)}`;
+  useEffect(() => {
+    if (!focusCrew && !emergency) return undefined;
+    const layer = L.layerGroup().addTo(map);
+    let target = null;
+    let card = null;
+    if (located(emergency)) {
+      target = L.latLng(emergency.latitude, emergency.longitude);
+      card = emergencyPopup(emergency);
+      L.marker(target, { icon: emergencyIcon(), keyboard: false, zIndexOffset: 1000 }).addTo(layer);
+    } else if (located(crew?.location)) {
+      target = L.latLng(crew.location.latitude, crew.location.longitude);
+      card = crewPopup(crew, Date.now());
+    }
+    onManual();
+    map.invalidateSize({ pan: false });
+    if (target) {
+      map.flyTo(target, FOLLOW_MAX_ZOOM, { duration: 1.1 });
+      map.once('moveend', () => L.popup({ offset: [0, -10] }).setLatLng(target).setContent(card).openOn(map));
+    } else {
+      const city = cities.find((c) => c._id === emergency?.city);
+      if (located(city)) map.flyTo([city.latitude, city.longitude], 12, { duration: 1.1 });
+    }
+    return () => layer.remove();
+  }, [key]);
+  return null;
+}
+
 function gpsBadge(crews, now) {
   const onDuty = crews.filter((c) => crewSituation(c, now) !== 'fora');
   const tracked = onDuty.filter((c) => gpsLive(c, now));
@@ -185,7 +223,15 @@ function gpsBadge(crews, now) {
   };
 }
 
-export default function SituationMap({ crews = [], occurrences = [], cities = [], now = Date.now(), compact = false }) {
+export default function SituationMap({
+  crews = [],
+  occurrences = [],
+  cities = [],
+  now = Date.now(),
+  compact = false,
+  focusCrew = '',
+  emergency = null,
+}) {
   const [follow, setFollow] = useState(true);
   const [overviewKey, setOverviewKey] = useState(0);
   const manual = useRef(() => setFollow(false)).current;
@@ -212,6 +258,14 @@ export default function SituationMap({ crews = [], occurrences = [], cities = []
           onManual={manual}
           padding={padding}
           overviewKey={overviewKey}
+          focusCrew={focusCrew}
+        />
+        <FocusLayer
+          crews={crews}
+          cities={cities}
+          focusCrew={focusCrew}
+          emergency={emergency}
+          onManual={manual}
         />
       </MapContainer>
       <div className="sr-map-tools">

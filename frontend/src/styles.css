@@ -1115,15 +1115,6 @@ tbody tr:hover {
 .field-welcome .button {
   margin-left: auto;
 }
-.operational-map {
-  height: 570px;
-  width: 100%;
-  z-index: 1;
-  background: #e7ebec;
-}
-.operational-map.compact {
-  height: 310px;
-}
 .leaflet-container {
   font-family: inherit;
 }
@@ -1138,35 +1129,6 @@ tbody tr:hover {
 }
 .leaflet-control-attribution {
   font-size: 8px !important;
-}
-.map-legend {
-  display: flex;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 16px 20px;
-  flex-wrap: wrap;
-  font-size: 8px;
-  color: var(--muted);
-}
-.map-legend span {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-}
-.legend-dot {
-  display: block;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-}
-.legend-dot.red {
-  background: #de524e;
-}
-.legend-dot.amber {
-  background: #edaa38;
-}
-.legend-dot.blue {
-  background: #3a81c3;
 }
 .map-vehicles {
   display: grid;
@@ -2325,9 +2287,6 @@ select {
   .dashboard-lower table {
     font-size: 11px;
   }
-  .operational-map.compact {
-    height: 335px;
-  }
   .sidebar {
     width: 250px;
   }
@@ -2411,9 +2370,6 @@ select {
   }
   .dashboard-lower {
     grid-template-columns: 1fr;
-  }
-  .dashboard-lower .operational-map.compact {
-    height: 280px;
   }
   .crew-summary-grid {
     grid-template-columns: 1fr 1fr;
@@ -2896,19 +2852,11 @@ select {
   .panel-head:has(.search) {
     flex-wrap: wrap;
   }
-  .operational-map {
-    height: 440px;
-  }
   .map-vehicles {
     grid-template-columns: 1fr;
   }
   .map-vehicles > div {
     font-size: 11px;
-  }
-  .map-legend {
-    justify-content: flex-start;
-    gap: 13px;
-    font-size: 9px;
   }
   .field-welcome {
     flex-wrap: wrap;
@@ -3276,9 +3224,6 @@ select {
 .gps-control small {
   margin-top: 4px;
 }
-.legend-dot.green {
-  background: #098b62;
-}
 .report-tabs {
   display: flex;
   flex-wrap: wrap;
@@ -3534,20 +3479,6 @@ select {
 .crew-filters-panel {
   margin-bottom: 20px;
 }
-.map-mode-controls {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-}
-.map-filters {
-  align-items: flex-start;
-}
-.map-filters .field {
-  flex-basis: 180px;
-}
-.legend-dot.gray {
-  background: #68788a;
-}
 .trace-filters .filter-fields {
   display: grid;
   grid-template-columns: minmax(160px, 1fr) minmax(160px, 1fr) minmax(260px, 1.6fr);
@@ -3660,9 +3591,6 @@ select {
   .trace-filters .filter-fields,
   .trace-filters.vehicle-report-filters .filter-fields {
     grid-template-columns: minmax(0, 1fr);
-  }
-  .map-mode-controls .button {
-    flex: 1 1 200px;
   }
 }
 @media print {
