@@ -3,6 +3,7 @@ import { useEffect, useRef } from 'react';
 import { MapContainer, TileLayer, CircleMarker, Popup, useMap } from 'react-leaflet';
 import { Badge } from './UI';
 import { crewSituation, SITUATION_STYLE } from '../utils/operation';
+import { TILE_ATTRIBUTION, TILE_URL } from './mapTiles';
 function FitPoints({ points, fallback, fitKey }) {
   const map = useMap();
   const signature = JSON.stringify(points);
@@ -75,15 +76,14 @@ export default function OperationalMap({
   fitKey = '',
   now = Date.now(),
 }) {
-  // 'operation' shows crews and open occurrences together.
   const shownCrews =
-    mode === 'crews' || mode === 'operation'
+    mode === 'crews'
       ? crews.filter(
           (c) => Number.isFinite(c.location?.latitude) && Number.isFinite(c.location?.longitude),
         )
       : [];
   const shownOccurrences =
-    mode === 'occurrences' || mode === 'operation'
+    mode === 'occurrences'
       ? occurrences.filter((o) => Number.isFinite(o.latitude) && Number.isFinite(o.longitude))
       : [];
   const points = [
@@ -135,8 +135,8 @@ export default function OperationalMap({
           </CircleMarker>
         )}
       <TileLayer
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
-        url={`https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png?key=${encodeURIComponent(import.meta.env.VITE_CARTO_API_KEY || 'cb1_4u0a_1_93cf66948d960a7d71de1c27')}`}
+        attribution={TILE_ATTRIBUTION}
+        url={TILE_URL}
         maxZoom={20}
       />
       {shownOccurrences

@@ -19,8 +19,7 @@ import { useData } from '../hooks/useData';
 import { api } from '../services/api';
 import { duration, fmtTime, fmtDate } from '../utils/format';
 import { Panel, Badge, Loading, Button, Empty } from '../components/UI';
-import OperationalMap from '../components/OperationalMap';
-import OperationLegend from '../components/OperationLegend';
+import SituationMap from '../components/operation/SituationMap';
 import HandoverDialog from '../components/HandoverSummary';
 import { useConnectionState } from '../components/ConnectionStatus';
 import CpuTransferDialog from '../components/cpu/CpuTransferDialog';
@@ -332,15 +331,15 @@ export default function Dashboard() {
               </Link>
             }
           >
-            <OperationalMap
-              mode="operation"
-              cities={cities}
-              occurrences={data.open || []}
-              crews={data.crews}
-              now={app.now}
-              compact
-            />
-            <OperationLegend />
+            <div className="situation-room">
+              <SituationMap
+                cities={cities}
+                occurrences={data.open || []}
+                crews={data.crews}
+                now={app.now}
+                compact
+              />
+            </div>
           </Panel>
         )}
       </div>

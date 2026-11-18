@@ -52,7 +52,7 @@ vi.mock('../services/api', () => ({
 vi.mock('../context/AppContext', () => ({
   useApp: () => ({ now: NOW, revision: 0, chatRevision: 0, notificationRevision: 0 }),
 }));
-vi.mock('../components/OperationalMap', () => ({ default: () => <div>mapa</div> }));
+vi.mock('../components/operation/SituationMap', () => ({ default: () => <div>mapa</div> }));
 
 const { default: Operation } = await import('../pages/Operation');
 

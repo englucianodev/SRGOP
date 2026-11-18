@@ -1,77 +1,121 @@
-import { Panel, Empty } from '../UI';
-import OperationalMap from '../OperationalMap';
-import OperationLegend from '../OperationLegend';
-import { operationCounters } from '../../utils/operation';
+import { useRef } from 'react';
+import SituationMap from './SituationMap';
+import { crewPeople } from './situationLayers';
+import { useArrivals } from './useArrivals';
+import { militaryLabel } from '../PersonalFields';
+import { eventTag, operationCounters } from '../../utils/operation';
 import { duration, fmtTime } from '../../utils/format';
 
 const COUNTERS = [
-  ['emServico', 'Em serviço'],
-  ['emAtendimento', 'Em atendimento'],
-  ['livres', 'Livres'],
-  ['expirados', 'Turno encerrado'],
+  ['emServico', 'em serviço', ''],
+  ['emAtendimento', 'em atendimento', 'hot'],
+  ['livres', 'livres', 'ok'],
+  ['expirados', 'turno encerrado', 'warn'],
 ];
 
+/** Counter that bumps whenever its value changes after the page opened. */
+function Kpi({ value, label, tone }) {
+  const initial = useRef(value);
+  return (
+    <div className={`kpi ${tone}`}>
+      <b key={value} className={value !== initial.current ? 'bump' : ''}>
+        {value}
+      </b>
+      <span>{label}</span>
+    </div>
+  );
+}
+
+function AttendanceCard({ occurrence: o, crew, now, fresh }) {
+  const { commander, driver } = crew ? crewPeople(crew) : {};
+  return (
+    <article className={`sr-card ${fresh ? 'novo' : ''}`}>
+      <div className="sr-card-head">
+        <b>
+          <span>{o.protocol}</span>
+          {o.city?.name && <span className="sr-card-city"> · {o.city.name}</span>}
+        </b>
+        <span className="tabular sr-elapsed">{duration((now - +new Date(o.startedAt)) / 1000)}</span>
+      </div>
+      {o.crimeType && <div className="crime">{o.crimeType}</div>}
+      <div className="people">
+        {o.crew?.name || 'Sem guarnição'}
+        {commander && (
+          <>
+            {' · Cmt '}
+            <strong>{militaryLabel(commander)}</strong>
+          </>
+        )}
+        {driver && (
+          <>
+            {' · Mot '}
+            <strong>{militaryLabel(driver)}</strong>
+          </>
+        )}
+      </div>
+    </article>
+  );
+}
+
 export default function OperationTab({ data, cities, now }) {
-  const counters = operationCounters(data.crews, now);
+  const crews = data.crews || [];
+  const counters = operationCounters(crews, now);
   const attending = (data.open || []).filter((o) => o.status === 'Em atendimento');
   const events = data.events || [];
+  const eventKey = (e) => `${e.at}|${e.action}|${e.label}`;
+  const fresh = useArrivals([...attending.map((o) => `a|${o.protocol}`), ...events.map(eventKey)]);
+  const crewById = new Map(crews.map((c) => [c._id, c]));
   return (
-    <div className="operation-page">
-      <div className="operation-counters">
-        {COUNTERS.map(([key, label]) => (
-          <div key={key}>
-            <b>{counters[key]}</b>
-            <span>{label}</span>
-          </div>
-        ))}
-        <div className="operation-cpu">
-          <b>{data.cpu?.officer?.name || '—'}</b>
-          <span>CPU atual{data.cpu?.assumedAt ? ` desde ${fmtTime(data.cpu.assumedAt)}` : ''}</span>
+    <section className="sr-operation">
+      <SituationMap crews={crews} occurrences={data.open || []} cities={cities} now={now} />
+      <aside className="sr-side">
+        <div className="kpis">
+          {COUNTERS.map(([key, label, tone]) => (
+            <Kpi key={key} value={counters[key]} label={label} tone={tone} />
+          ))}
         </div>
-      </div>
-      <Panel title="Mapa da operação">
-        <OperationalMap
-          mode="operation"
-          cities={cities}
-          occurrences={data.open || []}
-          crews={data.crews}
-          now={now}
-        />
-        <OperationLegend />
-      </Panel>
-      <Panel title="Em atendimento">
+        <div className="sr-cpu">
+          <span>CPU atual{data.cpu?.assumedAt ? ` desde ${fmtTime(data.cpu.assumedAt)}` : ''}</span>
+          <b>{data.cpu?.officer?.name || '—'}</b>
+        </div>
+        <h2 className="sr-heading">Em atendimento</h2>
         {attending.length ? (
-          <div className="operation-cards">
+          <div className="sr-cards">
             {attending.map((o) => (
-              <article key={o.protocol} className="operation-card">
-                <strong>{o.crew?.name || 'Sem guarnição'}</strong>
-                <span>{o.protocol}</span>
-                <b className="tabular">{duration((now - +new Date(o.startedAt)) / 1000)}</b>
-              </article>
+              <AttendanceCard
+                key={o.protocol}
+                occurrence={o}
+                crew={crewById.get(o.crew?._id)}
+                now={now}
+                fresh={fresh.has(`a|${o.protocol}`)}
+              />
             ))}
           </div>
         ) : (
-          <Empty text="Nenhum atendimento em andamento." />
+          <p className="sr-muted">Nenhum atendimento em andamento.</p>
         )}
-      </Panel>
-      <Panel title="Linha do tempo">
+        <h2 className="sr-heading">Linha do tempo</h2>
         {events.length ? (
-          <ul className="operation-timeline">
-            {events.map((e, i) => (
-              <li key={`${e.at}-${i}`}>
-                <time className="tabular">{fmtTime(e.at)}</time>
-                <span>
-                  {e.action}
-                  {e.label ? ` · ${e.label}` : ''}
-                </span>
-                <small>{e.actor}</small>
-              </li>
-            ))}
-          </ul>
+          <ol className="sr-events">
+            {events.map((e, i) => {
+              const [tag, tone] = eventTag(e.action);
+              return (
+                <li key={`${eventKey(e)}-${i}`} className={fresh.has(eventKey(e)) ? 'novo' : ''}>
+                  <time className="tabular">{fmtTime(e.at)}</time>
+                  <span className={`tag ${tone}`}>{tag}</span>
+                  <span>
+                    {e.action}
+                    {e.label ? ` · ${e.label}` : ''}
+                    {e.actor && <small> — {e.actor}</small>}
+                  </span>
+                </li>
+              );
+            })}
+          </ol>
         ) : (
-          <Empty text="Sem eventos neste turno." />
+          <p className="sr-muted">Sem eventos neste turno.</p>
         )}
-      </Panel>
-    </div>
+      </aside>
+    </section>
   );
 }

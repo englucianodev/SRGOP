@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Map as MapIcon, Users } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { useData } from '../hooks/useData';
 import { Empty, Loading, PageTitle } from '../components/UI';
@@ -7,8 +8,8 @@ import StaffTab from '../components/operation/StaffTab';
 
 const TAB_KEY = 'srgop-operacao-aba';
 const TABS = [
-  ['operacao', 'Operação'],
-  ['efetivo', 'Efetivo'],
+  ['operacao', 'Operação', MapIcon],
+  ['efetivo', 'Efetivo', Users],
 ];
 
 function storedTab() {
@@ -36,30 +37,36 @@ export default function Operation() {
   if (loading && !data) return <Loading />;
   if (!data) return <Empty text="Não foi possível carregar a operação." />;
   return (
-    <>
+    <div className="situation-room">
       <PageTitle eyebrow="SALA DE SITUAÇÃO" title="Operação e Efetivo" />
-      <div className="operation-tabs" role="tablist" aria-label="Seções da operação">
-        {TABS.map(([id, label]) => (
+      <div className="sr-tabs" role="tablist" aria-label="Seções da operação">
+        {TABS.map(([id, label, Icon]) => (
           <button
             key={id}
             role="tab"
             id={`operation-tab-${id}`}
             aria-selected={tab === id}
             aria-controls="operation-panel"
-            className={tab === id ? 'active' : ''}
             onClick={() => choose(id)}
           >
+            <Icon size={16} aria-hidden="true" />
             {label}
           </button>
         ))}
       </div>
-      <div role="tabpanel" id="operation-panel" aria-labelledby={`operation-tab-${tab}`}>
+      <div
+        role="tabpanel"
+        id="operation-panel"
+        key={tab}
+        className="sr-tabpanel"
+        aria-labelledby={`operation-tab-${tab}`}
+      >
         {tab === 'operacao' ? (
           <OperationTab data={data} cities={cities} now={app.now} />
         ) : (
           <StaffTab data={data} now={app.now} />
         )}
       </div>
-    </>
+    </div>
   );
 }
