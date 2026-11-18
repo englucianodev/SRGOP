@@ -41,4 +41,12 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <!-- Background GPS of the crew on duty (@capacitor-community/background-geolocation).
+         The plugin manifest declares the same permissions and its foreground service
+         (foregroundServiceType="location"); they are repeated here so the full set
+         the app asks for is visible in one place. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
+    <!-- Android 13+: needed to show the persistent "location in use" notification. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 </manifest>

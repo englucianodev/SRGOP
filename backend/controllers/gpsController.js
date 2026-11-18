@@ -5,8 +5,37 @@ import { transaction } from '../services/operations.js';
 import { crewLocationChanged } from '../services/realtime.js';
 import { audit } from '../services/audit.js';
 
+const LIVE_MS = 60000;
+
+/**
+ * Routine position update from whoever is already sharing: one atomic write instead of a
+ * transaction. Returns null when the full path is needed (first fix, takeover, another sharer).
+ */
+const refreshOwnPosition = (req) =>
+  Crew.findOneAndUpdate(
+    {
+      _id: req.params.id,
+      members: req.user._id,
+      ...activeDuty(),
+      status: { $ne: 'Fora de serviço' },
+      'location.sharing': true,
+      'location.updatedBy': req.user._id,
+      'location.locatedAt': { $gt: new Date(Date.now() - LIVE_MS) },
+    },
+    {
+      $set: {
+        'location.latitude': req.input.latitude,
+        'location.longitude': req.input.longitude,
+        'location.accuracy': req.input.accuracy,
+        'location.locatedAt': new Date(),
+      },
+    },
+    { new: true, runValidators: true },
+  );
+
 export async function location(req, res) {
-  const crew = await transaction(async (session) => {
+  const quick = req.input.enabled ? await refreshOwnPosition(req) : null;
+  const crew = quick ?? await transaction(async (session) => {
     const crew = await Crew.findOne({
       _id: req.params.id,
       members: req.user._id,
@@ -21,7 +50,7 @@ export async function location(req, res) {
     const previous = crew.location;
     const wasSharing = Boolean(previous?.sharing);
     const owner = String(previous?.updatedBy) === String(req.user._id);
-    const live = previous?.sharing && +previous.locatedAt > Date.now() - 60000;
+    const live = previous?.sharing && +previous.locatedAt > Date.now() - LIVE_MS;
     requireValue(
       !live || owner,
       'Outro integrante já está compartilhando o GPS desta guarnição.',

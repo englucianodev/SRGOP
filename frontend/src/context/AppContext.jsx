@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { io } from 'socket.io-client';
 import { api } from '../services/api';
+import { whenServerReady } from '../services/startup';
 const Context = createContext(null);
 export const useApp = () => useContext(Context);
 export function AppProvider({ children }) {
@@ -10,6 +11,7 @@ export function AppProvider({ children }) {
   const [settings, setSettings] = useState(null);
   const [inactivityPolicy, setInactivityPolicy] = useState(null);
   const [ready, setReady] = useState(false);
+  const [waitingServer, setWaitingServer] = useState(false);
   const [error, setError] = useState(null);
   const [toast, setToast] = useState('');
   const [revision, setRevision] = useState(0);
@@ -49,17 +51,28 @@ export function AppProvider({ children }) {
     loggedOut.current = false;
   };
   useEffect(() => {
-    api
-      .get('/auth/me', { quiet: true })
+    // While the server wakes up (or its database reconnects) the startup screen stays on
+    // and the request is repeated; no error dialog is shown for that.
+    const control = new AbortController();
+    whenServerReady(() => api.get('/auth/me', { quiet: true, signal: control.signal }), {
+      signal: control.signal,
+      onWaiting: () => setWaitingServer(true),
+    })
       .then((r) => hydrate(r.data))
       .catch((e) => {
+        if (control.signal.aborted) return;
         if (e.response?.status !== 401)
           setError({
-            message: 'Não foi possível carregar a sessão. Verifique se o backend está em execução.',
-            origin: 'Inicialização / API',
+            message: e.response?.data?.message || 'Não foi possível carregar sua sessão.',
+            origin: e.response?.data?.origin || 'Inicialização',
           });
       })
-      .finally(() => setReady(true));
+      .finally(() => {
+        if (control.signal.aborted) return;
+        setWaitingServer(false);
+        setReady(true);
+      });
+    return () => control.abort();
   }, []);
   useEffect(() => {
     const listener = (e) => {
@@ -334,6 +347,7 @@ export function AppProvider({ children }) {
         inactivityPolicy,
         setSettings,
         ready,
+        waitingServer,
         hydrate,
         logout,
         error,

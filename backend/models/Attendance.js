@@ -12,6 +12,7 @@ const schema = new mongoose.Schema(
     members: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
     acceptedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     startedAt: { type: Date, required: true },
+    arrivedAt: Date,
     endedAt: Date,
     durationSeconds: { type: Number, min: 0 },
     summary: { type: String, maxlength: 10000 },

@@ -3,6 +3,7 @@ import { Navigate, Outlet, Route, Routes, useLocation } from 'react-router-dom';
 import { useApp } from './context/AppContext';
 import { GlobalFeedback, Loading } from './components/UI';
 import Layout from './components/Layout';
+import StartupScreen from './components/StartupScreen';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Occurrences from './pages/Occurrences';
@@ -50,8 +51,8 @@ function Denied({ missing = false }) {
   return null;
 }
 export default function App() {
-  const { ready } = useApp();
-  if (!ready) return <Loading />;
+  const { ready, waitingServer } = useApp();
+  if (!ready) return <StartupScreen waiting={waitingServer} />;
   return (
     <>
       <Routes>

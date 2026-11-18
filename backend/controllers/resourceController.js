@@ -1,6 +1,6 @@
 import { activeDuty, onDuty } from '../utils/duty.js';
 import { mileageFilter } from '../utils/mileage.js';
-import bcrypt from 'bcryptjs';
+import bcrypt from 'bcrypt';
 import {
   User,
   City,
@@ -25,6 +25,8 @@ import { changed, disconnectUser, serviceChanged } from '../services/realtime.js
 import { transaction } from '../services/operations.js';
 import { dayKey, dayRange, serviceWindow } from '../utils/time.js';
 import { notifyPendingForCpu } from '../services/pendingDispatch.js';
+import { buildHandover } from '../services/handover.js';
+import { clearLoginFailures } from '../services/loginThrottle.js';
 const validCity = async (city, session) =>
   requireValue(
     await City.exists({ _id: city, active: true }).session(session || null),
@@ -72,6 +74,8 @@ export async function saveUser(req, res) {
       Object.assign(user, v);
       await user.save({ session });
       await Session.deleteMany({ user: user._id }, { session });
+      // A new password from the Administrativo also lifts a lock from wrong attempts.
+      if (v.password) await clearLoginFailures(user.email, session);
     } else {
       [user] = await User.create([v], { session });
     }
@@ -534,7 +538,12 @@ export async function cpu(req, res) {
   );
 }
 export async function assumeCpu(req, res) {
-  const row = await DailyOfficer.create({ day: serviceWindow().day, officer: req.user._id });
+  // The snapshot is stored with the assumption itself and returned as `handover`.
+  const row = await DailyOfficer.create({
+    day: serviceWindow().day,
+    officer: req.user._id,
+    handover: await buildHandover(),
+  });
   await audit(req.user, 'Assumiu CPU', 'DailyOfficer', row._id);
   changed('cpu');
   await notifyPendingForCpu(req.user._id);
@@ -554,6 +563,7 @@ export async function updateCpu(req, res) {
       reason: req.input.reason,
       modifiedBy: req.user._id,
       assumedAt: new Date(),
+      handover: await buildHandover(),
     },
     { new: true, upsert: true, runValidators: true },
   );

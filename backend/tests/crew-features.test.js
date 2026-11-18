@@ -4,7 +4,7 @@ import { once } from 'node:events';
 import { createServer } from 'node:http';
 import { MongoMemoryReplSet } from 'mongodb-memory-server';
 import mongoose from 'mongoose';
-import bcrypt from 'bcryptjs';
+import bcrypt from 'bcrypt';
 import request from 'supertest';
 import { io as connect } from 'socket.io-client';
 import { createApp } from '../app.js';
@@ -405,6 +405,15 @@ test('GPS exige integrante em serviço, valida coordenadas e controla quem trans
     (await patch(teammate.agent, `/crews/${firstCrew._id}/gps`, { enabled: false })).status,
     409,
   );
+  const moved = await patch(first.agent, `/crews/${firstCrew._id}/gps`, { ...body, latitude: -5.26 });
+  assert.equal(moved.status, 200, JSON.stringify(moved.body));
+  assert.equal(moved.body.latitude, -5.26);
+  assert.equal(
+    await AuditLog.countDocuments({ actor: first.user._id, action: 'GPS ativado', entityId: firstCrew._id }),
+    1,
+    'atualização rotina de quem já transmite não gera nova auditoria',
+  );
+  await patch(first.agent, `/crews/${firstCrew._id}/gps`, body);
   const crews = await second.agent.get('/api/crews');
   const position = crews.body.find((c) => c._id === String(firstCrew._id)).location;
   assert.equal(position.latitude, body.latitude);

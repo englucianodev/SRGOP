@@ -15,6 +15,7 @@ import {
   User,
 } from '../models/index.js';
 import { requireValue } from '../utils/errors.js';
+import { describeChanges } from '../utils/occurrenceDetails.js';
 import { dayRange } from '../utils/time.js';
 import { audit } from '../services/audit.js';
 import { changed, attendanceChanged, deliverNotifications } from '../services/realtime.js';
@@ -249,10 +250,7 @@ export async function update(req, res) {
       'Ocorrências finalizadas preservam seu histórico e não podem ser editadas.',
       409,
     );
-    const changes = Object.keys(req.input)
-      .filter((k) => String(row[k]) !== String(req.input[k]))
-      .map((k) => `${k}: ${String(row[k] ?? '—')} → ${String(req.input[k])}`)
-      .join('; ');
+    const changes = describeChanges(row, req.input);
     Object.assign(row, req.input);
     row.history.push(history(req.user, 'Alteração', changes));
     await row.save({ session });

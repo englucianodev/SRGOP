@@ -2,6 +2,7 @@ import { activeDuty, onDuty } from '../utils/duty.js';
 import { Server } from 'socket.io';
 import { authenticateToken } from '../middlewares/auth.js';
 import { Notification, Crew, User, ChatAccess } from '../models/index.js';
+import { sendPush } from './push.js';
 let io;
 export function configureSocket(server, origins) {
   io = new Server(server, {
@@ -103,6 +104,8 @@ export async function queueCrewNotifications(
   );
 }
 export function deliverNotifications(rows) {
+  // Reaches devices whose app is closed. Not awaited: sendPush handles its own failures.
+  void sendPush(rows);
   for (const row of rows) {
     io?.to(`user:${row.user}`).emit('notification', row);
     if (['chat', 'pendente', 'automatico', 'urgencia'].includes(row.kind)) continue;

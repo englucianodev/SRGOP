@@ -11,6 +11,7 @@ import {
   Eye,
   Navigation,
   Send,
+  MapPin,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { useData } from '../hooks/useData';
@@ -29,6 +30,20 @@ import {
   Loading,
 } from '../components/UI';
 import OccurrenceDetail from '../components/OccurrenceDetail';
+import InvolvedEditor from '../components/InvolvedEditor';
+import SeizureEditor from '../components/SeizureEditor';
+import {
+  editablePeople,
+  elapsedSeconds,
+  involvedPayload,
+  seizuresPayload,
+} from '../utils/occurrenceDetails';
+// Extra closing data. The station is sent only when filled, so an empty input changes nothing.
+const closingDetails = ({ involved, seizures, policeStation }) => ({
+  involved: involvedPayload(involved),
+  seizures: seizuresPayload(seizures),
+  ...(policeStation.trim() ? { policeStation: policeStation.trim() } : {}),
+});
 export default function Attendance() {
   const app = useApp();
   const { data: rows, loading } = useData('/attendances', []);
@@ -45,12 +60,15 @@ export default function Attendance() {
     detained: 0,
     approaches: 0,
   });
+  const [details, setDetails] = useState({ involved: [], seizures: [], policeStation: '' });
   const manager = app.user.role !== 'Praça';
   const open = (kind, row) => {
     setAction({ kind, row });
     setText('');
     setTarget('');
     setCounts({ weapons: 0, recoveredVehicles: 0, detained: 0, approaches: 0 });
+    // The closing form starts from the people registered so far, because it replaces the list.
+    setDetails({ involved: editablePeople(row.involved), seizures: [], policeStation: '' });
   };
   async function submit(e) {
     e.preventDefault();
@@ -58,7 +76,11 @@ export default function Attendance() {
     await app.run(async () => {
       const { kind, row } = action;
       if (kind === 'close')
-        await api.post(`/attendances/${row._id}/close`, { summary: text, ...counts });
+        await api.post(`/attendances/${row._id}/close`, {
+          summary: text,
+          ...counts,
+          ...closingDetails(details),
+        });
       if (kind === 'reject') await api.post(`/attendances/${row._id}/reject`, { reason: text });
       if (kind === 'notes') await api.post(`/attendances/${row._id}/notes`, { text });
       if (kind === 'support' || kind === 'accept-support') {
@@ -132,6 +154,18 @@ export default function Attendance() {
                     <span>Despacho recebido</span>
                     <strong>{fmtDateTime(o.dispatchedAt)}</strong>
                   </div>
+                  {o.arrivedAt && (
+                    <>
+                      <div>
+                        <span>Chegada ao local</span>
+                        <strong>{fmtDateTime(o.arrivedAt)}</strong>
+                      </div>
+                      <div>
+                        <span>Deslocamento</span>
+                        <strong>{duration(elapsedSeconds(o.startedAt, o.arrivedAt))}</strong>
+                      </div>
+                    </>
+                  )}
                 </div>
                 <div className="attendance-status">
                   <Badge>{o.status}</Badge>
@@ -185,6 +219,19 @@ export default function Attendance() {
                   )}
                   {canAct && o.status === 'Em atendimento' && (
                     <>
+                      {!o.arrivedAt && (
+                        <Button
+                          onClick={() =>
+                            app.run(
+                              () => api.post(`/attendances/${o._id}/arrive`),
+                              'Chegada ao local registrada.',
+                            )
+                          }
+                        >
+                          <MapPin size={17} />
+                          Cheguei ao local
+                        </Button>
+                      )}
                       <Button variant="secondary" onClick={() => open('notes', o)}>
                         Registrar observação
                       </Button>
@@ -278,7 +325,11 @@ export default function Attendance() {
         )}
       </Panel>
       {action && (
-        <Modal title={titles[action.kind]} onClose={() => setAction(null)}>
+        <Modal
+          title={titles[action.kind]}
+          onClose={() => setAction(null)}
+          wide={action.kind === 'close'}
+        >
           <form onSubmit={submit}>
             <p>
               <strong>{action.row.protocol}</strong> · {action.row.crimeType}
@@ -343,6 +394,24 @@ export default function Attendance() {
                   />
                 ))}
               </div>
+            )}
+            {action.kind === 'close' && (
+              <>
+                <InvolvedEditor
+                  value={details.involved}
+                  onChange={(involved) => setDetails({ ...details, involved })}
+                />
+                <SeizureEditor
+                  value={details.seizures}
+                  onChange={(seizures) => setDetails({ ...details, seizures })}
+                />
+                <Input
+                  label="Delegacia de destino (opcional)"
+                  maxLength={160}
+                  value={details.policeStation}
+                  onChange={(e) => setDetails({ ...details, policeStation: e.target.value })}
+                />
+              </>
             )}
             <p className="form-note">
               {['support', 'accept-support'].includes(action.kind)

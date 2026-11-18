@@ -8,6 +8,8 @@ import { PageTitle, Panel, Button, Badge, Loading, Select } from '../components/
 import OccurrenceFilters from '../components/OccurrenceFilters';
 const CrewTraceReport = lazy(() => import('../components/CrewTraceReport'));
 const VehicleReport = lazy(() => import('../components/VehicleReport'));
+// These averages exist only when some occurrence in the period has the arrival registered.
+const averageTime = (seconds) => (seconds == null ? '—' : duration(seconds));
 export default function Reports() {
   const [mode, setMode] = useState('crews');
   return (
@@ -90,6 +92,8 @@ function GeneralReports() {
                 ['Encerradas', data.totals.closed],
                 ['Em aberto / andamento', data.totals.open],
                 ['Tempo médio', duration(data.totals.averageSeconds)],
+                ['Deslocamento médio', averageTime(data.totals.averageTravelSeconds)],
+                ['Tempo médio no local', averageTime(data.totals.averageOnSceneSeconds)],
                 ['Armas apreendidas', data.totals.weapons],
                 ['Veículos recuperados', data.totals.recoveredVehicles],
                 ['Conduzidos', data.totals.detained],

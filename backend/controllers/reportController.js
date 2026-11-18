@@ -1,6 +1,8 @@
 import { Occurrence, CrewShift, Vehicle, User } from '../models/index.js';
 import { occurrenceFilter, populateOccurrence } from './occurrenceController.js';
 import { requireValue } from '../utils/errors.js';
+import { averageResponseTimes } from '../utils/occurrenceDetails.js';
+import { occurrenceCsv } from '../utils/occurrenceCsv.js';
 export async function reports(req, res) {
   const filter = occurrenceFilter(req.query);
   const total = await Occurrence.countDocuments(filter);
@@ -50,51 +52,13 @@ export async function reports(req, res) {
     averageSeconds: ended.length
       ? Math.round(ended.reduce((sum, r) => sum + (r.durationSeconds || 0), 0) / ended.length)
       : 0,
+    // Null when no occurrence in the period has the arrival at the scene registered.
+    ...averageResponseTimes(rows),
   };
   for (const key of ['weapons', 'recoveredVehicles', 'detained', 'approaches'])
     totals[key] = rows.reduce((s, r) => s + r[key], 0);
   if (req.query.format === 'csv') {
-    const escape = (value) =>
-      `"${String(value ?? '')
-        .replace(/^[=+@\-\t\r]/, "'$&")
-        .replaceAll('"', '""')}"`;
-    const header = [
-      'Protocolo',
-      'Data',
-      'Cidade',
-      'Tipo',
-      'Prioridade',
-      'Status',
-      'Guarnição',
-      'Viatura',
-      'Responsável',
-      'Duração (s)',
-      'Armas',
-      'Veículos recuperados',
-      'Conduzidos',
-      'Abordagens',
-    ];
-    const csv = [
-      header,
-      ...rows.map((r) => [
-        r.protocol,
-        r.occurredAt.toISOString(),
-        r.city?.name,
-        r.crimeType,
-        r.priority,
-        r.status,
-        r.crew?.name,
-        r.vehicle?.prefix,
-        r.acceptedBy?.name,
-        r.durationSeconds,
-        r.weapons,
-        r.recoveredVehicles,
-        r.detained,
-        r.approaches,
-      ]),
-    ]
-      .map((row) => row.map(escape).join(';'))
-      .join('\r\n');
+    const csv = occurrenceCsv(rows);
     return res
       .set({
         'Content-Type': 'text/csv; charset=utf-8',

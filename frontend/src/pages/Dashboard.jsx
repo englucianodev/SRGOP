@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { isOnDuty, dutyClock } from '../utils/duty';
 import { Link } from 'react-router-dom';
 import {
@@ -19,11 +20,18 @@ import { api } from '../services/api';
 import { duration, fmtTime, fmtDate } from '../utils/format';
 import { Panel, Badge, Loading, Button, Empty } from '../components/UI';
 import OperationalMap from '../components/OperationalMap';
+import HandoverDialog from '../components/HandoverSummary';
 import FieldDashboard from './FieldDashboard';
 export default function Dashboard() {
   const app = useApp();
   const { data, loading } = useData('/dashboard');
   const { data: cities } = useData('/cities', []);
+  const [handoverOpen, setHandoverOpen] = useState(false);
+  // The officer who assumes sees what is pending right away.
+  const assumeCpu = async () => {
+    const assumed = await app.run(() => api.post('/cpu'), 'Você assumiu o CPU de hoje.');
+    if (assumed) setHandoverOpen(true);
+  };
   if (loading && !data) return <Loading />;
   if (!data) return <Empty text="Não foi possível carregar o Dashboard." />;
   if (app.user.role === 'Praça') return <FieldDashboard data={data} />;
@@ -190,14 +198,16 @@ export default function Dashboard() {
                   ? `${fmtDate(data.cpu.assumedAt)} · Assumiu às ${fmtTime(data.cpu.assumedAt)}`
                   : 'Nenhum Oficial assumiu o serviço de hoje.'}
               </p>
-              {app.user.role === 'Oficial' && !data.cpu && (
-                <Button
-                  variant="light"
-                  onClick={() => app.run(() => api.post('/cpu'), 'Você assumiu o CPU de hoje.')}
-                >
-                  Assumir CPU <ArrowUpRight size={16} />
+              <div className="cpu-actions">
+                {app.user.role === 'Oficial' && !data.cpu && (
+                  <Button variant="light" onClick={assumeCpu}>
+                    Assumir CPU <ArrowUpRight size={16} />
+                  </Button>
+                )}
+                <Button variant="light" onClick={() => setHandoverOpen(true)}>
+                  Passagem de serviço
                 </Button>
-              )}
+              </div>
               {data.cpu && (
                 <span className="cpu-active">
                   <i className="live-dot" />
@@ -348,6 +358,7 @@ export default function Dashboard() {
           </div>
         </Panel>
       )}
+      {handoverOpen && <HandoverDialog onClose={() => setHandoverOpen(false)} />}
     </>
   );
 }

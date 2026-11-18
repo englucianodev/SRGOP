@@ -4,6 +4,7 @@ import { useApp } from '../context/AppContext';
 import { Button, Modal, Badge, Loading } from './UI';
 import { fmtDateTime, duration } from '../utils/format';
 import { downloadFile } from '../services/api';
+import OccurrenceExtras from './OccurrenceExtras';
 export default function OccurrenceDetail({ id, onClose }) {
   const { data: o, loading } = useData(`/occurrences/${id}`);
   const app = useApp();
@@ -83,6 +84,7 @@ export default function OccurrenceDetail({ id, onClose }) {
                 </div>
               </>
             )}
+            <OccurrenceExtras o={o} />
             {o.attachments?.length > 0 && (
               <>
                 <h3>Anexos</h3>

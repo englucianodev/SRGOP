@@ -1,10 +1,15 @@
-import bcrypt from 'bcryptjs';
+import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { User, City, Session, SystemSetting } from '../models/index.js';
 import { requireValue } from '../utils/errors.js';
 import { audit } from '../services/audit.js';
 import { disconnectSession } from '../services/realtime.js';
-import { inactivityPolicy } from '../services/sessionPolicy.js';
+import { inactivityPolicy, SESSION_MAX_MS, SESSION_DEFAULT_MS } from '../services/sessionPolicy.js';
+import {
+  assertLoginAllowed,
+  registerLoginFailure,
+  clearLoginFailures,
+} from '../services/loginThrottle.js';
 const cookieOptions = () => ({
   httpOnly: true,
   secure: process.env.NODE_ENV === 'production',
@@ -44,18 +49,24 @@ export async function register(req, res) {
   res.status(201).json({ message: REGISTER_MESSAGE });
 }
 export async function login(req, res) {
-  const user = await User.findOne({ email: req.input.email.toLowerCase() }).select('+password');
+  const email = req.input.email.toLowerCase();
+  await assertLoginAllowed(email);
+  const user = await User.findOne({ email }).select('+password');
   const valid = await bcrypt.compare(req.input.password, user?.password || DUMMY_HASH);
+  if (!user || !valid) await registerLoginFailure(email);
   requireValue(user && valid, 'E-mail ou senha incorretos.', 401, 'Login');
   requireValue(user.active, 'Cadastro aguardando aprovação ou desativado.', 403, 'Login');
-  const lifetime = req.input.remember ? 7 * 86400000 : 12 * 3600000;
+  await clearLoginFailures(email);
+  const lifetime = req.input.remember ? SESSION_MAX_MS : SESSION_DEFAULT_MS;
   const session = await Session.create({
     user: user._id,
     expiresAt: new Date(Date.now() + lifetime),
   });
+  // The Session document decides when the login ends (12 h, 7 days or the end of the
+  // shift); the token only carries the upper bound so a shift can extend the session.
   const token = jwt.sign({ sid: String(session._id) }, process.env.JWT_SECRET, {
     subject: String(user._id),
-    expiresIn: Math.floor(lifetime / 1000),
+    expiresIn: Math.floor(SESSION_MAX_MS / 1000),
     issuer: 'srgop',
     audience: 'srgop-web',
   });
@@ -64,11 +75,12 @@ export async function login(req, res) {
     ...cookieOptions(),
     ...(req.input.remember ? { maxAge: lifetime } : {}),
   });
+  const settings = await SystemSetting.findOne({ key: 'general' });
   res.json({
     user: await User.findById(user._id).populate('city', 'name'),
-    settings: await SystemSetting.findOne({ key: 'general' }),
+    settings,
     lastActivity: session.lastActivity,
-    inactivityPolicy: await inactivityPolicy(user, await SystemSetting.findOne({ key: 'general' })),
+    inactivityPolicy: await inactivityPolicy(user, settings),
   });
 }
 export async function me(req, res) {

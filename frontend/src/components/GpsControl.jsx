@@ -1,10 +1,39 @@
-import { isOnDuty, dutyClock } from '../utils/duty';
-import { useEffect, useState } from 'react';
+import { isOnDuty } from '../utils/duty';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Navigation } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { useData } from '../hooks/useData';
 import { api } from '../services/api';
+import { createPositionSource, shouldSend } from '../services/positionSource';
 import { Button } from './UI';
+
+const COMMON_TEXT = {
+  idle: 'Compartilhe a posição da guarnição no mapa durante o serviço.',
+  waiting: 'Aguardando permissão e posição do GPS…',
+  unavailable: 'GPS sem posição atual. Verifique o sinal e a localização do aparelho.',
+  offDuty: 'Serviço encerrado. Compartilhamento desligado.',
+  stopped: 'Compartilhamento encerrado.',
+};
+// Texts that depend on where the position comes from (see positionSource.js).
+const SOURCE_TEXT = {
+  browser: {
+    ...COMMON_TEXT,
+    hint: 'Com a tela bloqueada o envio é interrompido. Para manter a posição, use o aplicativo Android.',
+    unsupported: 'O GPS exige HTTPS (ou localhost) e um navegador com localização.',
+    denied: 'Permissão de localização negada. Autorize o GPS nas configurações do navegador.',
+  },
+  native: {
+    ...COMMON_TEXT,
+    hint: 'O envio continua com a tela bloqueada até você desligar o GPS ou o serviço terminar.',
+    unsupported: 'O GPS não está disponível neste aparelho.',
+    denied:
+      'Localização negada ou desligada no aparelho. Autorize o GPS nas configurações do aplicativo.',
+    failed: 'Não foi possível iniciar o GPS do aplicativo. Tente ligar novamente.',
+    'notifications-blocked':
+      'Notificações bloqueadas: o envio continua, mas o aviso permanente não aparece.',
+    stopFailed: 'Não foi possível encerrar o GPS. Feche o aplicativo para interromper o envio.',
+  },
+};
 
 export default function GpsControl() {
   const app = useApp();
@@ -14,6 +43,12 @@ export default function GpsControl() {
   );
   const [enabled, setEnabled] = useState(false);
   const [status, setStatus] = useState('');
+  const source = useMemo(() => createPositionSource(), []);
+  const text = SOURCE_TEXT[source.kind];
+  const crewRef = useRef(crew);
+  useEffect(() => {
+    crewRef.current = crew;
+  });
   const crewId = crew?._id;
   const shift = crew?.shift;
   useEffect(() => {
@@ -25,14 +60,11 @@ export default function GpsControl() {
     const report = async () => {
       if (
         stopped ||
-        pending ||
-        !latest ||
-        Date.now() - latest.timestamp > 30000 ||
-        Date.now() - lastSent < 10000
+        !shouldSend({ fix: latest, lastSentAt: lastSent, busy: Boolean(pending), now: Date.now() })
       )
         return;
       lastSent = Date.now();
-      const { latitude, longitude, accuracy } = latest.coords;
+      const { latitude, longitude, accuracy } = latest;
       pending = api.patch(
         `/crews/${crewId}/gps`,
         { enabled: true, latitude, longitude, accuracy },
@@ -50,32 +82,30 @@ export default function GpsControl() {
         pending = null;
       }
     };
-    const success = (position) => {
-      if (!stopped) {
-        latest = position;
-        report();
-      }
-    };
-    const failure = (error) => {
+    const onFix = (fix) => {
       if (stopped) return;
-      setStatus(
-        error.code === 1
-          ? 'Permissão de localização negada. Autorize o GPS nas configurações do navegador.'
-          : 'GPS sem posição atual. Verifique o sinal e a localização do aparelho.',
-      );
-      if (error.code === 1) setEnabled(false);
+      // The native source keeps delivering with the screen locked, when the
+      // interface clock may be throttled: recheck the shift on every fix so
+      // nobody is tracked after going off duty.
+      if (!isOnDuty(crewRef.current)) {
+        setStatus(text.offDuty);
+        setEnabled(false);
+        return;
+      }
+      latest = fix;
+      report();
     };
-    const options = { enableHighAccuracy: true, timeout: 15000, maximumAge: 5000 };
-    setStatus('Aguardando permissão e posição do GPS…');
-    const watch = navigator.geolocation.watchPosition(success, failure, options);
-    const timer = setInterval(
-      () => navigator.geolocation.getCurrentPosition(success, failure, options),
-      15000,
-    );
+    const onError = ({ reason, fatal }) => {
+      if (stopped) return;
+      setStatus(text[reason]);
+      if (fatal) setEnabled(false);
+    };
+    setStatus(text.waiting);
+    const stopSource = source.start({ onFix, onError });
     return () => {
       stopped = true;
-      clearInterval(timer);
-      navigator.geolocation.clearWatch(watch);
+      // Stopping the native source also removes its foreground service.
+      stopSource().catch(() => setStatus(text.stopFailed));
       Promise.resolve(pending)
         .catch(() => {})
         .then(() => api.patch(`/crews/${crewId}/gps`, { enabled: false }, { quiet: true }))
@@ -94,19 +124,18 @@ export default function GpsControl() {
         <strong>
           {crew.name} · GPS {enabled ? 'ligado' : 'desligado'}
         </strong>
-        <small role="status">
-          {status || 'Compartilhe a posição da guarnição no mapa durante o serviço.'}
-        </small>
+        <small role="status">{status || text.idle}</small>
+        <small>{text.hint}</small>
       </div>
       <Button
         variant={enabled ? 'danger-ghost' : 'secondary'}
         onClick={() => {
-          if (!enabled && (!window.isSecureContext || !navigator.geolocation)) {
-            setStatus('O GPS exige HTTPS (ou localhost) e um navegador com localização.');
+          if (!enabled && !source.isSupported()) {
+            setStatus(text.unsupported);
             return;
           }
           setEnabled((v) => !v);
-          if (enabled) setStatus('Compartilhamento encerrado.');
+          if (enabled) setStatus(text.stopped);
         }}
       >
         {enabled ? 'Desligar GPS' : 'Ligar GPS'}

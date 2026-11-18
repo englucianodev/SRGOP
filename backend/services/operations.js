@@ -13,6 +13,7 @@ import {
   VehicleHandover,
 } from '../models/index.js';
 import { requireValue } from '../utils/errors.js';
+import { closeDetailsSummary } from '../utils/occurrenceDetails.js';
 import { serviceWindow } from '../utils/time.js';
 import { recordIntake, requireDriverReturn, refreshInspectionHold } from './vehicleInspections.js';
 import { audit } from './audit.js';
@@ -220,8 +221,10 @@ export async function closeOccurrence(actor, id, input) {
     );
     const endedAt = new Date();
     const durationSeconds = Math.max(0, Math.floor((endedAt - occurrence.startedAt) / 1000));
+    const details = closeDetailsSummary(occurrence, input);
     Object.assign(occurrence, input, { status: 'Encerrada', endedAt, durationSeconds });
     occurrence.history.push(history(actor, 'Encerramento', input.summary));
+    if (details) occurrence.history.push(history(actor, 'Dados do encerramento', details));
     await occurrence.save({ session });
     await Attendance.updateOne(
       { occurrence: id, status: 'Em atendimento' },

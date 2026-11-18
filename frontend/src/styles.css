@@ -868,6 +868,12 @@ main#main-content {
   padding: 7px 11px;
   font-size: 9px;
 }
+.cpu-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 13px;
+}
 .operation-card {
   display: flex;
   gap: 14px;

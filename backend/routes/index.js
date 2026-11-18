@@ -3,6 +3,7 @@ import { Router } from 'express';
 import multer from 'multer';
 import rateLimit from 'express-rate-limit';
 import { auth, allow, essentialOnly } from '../middlewares/auth.js';
+import * as recovery from '../controllers/recoveryController.js';
 import { schemas as s, validate as v, id } from '../middlewares/validation.js';
 import { asyncRoute as a, AppError, requireValue } from '../utils/errors.js';
 import * as authentication from '../controllers/authController.js';
@@ -14,7 +15,9 @@ import * as gps from '../controllers/gpsController.js';
 import * as inspections from '../controllers/inspectionController.js';
 import * as emergency from '../controllers/emergencyController.js';
 import * as branding from '../controllers/brandingController.js';
+import * as push from '../controllers/pushController.js';
 import { reports } from '../controllers/reportController.js';
+import { health, live } from '../controllers/healthController.js';
 import { crewReports } from '../controllers/crewReportController.js';
 import { vehicleReports } from '../controllers/vehicleReportController.js';
 import {
@@ -37,14 +40,18 @@ import {
 } from '../models/index.js';
 import { manageMember, setAvailability, sendCrewMessage } from '../services/crewManagement.js';
 import { provisionDefaultFleet } from '../services/defaultFleet.js';
+import { handoverOverview } from '../services/handover.js';
 import { requireDriverReturn } from '../services/vehicleInspections.js';
+import { isSimulationLogin } from '../middlewares/rateLimitBypass.js';
 import { transaction } from '../services/operations.js';
+import { arriveOccurrence } from '../services/arrival.js';
 const router = Router();
 const management = allow('Administrativo', 'Oficial');
 const admin = allow('Administrativo');
 const authLimit = rateLimit({
   windowMs: 15 * 60000,
   limit: 30,
+  skip: isSimulationLogin,
   standardHeaders: 'draft-8',
   legacyHeaders: false,
   message: {
@@ -58,7 +65,8 @@ router.param('id', (req, res, next, value) =>
     ? next()
     : next(new AppError('Identificador inválido.', 422, 'Parâmetros da API')),
 );
-router.get('/health', (req, res) => res.json({ status: 'ok', service: 'SRGOP' }));
+router.get('/health/live', live);
+router.get('/health', a(health));
 router.get('/branding', a(branding.metadata));
 router.get('/branding/logo', a(branding.logo));
 router.get(
@@ -69,6 +77,9 @@ router.get(
 );
 router.post('/auth/register', authLimit, v(s.register), a(authentication.register));
 router.post('/auth/login', authLimit, v(s.login), a(authentication.login));
+router.get('/auth/options', recovery.options);
+router.post('/auth/password/forgot', authLimit, v(s.forgotPassword), recovery.forgot);
+router.post('/auth/password/reset', authLimit, v(s.resetPassword), a(recovery.reset));
 router.use(auth);
 router.get('/auth/me', a(authentication.me));
 router.put('/auth/me', v(s.account), a(account.update));
@@ -89,6 +100,10 @@ router.get('/vehicle-checklists/defaults', a(inspections.defaults));
 router.post('/vehicle-checklists/:id', v(s.inspection), a(inspections.complete));
 router.post('/auth/activity', a(authentication.activity));
 router.post('/auth/logout', a(authentication.logout));
+// Kept before essentialOnly: a device must be able to (un)subscribe during an attendance.
+router.get('/push/config', a(push.config));
+router.post('/push/subscriptions', v(s.pushSubscription), a(push.subscribe));
+router.delete('/push/subscriptions', v(s.pushUnsubscribe), a(push.unsubscribe));
 router.use(essentialOnly);
 router.get('/dashboard', a(resource.dashboard));
 router.get(
@@ -174,6 +189,10 @@ router.get(
 router.post(
   '/attendances/:id/accept',
   a(async (req, res) => res.json(await acceptOccurrence(req.user, req.params.id))),
+);
+router.post(
+  '/attendances/:id/arrive',
+  a(async (req, res) => res.json(await arriveOccurrence(req.user, req.params.id))),
 );
 router.post(
   '/attendances/:id/reject',
@@ -361,6 +380,11 @@ router.put(
 );
 router.delete('/settings/logo', admin, a(branding.remove));
 router.get('/cpu', management, a(resource.cpu));
+router.get(
+  '/cpu/handover',
+  management,
+  a(async (req, res) => res.json(await handoverOverview())),
+);
 router.post('/cpu', allow('Oficial'), a(resource.assumeCpu));
 router.put('/cpu', admin, v(s.cpu), a(resource.updateCpu));
 router.get('/notifications', a(resource.notifications));

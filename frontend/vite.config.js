@@ -30,6 +30,8 @@ export default defineConfig(({ mode }) => ({
         navigateFallbackDenylist: [/^\/api(?:\/|$)/, /^\/downloads(?:\/|$)/],
         cleanupOutdatedCaches: true,
         runtimeCaching: [],
+        // Web Push handlers (public/push-sw.js) run inside the generated service worker.
+        importScripts: ['push-sw.js'],
       },
     }),
   ],

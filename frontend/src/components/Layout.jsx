@@ -30,6 +30,7 @@ import { fmtTime, fmtDate, fmtDateTime, duration } from '../utils/format';
 import { Button, Modal, Empty } from './UI';
 import { api } from '../services/api';
 import GpsControl from './GpsControl';
+import PushControl from './PushControl';
 import ProfileMenu from './ProfileMenu';
 import ServiceCpu from './ServiceCpu';
 import DayOperations from './DayOperations';
@@ -246,6 +247,7 @@ export default function Layout() {
             </div>
           )}
           <GpsControl />
+          <PushControl />
           <Outlet />
         </main>
         <footer className="app-footer">

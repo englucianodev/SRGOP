@@ -1,4 +1,4 @@
-import bcrypt from 'bcryptjs';
+import bcrypt from 'bcrypt';
 import { randomUUID } from 'node:crypto';
 import { User, Session, ProfilePhoto } from '../models/index.js';
 import { transaction } from '../services/operations.js';

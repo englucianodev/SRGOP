@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { once } from 'node:events';
 import { createServer } from 'node:http';
 import mongoose from 'mongoose';
-import bcrypt from 'bcryptjs';
+import bcrypt from 'bcrypt';
 import request from 'supertest';
 import { MongoMemoryReplSet } from 'mongodb-memory-server';
 import { io as connect } from 'socket.io-client';

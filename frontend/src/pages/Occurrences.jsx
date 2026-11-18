@@ -21,6 +21,8 @@ import {
 import OccurrenceDetail from '../components/OccurrenceDetail';
 import OccurrenceFilters from '../components/OccurrenceFilters';
 import CrimeSelect from '../components/CrimeSelect';
+import InvolvedEditor from '../components/InvolvedEditor';
+import { editablePeople, involvedPayload } from '../utils/occurrenceDetails';
 const fresh = () => ({
   occurredAt: localInput(),
   city: '',
@@ -30,6 +32,7 @@ const fresh = () => ({
   priority: 'Média',
   latitude: '',
   longitude: '',
+  involved: [],
 });
 export default function Occurrences() {
   const app = useApp();
@@ -74,6 +77,7 @@ export default function Occurrences() {
             priority: row.priority,
             latitude: row.latitude ?? '',
             longitude: row.longitude ?? '',
+            involved: editablePeople(row.involved),
           }
         : { ...fresh(), city: app.user.city?._id || '' },
     );
@@ -84,7 +88,11 @@ export default function Occurrences() {
     e.preventDefault();
     setBusy(true);
     await app.run(async () => {
-      const body = { ...form, occurredAt: new Date(form.occurredAt).toISOString() };
+      const body = {
+        ...form,
+        occurredAt: new Date(form.occurredAt).toISOString(),
+        involved: involvedPayload(form.involved),
+      };
       for (const k of ['latitude', 'longitude'])
         if (body[k] === '') delete body[k];
         else body[k] = Number(body[k]);
@@ -339,6 +347,7 @@ export default function Occurrences() {
               value={form.description}
               onChange={(e) => set('description', e.target.value)}
             />
+            <InvolvedEditor value={form.involved} onChange={(value) => set('involved', value)} />
             <Input
               label="Anexar arquivo"
               type="file"

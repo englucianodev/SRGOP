@@ -2,7 +2,7 @@ import jwt from 'jsonwebtoken';
 import { Session, User, SystemSetting, Attendance, VehicleHandover } from '../models/index.js';
 import { AppError, asyncRoute } from '../utils/errors.js';
 import { audit } from '../services/audit.js';
-import { inactivityPolicy } from '../services/sessionPolicy.js';
+import { inactivityPolicy, dutySessionExpiry } from '../services/sessionPolicy.js';
 export async function authenticateToken(token) {
   if (!token) throw new AppError('Entre no sistema para continuar.', 401, 'Autenticação');
   let payload;
@@ -15,9 +15,12 @@ export async function authenticateToken(token) {
   } catch {
     throw new AppError('Sessão expirada. Entre novamente.', 401, 'Autenticação/JWT');
   }
-  const session = await Session.findById(payload.sid);
-  const settings = await SystemSetting.findOne({ key: 'general' });
-  const user = await User.findById(payload.sub).populate('city', 'name');
+  // Independent reads: one round trip to the database instead of three on every request.
+  const [session, settings, user] = await Promise.all([
+    Session.findById(payload.sid),
+    SystemSetting.findOne({ key: 'general' }),
+    User.findById(payload.sub).populate('city', 'name'),
+  ]);
   const policy = user?.active ? await inactivityPolicy(user, settings) : null;
   if (
     !session ||
@@ -39,6 +42,12 @@ export async function authenticateToken(token) {
   }
   if (!user?.active)
     throw new AppError('Usuário inativo ou aguardando aprovação.', 401, 'Autenticação');
+  // Only reached with a still-valid session: an expired one is never brought back.
+  const extended = dutySessionExpiry(policy, session.expiresAt, payload.exp * 1000);
+  if (extended) {
+    session.expiresAt = extended;
+    await Session.updateOne({ _id: session._id }, { expiresAt: extended });
+  }
   return { user, session, inactivityPolicy: policy };
 }
 export const auth = asyncRoute(async (req, res, next) => {
@@ -52,21 +61,24 @@ export const allow =
       ? next()
       : next(new AppError('Seu perfil não tem permissão para esta ação.', 403, 'Autorização'));
 export const essentialOnly = asyncRoute(async (req, res, next) => {
-  if (
-    req.method !== 'GET' &&
-    !/^\/(emergencies|vehicle-checklists)(\/|$)/.test(req.path) &&
-    (await VehicleHandover.exists({
-      driver: req.user._id,
-      closedAt: null,
-      $or: [{ pendingReturn: true }, { pendingIntake: true }],
-    }))
-  )
+  const checksHandover =
+    req.method !== 'GET' && !/^\/(emergencies|vehicle-checklists)(\/|$)/.test(req.path);
+  // Both lookups are independent, so they share one round trip to the database.
+  const [pendingChecklist, attending] = await Promise.all([
+    checksHandover &&
+      VehicleHandover.exists({
+        driver: req.user._id,
+        closedAt: null,
+        $or: [{ pendingReturn: true }, { pendingIntake: true }],
+      }),
+    Attendance.exists({ acceptedBy: req.user._id, status: 'Em atendimento' }),
+  ]);
+  if (pendingChecklist)
     throw new AppError(
       'Conclua o checklist obrigatório da viatura antes de continuar.',
       409,
       'Checklist de viatura',
     );
-  const attending = await Attendance.exists({ acceptedBy: req.user._id, status: 'Em atendimento' });
   const essentialRead =
     req.method === 'GET' &&
     /^\/(attendances|occurrences|attachments|crews|crew-messages|crew-chats|notifications|dashboard|cities|settings|emergencies|vehicle-checklists)(\/|$)/.test(

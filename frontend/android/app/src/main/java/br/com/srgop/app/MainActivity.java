@@ -7,6 +7,8 @@ import com.getcapacitor.BridgeActivity;
 public class MainActivity extends BridgeActivity {
     @Override
     public void onCreate(Bundle savedInstanceState) {
+        // Local plugins must be registered before the bridge is created.
+        registerPlugin(NotificationPermissionPlugin.class);
         super.onCreate(savedInstanceState);
         // A API HTTPS usa a mesma sessão HttpOnly do sistema web.
         CookieManager.getInstance().setAcceptCookie(true);

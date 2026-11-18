@@ -1,0 +1,42 @@
+.startup {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 24px;
+  text-align: center;
+  background: var(--bg);
+  color: var(--muted);
+  font-size: 14px;
+}
+.startup strong {
+  color: var(--primary);
+  font-size: 17px;
+}
+.startup p {
+  max-width: 360px;
+  margin: 0;
+  line-height: 1.5;
+}
+.startup-bar {
+  width: min(320px, 100%);
+  height: 6px;
+  margin-top: 8px;
+  border-radius: 999px;
+  background: var(--border);
+  overflow: hidden;
+}
+.startup-bar span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--primary);
+  transition: width 1s linear;
+}
+@media (prefers-reduced-motion: reduce) {
+  .startup-bar span {
+    transition: none;
+  }
+}

@@ -1,5 +1,17 @@
 import { z } from 'zod';
 import { ROLES, RANKS, PRIORITIES, VEHICLE_STATUSES, MODULES } from '../utils/constants.js';
+import {
+  INVOLVED_ROLES,
+  SEIZURE_KINDS,
+  MAX_INVOLVED,
+  MAX_SEIZURES,
+} from '../utils/occurrenceDetails.js';
+import {
+  isAllowedPushEndpoint,
+  PUSH_ENDPOINT_MAX_LENGTH,
+  PUSH_P256DH_PATTERN,
+  PUSH_AUTH_PATTERN,
+} from '../utils/pushEndpoint.js';
 z.config(z.locales.pt());
 export const id = z.string().regex(/^[a-f\d]{24}$/i, 'Identificador inválido.');
 const text = (min = 1, max = 200) =>
@@ -47,6 +59,35 @@ export const inspectionSchema = z
     engine: condition,
   })
   .strict();
+const involved = z
+  .array(
+    z
+      .object({
+        role: z.enum(INVOLVED_ROLES),
+        name: text(2, 120),
+        document: text(0, 40).optional(),
+        phone: text(0, 30).optional(),
+        notes: text(0, 300).optional(),
+      })
+      .strict(),
+  )
+  .max(MAX_INVOLVED);
+const seizures = z
+  .array(
+    z
+      .object({
+        kind: z.enum(SEIZURE_KINDS),
+        description: text(0, 200).default(''),
+        quantity: z.number().min(0).max(1000000000),
+        unit: text(0, 20).default(''),
+      })
+      .strict()
+      .refine((v) => v.kind !== 'Outro' || v.description.length >= 2, {
+        message: 'Descreva o material apreendido.',
+        path: ['description'],
+      }),
+  )
+  .max(MAX_SEIZURES);
 export const schemas = {
   inspection: inspectionSchema,
   emergency: z
@@ -85,8 +126,20 @@ export const schemas = {
       path: ['confirmPassword'],
     }),
   login: z
-    .object({ email: z.email(), password: text(1, 128), remember: z.boolean().default(false) })
+    .object({
+      email: z.email(),
+      password: text(1, 128),
+      remember: z.boolean().default(false),
+    })
     .strict(),
+  forgotPassword: z.object({ email: z.email().max(200) }).strict(),
+  resetPassword: z
+    .object({ token: text(20, 200), password, confirmPassword: text(10, 72) })
+    .strict()
+    .refine((v) => v.password === v.confirmPassword, {
+      message: 'As senhas não coincidem.',
+      path: ['confirmPassword'],
+    }),
   register: z
     .object({
       name: text(3, 120),
@@ -122,6 +175,7 @@ export const schemas = {
       description: text(10, 10000),
       priority: z.enum(PRIORITIES),
       ...coord,
+      involved: involved.optional(),
     })
     .strict(),
   dispatch: z.object({ occurrence: id, crew: id, reason: text(3, 1000).optional() }).strict(),
@@ -132,6 +186,10 @@ export const schemas = {
       recoveredVehicles: z.number().int().min(0).max(100000).default(0),
       detained: z.number().int().min(0).max(100000).default(0),
       approaches: z.number().int().min(0).max(100000).default(0),
+      // No defaults here: a client that omits these fields must not erase what is stored.
+      involved: involved.optional(),
+      seizures: seizures.optional(),
+      policeStation: text(0, 160).optional(),
     })
     .strict(),
   reason: z.object({ reason: text(5, 1000) }).strict(),
@@ -230,6 +288,24 @@ export const schemas = {
     })
     .strict(),
   cpu: z.object({ officer: id, reason: text(5, 1000) }).strict(),
+  // The server posts to this URL, so only real browser push services are accepted (SSRF).
+  pushSubscription: z
+    .object({
+      endpoint: z
+        .string()
+        .max(PUSH_ENDPOINT_MAX_LENGTH)
+        .refine(isAllowedPushEndpoint, 'Endereço de notificações não reconhecido.'),
+      keys: z
+        .object({
+          p256dh: z.string().regex(PUSH_P256DH_PATTERN, 'Chave de notificações inválida.'),
+          auth: z.string().regex(PUSH_AUTH_PATTERN, 'Chave de notificações inválida.'),
+        })
+        .strict(),
+    })
+    .strict(),
+  pushUnsubscribe: z
+    .object({ endpoint: z.string().min(1).max(PUSH_ENDPOINT_MAX_LENGTH) })
+    .strict(),
 };
 export const validate = (schema) => (req, res, next) => {
   const result = schema.safeParse(req.body);

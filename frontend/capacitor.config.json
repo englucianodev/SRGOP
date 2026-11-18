@@ -3,5 +3,5 @@
   "appName": "SRGOP",
   "webDir": "dist",
   "server": { "androidScheme": "https" },
-  "android": { "allowMixedContent": false }
+  "android": { "allowMixedContent": false, "useLegacyBridge": true }
 }
