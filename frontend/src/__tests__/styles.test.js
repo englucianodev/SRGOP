@@ -30,6 +30,14 @@ describe('rebranding: regras globais de estilo', () => {
     expect(screenRules.match(/#[0-9a-f]{3,8}\b/gi)).toBeNull();
   });
 
+  it('cartão do CPU usa as cores de texto do tema sobre o fundo claro dos painéis', () => {
+    // theme.css loads after styles.css and gives every .panel a light surface, so the CPU
+    // card's original white-on-navy text would vanish. The card's text must follow the theme.
+    expect(theme).toMatch(/\.cpu-panel\s*{[^}]*color:\s*var\(--text\)/);
+    expect(theme).toMatch(/\.cpu-panel p[^{]*{[^}]*color:\s*var\(--muted\)/);
+    expect(theme).toMatch(/\.cpu-active\s*{[^}]*color:\s*var\(--sr-ok\)/);
+  });
+
   it('impressão usa tinta escura mesmo no tema escuro', () => {
     const print = theme.slice(theme.lastIndexOf('@media print'));
     expect(print).toMatch(/:root\[data-theme='dark'\][^{]*{[^}]*--text:\s*#111/);

@@ -101,7 +101,10 @@ export function Modal({ title, children, onClose, wide = false, mandatory = fals
   );
 }
 export function GlobalFeedback() {
-  const { error, acknowledgeError, toast } = useApp();
+  const { error, acknowledgeError, toast, user } = useApp();
+  // On public screens (login, sign-up) closing the dialog keeps the person where they are,
+  // with what they typed; only a signed-in session goes back to the Dashboard.
+  const stay = !user;
   return (
     <>
       {toast && (
@@ -119,10 +122,11 @@ export function GlobalFeedback() {
             </div>
           </div>
           <p className="muted">
-            Após fechar esta mensagem, você será direcionado ao Dashboard. Se a sessão tiver
-            expirado, será necessário entrar novamente.
+            {stay
+              ? 'Feche esta mensagem, confira os dados e tente novamente.'
+              : 'Após fechar esta mensagem, você será direcionado ao Dashboard. Se a sessão tiver expirado, será necessário entrar novamente.'}
           </p>
-          <Button onClick={acknowledgeError}>
+          <Button onClick={() => acknowledgeError({ stay })}>
             Entendi, continuar <ArrowRight size={16} />
           </Button>
         </Modal>

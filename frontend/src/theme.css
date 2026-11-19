@@ -52,6 +52,20 @@
 .panel-head p {
   font-size: 13px;
 }
+/* The CPU card was white-on-navy before the rebranding; on the light panel surface its
+   text follows the theme so the CPU name stays readable in both light and dark modes. */
+.cpu-panel {
+  color: var(--text);
+}
+.cpu-panel p,
+.cpu-panel > small,
+.cpu-top,
+.cpu-top .eyebrow {
+  color: var(--muted);
+}
+.cpu-active {
+  color: var(--sr-ok);
+}
 
 /* ── Buttons: keycaps ──────────────────────────────────────────── */
 .button {

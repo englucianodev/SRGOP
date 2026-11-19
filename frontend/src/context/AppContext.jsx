@@ -340,9 +340,10 @@ export function AppProvider({ children }) {
       return null;
     }
   };
-  const acknowledgeError = () => {
+  const acknowledgeError = ({ stay = false } = {}) => {
     const expired = error?.status === 401;
     setError(null);
+    if (stay) return;
     if (expired) {
       setUser(null);
       setRinging(false);
