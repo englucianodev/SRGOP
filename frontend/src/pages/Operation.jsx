@@ -8,6 +8,7 @@ import Tabs, { useStoredChoice } from '../components/Tabs';
 import OperationTab from '../components/operation/OperationTab';
 import StaffTab from '../components/operation/StaffTab';
 import OccurrencesTab from '../components/operation/OccurrencesTab';
+import ServiceCpu from '../components/ServiceCpu';
 
 const TAB_KEY = 'srgop-operacao-aba';
 const TABS = [
@@ -56,6 +57,8 @@ export default function Operation() {
   return (
     <div className="situation-room">
       <PageTitle eyebrow="SALA DE SITUAÇÃO" title="Operação, Efetivo e Ocorrências" />
+      {/* Same CPU do dia strip the Praça sees, visible on every tab. */}
+      <ServiceCpu />
       <Tabs tabs={TABS} value={tab} onChange={pick} label="Seções da operação" idPrefix="operation" />
       <div
         role="tabpanel"

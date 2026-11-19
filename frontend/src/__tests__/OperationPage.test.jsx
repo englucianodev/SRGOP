@@ -45,6 +45,8 @@ const DASHBOARD = {
   cpu: { officer: { name: 'Ten Costa' }, assumedAt: '2026-11-18T08:00:00.000Z' },
 };
 
+const SERVICE_CPU = { day: '2026-11-18', officer: { _id: 'o9', name: 'Marcos Costa', rank: '1º Ten', phone: '99981234567' } };
+
 const MAP_POINTS = {
   items: [
     { _id: 'o1', protocol: '00001-18112026', crimeType: 'Furto', priority: 'Alta', status: 'Em aberto', latitude: -4.2, longitude: -44.7 },
@@ -58,6 +60,7 @@ vi.mock('../services/api', () => ({
   api: {
     get: vi.fn((path) => {
       if (path === '/dashboard') return Promise.resolve({ data: DASHBOARD });
+      if (path === '/service-cpu') return Promise.resolve({ data: SERVICE_CPU });
       if (path.startsWith('/occurrences/map')) return Promise.resolve({ data: MAP_POINTS });
       return Promise.resolve({ data: [] });
     }),
@@ -105,6 +108,14 @@ describe('Operation page', () => {
     expect(screen.getByText('Turno encerrado')).toBeInTheDocument();
     expect(screen.getByText('Entradas recentes')).toBeInTheDocument();
     await waitFor(() => expect(localStorage.getItem('srgop-operacao-aba')).toBe('efetivo'));
+  });
+
+  it('shows the CPU do dia name for officers and administrators on every tab', async () => {
+    renderAt();
+    const banner = await screen.findByRole('region', { name: 'CPU do serviço' });
+    await waitFor(() => expect(banner).toHaveTextContent('Marcos Costa'));
+    await userEvent.click(screen.getByRole('tab', { name: 'Efetivo' }));
+    expect(screen.getByRole('region', { name: 'CPU do serviço' })).toHaveTextContent('Marcos Costa');
   });
 
   it('shows the filtered occurrences on the Ocorrências tab', async () => {
