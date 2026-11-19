@@ -5,6 +5,10 @@ import { useData } from '../hooks/useData';
 import { api, downloadFile } from '../services/api';
 import { dateKey, params, fmtDateTime } from '../utils/format';
 import { PageTitle, Panel, Input, Select, Button, Loading, Empty } from './UI';
+import Collapsible from './Collapsible';
+import FactList from './FactList';
+import ScrollArea from './ScrollArea';
+import Kpi from './operation/Kpi';
 
 const initial = () => ({
   from: `${dateKey().slice(0, 7)}-01`,
@@ -163,39 +167,45 @@ export default function VehicleReport() {
       {data && (
         <div className="report-content printable">
           <Panel title="Critérios do relatório">
-            <p className="trace-note">
-              <strong>Período:</strong> {dateLabel(data.from)} a {dateLabel(data.to)} — dias
-              completos no horário de Fortaleza.
-              <br />
-              <strong>Viaturas:</strong>{' '}
-              {data.vehicles.map((v) => v.prefix).join(', ') || 'Nenhuma cadastrada'}
-              .<br />
-              {momentLabel(data.phase)} ·{' '}
-              {data.changesOnly ? 'Somente checklists com C/A' : 'Todos os checklists registrados'}.
-              <br />
-              Emitido em {fmtDateTime(data.generatedAt)}.
-            </p>
+            <FactList
+              items={[
+                [
+                  'Período',
+                  `${dateLabel(data.from)} a ${dateLabel(data.to)} — dias completos no horário de Fortaleza`,
+                ],
+                ['Viaturas', data.vehicles.map((v) => v.prefix).join(', ') || 'Nenhuma cadastrada'],
+                [
+                  'Checklists',
+                  `${momentLabel(data.phase)} · ${data.changesOnly ? 'Somente checklists com C/A' : 'Todos os checklists registrados'}`,
+                ],
+                ['Emitido em', fmtDateTime(data.generatedAt)],
+              ]}
+            />
           </Panel>
-          <div className="small-metrics">
+          <div className="kpis wide">
             {[
               ['Recebimentos', data.totals.intake],
               ['Entregas', data.totals.delivery],
               ['Checklists com C/A', data.totals.withChanges],
               ['Itens com C/A', data.totals.alterations],
             ].map(([label, value]) => (
-              <Panel key={label}>
-                <span className="muted">{label}</span>
-                <strong>{value}</strong>
-              </Panel>
+              <Kpi
+                key={label}
+                value={value}
+                label={label}
+                tone={label.includes('C/A') ? 'warn' : ''}
+              />
             ))}
           </div>
           {!data.vehicles.length && <Empty text="Nenhuma viatura cadastrada para o relatório." />}
           {data.vehicles.map((v) => (
-            <Panel
+            <Collapsible
               key={v._id}
               className="trace-crew"
               title={`${v.prefix} · ${v.plate}`}
               subtitle={`${v.brand || ''} ${v.model || ''} · ${v.type} · ${v.city}`}
+              chips={[`${v.checklists.length} checklists`]}
+              defaultOpen={data.vehicles.length === 1}
             >
               {!v.checklists.length ? (
                 <p className="trace-note">
@@ -205,16 +215,15 @@ export default function VehicleReport() {
                 v.checklists.map((c) => (
                   <section className="trace-shift" key={c._id}>
                     <h3>{c.moment}</h3>
-                    <p>
-                      <strong>Data:</strong> {fmtDateTime(c.at)} · <strong>KM registrado:</strong>{' '}
-                      {c.mileage.toLocaleString('pt-BR')} km
-                      <br />
-                      <strong>Policial:</strong> {c.officer}
-                      <br />
-                      <strong>Guarnição:</strong> {c.crew}
-                      {c.serviceCity && ` · ${c.serviceCity}`}
-                    </p>
-                    <div className="table-scroll">
+                    <FactList
+                      items={[
+                        ['Data', fmtDateTime(c.at)],
+                        ['KM registrado', `${c.mileage.toLocaleString('pt-BR')} km`],
+                        ['Policial', c.officer],
+                        ['Guarnição', `${c.crew}${c.serviceCity ? ` · ${c.serviceCity}` : ''}`],
+                      ]}
+                    />
+                    <ScrollArea label={`Itens do checklist: ${c.moment}`}>
                       <table>
                         <thead>
                           <tr>
@@ -239,11 +248,11 @@ export default function VehicleReport() {
                           ))}
                         </tbody>
                       </table>
-                    </div>
+                    </ScrollArea>
                   </section>
                 ))
               )}
-            </Panel>
+            </Collapsible>
           ))}
           <p className="trace-note">
             S/A: sem alteração · C/A: com alteração. O período considera a data efetiva de cada

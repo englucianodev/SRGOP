@@ -5,6 +5,9 @@ import { useData } from '../hooks/useData';
 import { api } from '../services/api';
 import { objectId, fmtDate, fmtDateTime, localInput } from '../utils/format';
 import PersonalFields, { personalDefaults } from '../components/PersonalFields';
+import Pagination from '../components/Pagination';
+import Kpi from '../components/operation/Kpi';
+import usePagination from '../hooks/usePagination';
 import {
   PageTitle,
   Panel,
@@ -18,6 +21,23 @@ import {
   Textarea,
   Confirm,
 } from '../components/UI';
+const PAGE_SIZE = 12;
+const USER_COLUMNS = ['Nome / e-mail', 'Município', 'Perfil', 'Guarnição', 'Acesso', 'Ações'];
+const VEHICLE_COLUMNS = [
+  'Prefixo / placa',
+  'Município',
+  'Quilometragem',
+  'Próxima revisão',
+  'Status',
+  'Ações',
+];
+const STATUS_TONE = {
+  Disponível: 'ok',
+  'Em operação': '',
+  'Em manutenção': 'warn',
+  Indisponível: 'hot',
+};
+
 export default function Resources({ type }) {
   const app = useApp();
   const admin = app.user.role === 'Administrativo';
@@ -37,6 +57,8 @@ export default function Resources({ type }) {
       .toLowerCase()
       .includes(search.toLowerCase()),
   );
+  const pages = usePagination(filtered, PAGE_SIZE, search);
+  const columns = isUser ? USER_COLUMNS : VEHICLE_COLUMNS;
   function edit(r) {
     setForm(
       isUser
@@ -114,12 +136,9 @@ export default function Resources({ type }) {
         )}
       </PageTitle>
       {!isUser && (
-        <div className="small-metrics">
-          {['Disponível', 'Em operação', 'Em manutenção', 'Indisponível'].map((s) => (
-            <Panel key={s}>
-              <Badge>{s}</Badge>
-              <strong>{rows.filter((r) => r.status === s).length}</strong>
-            </Panel>
+        <div className="kpis wide">
+          {Object.entries(STATUS_TONE).map(([s, tone]) => (
+            <Kpi key={s} label={s} tone={tone} value={rows.filter((r) => r.status === s).length} />
           ))}
         </div>
       )}
@@ -149,28 +168,18 @@ export default function Resources({ type }) {
           <Empty />
         ) : (
           <div className="table-scroll">
-            <table>
+            <table className="record-table">
               <thead>
                 <tr>
-                  {(isUser
-                    ? ['Nome / e-mail', 'Município', 'Perfil', 'Guarnição', 'Acesso', 'Ações']
-                    : [
-                        'Prefixo / placa',
-                        'Município',
-                        'Quilometragem',
-                        'Próxima revisão',
-                        'Status',
-                        'Ações',
-                      ]
-                  ).map((c) => (
+                  {columns.map((c) => (
                     <th key={c}>{c}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((r) => (
+                {pages.pageItems.map((r) => (
                   <tr key={r._id}>
-                    <td>
+                    <td data-label={columns[0]}>
                       <strong className="cell-title">{isUser ? r.name : r.prefix}</strong>
                       <span className="cell-sub">
                         {isUser
@@ -185,11 +194,11 @@ export default function Resources({ type }) {
                         </small>
                       )}
                     </td>
-                    <td>{r.city?.name}</td>
-                    <td>
+                    <td data-label={columns[1]}>{r.city?.name}</td>
+                    <td data-label={columns[2]}>
                       {isUser ? <Badge>{r.role}</Badge> : `${r.mileage.toLocaleString('pt-BR')} km`}
                     </td>
-                    <td>
+                    <td data-label={columns[3]}>
                       {isUser ? (
                         r.crew?.name || 'Sem guarnição'
                       ) : (
@@ -209,10 +218,10 @@ export default function Resources({ type }) {
                         </>
                       )}
                     </td>
-                    <td>
+                    <td data-label={columns[4]}>
                       <Badge>{isUser ? (r.active ? 'Ativo' : 'Inativo') : r.status}</Badge>
                     </td>
-                    <td>
+                    <td data-label={columns[5]}>
                       <div className="row-actions">
                         {!isUser && admin && (
                           <Button
@@ -257,6 +266,16 @@ export default function Resources({ type }) {
               </tbody>
             </table>
           </div>
+        )}
+        {!!filtered.length && (
+          <Pagination
+            page={pages.page}
+            pageCount={pages.pageCount}
+            from={pages.from}
+            to={pages.to}
+            total={pages.total}
+            onChange={pages.setPage}
+          />
         )}
       </Panel>
       {editing && (

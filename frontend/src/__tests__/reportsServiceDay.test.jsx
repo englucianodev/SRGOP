@@ -11,7 +11,10 @@ const { useData } = vi.hoisted(() => ({
   })),
 }));
 vi.mock('../hooks/useData', () => ({ useData }));
-vi.mock('../services/api', () => ({ downloadFile: vi.fn(), api: { get: vi.fn() } }));
+vi.mock('../services/api', () => ({
+  downloadFile: vi.fn(),
+  api: { get: vi.fn(() => new Promise(() => {})) },
+}));
 vi.mock('../context/AppContext', () => ({
   useApp: () => ({ run: async (fn) => fn(), user: { role: 'Oficial' } }),
 }));
@@ -35,7 +38,8 @@ describe('dia de serviço (08h→08h, America/Fortaleza)', () => {
         <Reports />
       </MemoryRouter>,
     );
-    await userEvent.click(screen.getByRole('button', { name: 'Indicadores gerais' }));
+    await userEvent.click(screen.getByRole('tab', { name: 'Indicadores gerais' }));
+    await userEvent.click(screen.getByRole('tab', { name: 'Turnos CPU' }));
     expect(await screen.findByLabelText('Dia de serviço')).toHaveValue('2026-11-17');
     expect(screen.getByRole('link', { name: 'Relatório do dia' })).toHaveAttribute(
       'href',

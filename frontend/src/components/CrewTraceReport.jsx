@@ -5,6 +5,9 @@ import { useData } from '../hooks/useData';
 import { api, downloadFile } from '../services/api';
 import { dateKey, params } from '../utils/format';
 import { PageTitle, Panel, Input, Select, Button, Badge, Loading, Empty } from './UI';
+import Collapsible from './Collapsible';
+import FactList from './FactList';
+import ScrollArea from './ScrollArea';
 
 const dateTime = (value) =>
   value
@@ -20,7 +23,7 @@ function Attendances({ rows }) {
   if (!rows.length)
     return <p className="trace-note">Nenhum atendimento registrado para este turno no período.</p>;
   return (
-    <div className="table-scroll">
+    <ScrollArea label="Ocorrências atendidas">
       <table>
         <thead>
           <tr>
@@ -60,7 +63,7 @@ function Attendances({ rows }) {
           ))}
         </tbody>
       </table>
-    </div>
+    </ScrollArea>
   );
 }
 export default function CrewTraceReport() {
@@ -201,29 +204,41 @@ export default function CrewTraceReport() {
       {data && (
         <div className="report-content printable">
           <Panel title="Critérios do relatório">
-            <p className="trace-note">
-              <strong>Período:</strong> {dayLabel(data.from)} a {dayLabel(data.to)} (dias completos,
-              horário de Fortaleza).
-              <br />
-              <strong>Guarnições:</strong>{' '}
-              {data.crews.map((c) => c.name).join(', ') || 'Nenhuma cadastrada'}.<br />
-              Emitido em {dateTime(data.generatedAt)}.
-            </p>
+            <FactList
+              items={[
+                [
+                  'Período',
+                  `${dayLabel(data.from)} a ${dayLabel(data.to)} (dias completos, horário de Fortaleza)`,
+                ],
+                ['Guarnições', data.crews.map((c) => c.name).join(', ') || 'Nenhuma cadastrada'],
+                ['Emitido em', dateTime(data.generatedAt)],
+              ]}
+            />
           </Panel>
           {!data.crews.length && <Empty text="Nenhuma guarnição cadastrada." />}
           {data.crews.map((crew) => (
-            <Panel
+            <Collapsible
               key={crew._id}
               className="trace-crew"
               title={crew.name}
-              subtitle={`${crew.city || 'Município não informado'} (cadastro atual) · ${crew.shifts.length} turnos · ${crew.workedDays.length} dias trabalhados · ${crew.occurrenceCount} ocorrências distintas`}
+              subtitle={`${crew.city || 'Município não informado'} (cadastro atual)`}
+              chips={[
+                `${crew.shifts.length} turnos`,
+                `${crew.workedDays.length} dias trabalhados`,
+                `${crew.occurrenceCount} ocorrências distintas`,
+              ]}
+              defaultOpen={data.crews.length === 1}
             >
-              <p className="trace-note">
-                <strong>Dias trabalhados no período:</strong>{' '}
-                {crew.workedDays.length
-                  ? crew.workedDays.map(dayLabel).join(', ')
-                  : 'Nenhum turno com serviço neste período.'}
-              </p>
+              <FactList
+                items={[
+                  [
+                    'Dias trabalhados no período',
+                    crew.workedDays.length
+                      ? crew.workedDays.map(dayLabel).join(', ')
+                      : 'Nenhum turno com serviço neste período.',
+                  ],
+                ]}
+              />
               {!crew.shifts.length && !crew.unmatchedAttendances.length && (
                 <p className="trace-note">
                   Nenhum turno ou atendimento registrado para esta guarnição no período.
@@ -241,24 +256,25 @@ export default function CrewTraceReport() {
                       reais.
                     </p>
                   )}
-                  <p>
-                    <strong>Equipe no turno:</strong> {shift.crewName} ·{' '}
-                    {shift.city || 'Município do turno não registrado'}
-                    {shift.vehicle ? ` · ${shift.vehicle}` : ''}
-                    <br />
-                    <strong>Fim previsto:</strong> {dateTime(shift.plannedEnd)} ·{' '}
-                    <strong>Fim efetivo:</strong>{' '}
-                    {shift.end ? dateTime(shift.end) : 'Não registrado'}
-                    <br />
-                    <strong>Serviço observado até:</strong> {dateTime(shift.effectiveEnd)}
-                    <br />
-                    <strong>Dias no período:</strong>{' '}
-                    {shift.workedDays.map(dayLabel).join(', ') ||
-                      'Atendimento continuado; turno fora do período'}
-                  </p>
+                  <FactList
+                    items={[
+                      [
+                        'Equipe no turno',
+                        `${shift.crewName} · ${shift.city || 'Município do turno não registrado'}${shift.vehicle ? ` · ${shift.vehicle}` : ''}`,
+                      ],
+                      ['Fim previsto', dateTime(shift.plannedEnd)],
+                      ['Fim efetivo', shift.end ? dateTime(shift.end) : 'Não registrado'],
+                      ['Serviço observado até', dateTime(shift.effectiveEnd)],
+                      [
+                        'Dias no período',
+                        shift.workedDays.map(dayLabel).join(', ') ||
+                          'Atendimento continuado; turno fora do período',
+                      ],
+                    ]}
+                  />
                   <h4>Integrantes e períodos de participação</h4>
                   {shift.members.length ? (
-                    <div className="table-scroll">
+                    <ScrollArea label="Integrantes do turno">
                       <table>
                         <thead>
                           <tr>
@@ -289,7 +305,7 @@ export default function CrewTraceReport() {
                           ))}
                         </tbody>
                       </table>
-                    </div>
+                    </ScrollArea>
                   ) : (
                     <p>Nenhum integrante com participação registrada neste período.</p>
                   )}
@@ -298,7 +314,7 @@ export default function CrewTraceReport() {
                   {!!shift.changes.length && (
                     <details className="trace-changes">
                       <summary>Movimentações dos integrantes ({shift.changes.length})</summary>
-                      <div className="table-scroll">
+                      <ScrollArea label="Movimentações dos integrantes">
                         <table>
                           <thead>
                             <tr>
@@ -328,7 +344,7 @@ export default function CrewTraceReport() {
                             ))}
                           </tbody>
                         </table>
-                      </div>
+                      </ScrollArea>
                     </details>
                   )}
                 </article>
@@ -343,7 +359,7 @@ export default function CrewTraceReport() {
                   <Attendances rows={crew.unmatchedAttendances} />
                 </div>
               )}
-            </Panel>
+            </Collapsible>
           ))}
           <p className="form-note">
             Os dias trabalhados são os dias civis com serviço dentro do período, sem contar duas

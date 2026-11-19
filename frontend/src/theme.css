@@ -1,0 +1,581 @@
+/* Rebranding: the situation-room look (raised cards, display/mono fonts, keycap buttons,
+   KPI counters, chips) applied to the system-wide building blocks. Loaded after
+   styles.css and situation-room.css; every color comes from a token, so the dark theme follows. */
+
+/* ── Page title ────────────────────────────────────────────────── */
+.eyebrow,
+.page-title .eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font: 700 12px/1.2 var(--sr-font-mono);
+  letter-spacing: 1.8px;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+.page-title .eyebrow::before,
+.panel-head h2::before {
+  content: '';
+  flex: none;
+  width: 14px;
+  height: 3px;
+  border-radius: 3px;
+  background: linear-gradient(90deg, var(--sr-brand), var(--sr-brand-2));
+  box-shadow: 0 0 10px var(--sr-brand-2);
+}
+.page-title h1 {
+  font-family: var(--sr-font-display);
+  font-weight: 800;
+  letter-spacing: -0.4px;
+}
+.page-title p {
+  font-size: 14px;
+}
+
+/* ── Panels: raised cards ──────────────────────────────────────── */
+.panel {
+  background: linear-gradient(170deg, var(--sr-surface), var(--sr-surface-2));
+  border: 1px solid var(--sr-line);
+  border-radius: 14px;
+  box-shadow: var(--sr-shadow-sm);
+}
+.panel-head h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font: 700 13px/1.3 var(--sr-font-display);
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: var(--text);
+}
+.panel-head p {
+  font-size: 13px;
+}
+
+/* ── Buttons: keycaps ──────────────────────────────────────────── */
+.button {
+  border-radius: 11px;
+  font: 700 13px/1.3 var(--sr-font-display);
+  letter-spacing: 0.2px;
+  transition:
+    transform 0.12s,
+    box-shadow 0.12s,
+    background 0.15s;
+}
+.button.primary {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--sr-brand) 88%, var(--surface)),
+    var(--sr-brand)
+  );
+  color: var(--surface);
+  box-shadow:
+    0 1px 0 var(--sr-highlight) inset,
+    0 3px 0 color-mix(in srgb, var(--sr-brand) 60%, var(--text)),
+    0 8px 16px -8px var(--sr-shade);
+}
+.button.primary:hover {
+  background: var(--sr-brand);
+  box-shadow:
+    0 1px 0 var(--sr-highlight) inset,
+    0 3px 0 color-mix(in srgb, var(--sr-brand) 60%, var(--text)),
+    var(--sr-glow-brand);
+}
+.button.secondary {
+  background: linear-gradient(180deg, var(--sr-surface), var(--sr-surface-3));
+  border-color: var(--sr-line-strong);
+  color: var(--text);
+  box-shadow:
+    0 1px 0 var(--sr-highlight) inset,
+    0 3px 0 var(--sr-line-strong),
+    0 8px 16px -8px var(--sr-shade);
+}
+.button.secondary:hover {
+  background: linear-gradient(180deg, var(--sr-surface), var(--sr-surface-2));
+  border-color: var(--sr-line-strong);
+}
+.button.danger {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--sr-hot) 88%, var(--surface)),
+    var(--sr-hot)
+  );
+  color: var(--surface);
+  box-shadow:
+    0 1px 0 var(--sr-highlight) inset,
+    0 3px 0 color-mix(in srgb, var(--sr-hot) 60%, var(--text));
+}
+.button.danger:hover {
+  background: var(--sr-hot);
+}
+.button.primary:not(:disabled):hover,
+.button.secondary:not(:disabled):hover,
+.button.danger:not(:disabled):hover {
+  transform: translateY(-1px);
+}
+.button.primary:not(:disabled):active,
+.button.secondary:not(:disabled):active,
+.button.danger:not(:disabled):active {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 var(--sr-highlight) inset;
+}
+
+/* ── Badges: chips ─────────────────────────────────────────────── */
+.badge {
+  --badge: var(--muted);
+  padding: 3px 9px;
+  border-radius: 999px;
+  font: 700 12px/1.4 var(--sr-font-display);
+  letter-spacing: 0.3px;
+  border: 1px solid color-mix(in srgb, var(--badge) 30%, transparent);
+}
+/* Tone classes repeated so they beat the old fixed light colors of styles.css. */
+.badge,
+.badge.red,
+.badge.amber,
+.badge.green,
+.badge.blue,
+.badge.gray {
+  color: var(--badge);
+  background: color-mix(in srgb, var(--badge) 13%, var(--sr-surface));
+}
+.badge i {
+  width: 6px;
+  height: 6px;
+  box-shadow: 0 0 6px currentColor;
+}
+.badge.red {
+  --badge: var(--sr-hot);
+}
+.badge.amber {
+  --badge: var(--amber);
+}
+.badge.green {
+  --badge: var(--sr-ok);
+}
+.badge.blue {
+  --badge: var(--sr-brand-2);
+}
+.badge.gray {
+  --badge: var(--muted);
+}
+
+/* ── Metrics: KPI counters ─────────────────────────────────────── */
+.metric-card,
+.small-metrics > .panel {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(160deg, var(--sr-surface-2), var(--sr-surface));
+  border: 1px solid var(--sr-line);
+  border-radius: 14px;
+  box-shadow: var(--sr-shadow-md);
+  margin-bottom: 0;
+}
+.metric-card::before,
+.small-metrics > .panel::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto;
+  height: 3px;
+  background: linear-gradient(90deg, var(--sr-brand), var(--sr-brand-2));
+}
+.metric-card > strong,
+.small-metrics strong {
+  font-family: var(--sr-font-display);
+  font-weight: 800;
+  text-shadow: 0 2px 0 var(--sr-shade);
+}
+.metric-label,
+.small-metrics > .panel > .muted {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+.small-metrics {
+  margin-bottom: 23px;
+}
+.kpis.wide {
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  margin-bottom: 18px;
+}
+.kpi span {
+  font-size: 12px;
+}
+
+/* ── Tables ────────────────────────────────────────────────────── */
+table {
+  font-size: 13px;
+}
+th {
+  font: 700 12px/1.3 var(--sr-font-display);
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  background: var(--sr-surface-2);
+}
+th,
+td {
+  padding-left: 14px;
+  padding-right: 14px;
+}
+tbody tr:nth-child(even) {
+  background: color-mix(in srgb, var(--sr-surface-2) 55%, transparent);
+}
+tbody tr:hover {
+  background: color-mix(in srgb, var(--sr-brand-2) 9%, var(--sr-surface));
+}
+.cell-title {
+  font-size: 14px;
+  font-weight: 650;
+}
+.num,
+td.num {
+  font-family: var(--sr-font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Scroll areas ──────────────────────────────────────────────── */
+.sr-scroll {
+  max-height: 65vh;
+  overflow: auto;
+  overscroll-behavior: auto;
+  border-top: 1px solid var(--sr-line);
+  box-shadow: inset 0 -12px 12px -12px var(--sr-shade);
+}
+.sr-scroll:focus-visible {
+  outline: 2px solid var(--sr-brand-2);
+  outline-offset: -2px;
+}
+.sr-scroll thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  border-top: 0;
+}
+
+/* ── Report sections (sub-tabs): hidden on screen only, all printed ── */
+@media screen {
+  .report-section.is-inactive {
+    display: none;
+  }
+}
+.report-section {
+  animation: sr-rise 0.35s ease both;
+}
+
+/* ── Collapsible report blocks and label/value facts ───────────── */
+.collapsible-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 18px 20px;
+  cursor: pointer;
+}
+.collapsible-title {
+  min-width: 0;
+}
+.collapsible-title h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font: 800 16px/1.25 var(--sr-font-display);
+  color: var(--text);
+}
+.collapsible-title p {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+.collapsible-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+.collapsible-chips .tag {
+  font-size: 12px;
+  padding: 2px 8px;
+}
+.collapsible-toggle svg {
+  transition: transform 0.25s;
+}
+.collapsible.is-collapsed .collapsible-toggle svg {
+  transform: rotate(-90deg);
+}
+.collapsible-body {
+  padding: 0 20px 18px;
+  border-top: 1px solid var(--sr-line);
+}
+@media screen {
+  .collapsible.is-collapsed > .collapsible-body {
+    display: none;
+  }
+}
+.fact-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 10px 18px;
+  margin: 14px 0;
+}
+.fact-list div {
+  min-width: 0;
+  padding: 8px 12px;
+  border-left: 3px solid var(--sr-brand-2);
+  border-radius: 8px;
+  background: var(--sr-surface-2);
+}
+.fact-list dt {
+  font: 700 12px/1.3 var(--sr-font-display);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.fact-list dd {
+  margin: 3px 0 0;
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+
+/* ── Pagination and record tables (cards on phones) ────────────── */
+.pagination-count {
+  font-family: var(--sr-font-mono);
+  font-size: 13px;
+}
+.pagination-pages {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.pagination-numbers {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+}
+.pagination-gap {
+  align-self: center;
+  color: var(--muted);
+}
+.pagination-number {
+  min-width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  border: 1px solid var(--sr-line);
+  background: var(--sr-surface);
+  color: var(--text);
+  font: 700 13px/1 var(--sr-font-mono);
+}
+.pagination-number:hover {
+  border-color: var(--sr-brand-2);
+}
+.pagination-number[aria-current='page'] {
+  background: var(--sr-brand);
+  border-color: var(--sr-brand);
+  color: var(--surface);
+  box-shadow: var(--sr-glow-brand);
+}
+@media (max-width: 720px) {
+  .record-table thead {
+    display: none;
+  }
+  .record-table,
+  .record-table tbody {
+    display: block;
+  }
+  .record-table tbody {
+    display: grid;
+    gap: 12px;
+    padding: 12px;
+  }
+  .record-table tr {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px 14px;
+    padding: 14px;
+    border: 1px solid var(--sr-line);
+    border-radius: 14px;
+    background: linear-gradient(170deg, var(--sr-surface), var(--sr-surface-2));
+    box-shadow: var(--sr-shadow-sm);
+  }
+  .record-table tbody tr:nth-child(even),
+  .record-table tbody tr:hover {
+    background: linear-gradient(170deg, var(--sr-surface), var(--sr-surface-2));
+  }
+  .record-table td {
+    display: block;
+    padding: 0;
+    border: 0;
+    min-width: 0;
+  }
+  .record-table td::before {
+    content: attr(data-label);
+    display: block;
+    margin-bottom: 2px;
+    font: 700 11px/1.3 var(--sr-font-display);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .record-table td:first-child {
+    grid-column: 1 / -1;
+  }
+  .record-table td:first-child::before,
+  .record-table td:last-child::before {
+    display: none;
+  }
+  .record-table td:first-child .cell-title {
+    white-space: normal;
+    font: 800 15px/1.3 var(--sr-font-display);
+  }
+  .record-table td:last-child {
+    grid-column: 1 / -1;
+    padding-top: 8px;
+    border-top: 1px solid var(--sr-line);
+  }
+  .record-table td:last-child .row-actions {
+    justify-content: flex-end;
+  }
+  .pagination {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .pagination > .pagination-pages {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 8px;
+  }
+  .pagination-pages .button {
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+  .pagination-pages .button svg {
+    display: none;
+  }
+  .pagination-numbers {
+    gap: 4px;
+  }
+  .pagination-number {
+    min-width: 32px;
+    height: 34px;
+  }
+  .pagination-count {
+    text-align: center;
+  }
+}
+
+/* ── Sidebar ───────────────────────────────────────────────────── */
+.brand strong {
+  font-family: var(--sr-font-display);
+  font-weight: 800;
+}
+.sidebar nav a {
+  font-size: 13.5px;
+  font-weight: 600;
+  border-radius: 10px;
+  transition:
+    background 0.2s,
+    color 0.2s,
+    transform 0.2s;
+}
+.sidebar nav a:hover {
+  transform: translateX(2px);
+}
+.sidebar nav a.active {
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--sr-brand-2) 32%, transparent),
+    transparent
+  );
+  box-shadow: 0 1px 0 var(--sr-highlight) inset;
+}
+.sidebar nav a.active:before {
+  background: var(--sr-brand-2);
+  box-shadow: 0 0 10px var(--sr-brand-2);
+}
+
+/* ── Mobile ────────────────────────────────────────────────────── */
+@media (max-width: 720px) {
+  .sr-tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: thin;
+  }
+  .sr-tabs button {
+    flex: none;
+  }
+  .small-metrics,
+  .kpis,
+  .kpis.wide {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .panel-head {
+    padding: 16px 16px 12px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .button,
+  .sidebar nav a {
+    transition: none;
+  }
+  .report-section {
+    animation: none;
+  }
+  .collapsible-toggle svg {
+    transition: none;
+  }
+  .button:hover,
+  .button:active,
+  .sidebar nav a:hover {
+    transform: none;
+  }
+}
+
+@media print {
+  /* Paper is white even when the screen is dark: reset the ink tokens. */
+  :root,
+  :root[data-theme='dark'] {
+    --text: #111;
+    --muted: #555;
+    --sr-surface: #fff;
+    --sr-surface-2: #fff;
+    --sr-surface-3: #f2f2f2;
+    --sr-line: #ccc;
+    --sr-line-strong: #bbb;
+  }
+  th,
+  td {
+    padding: 7px 5px;
+  }
+  .sr-tabs {
+    display: none !important;
+  }
+  .sr-scroll {
+    max-height: none;
+    overflow: visible;
+    box-shadow: none;
+  }
+  .report-cadastros {
+    grid-template-columns: 1fr !important;
+  }
+  .report-section {
+    animation: none;
+  }
+  .collapsible-body {
+    border-top: 0;
+  }
+  .fact-list div {
+    background: none;
+  }
+  .panel,
+  .metric-card,
+  .small-metrics > .panel,
+  .kpi {
+    background: none;
+    box-shadow: none;
+  }
+}

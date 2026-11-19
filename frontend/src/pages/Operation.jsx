@@ -4,6 +4,7 @@ import { FileText, Map as MapIcon, Users } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { useData } from '../hooks/useData';
 import { Empty, Loading, PageTitle } from '../components/UI';
+import Tabs, { useStoredChoice } from '../components/Tabs';
 import OperationTab from '../components/operation/OperationTab';
 import StaffTab from '../components/operation/StaffTab';
 import OccurrencesTab from '../components/operation/OccurrencesTab';
@@ -15,15 +16,6 @@ const TABS = [
   ['ocorrencias', 'Ocorrências', FileText],
 ];
 const OBJECT_ID = /^[a-f\d]{24}$/i;
-
-function storedTab() {
-  try {
-    const value = localStorage.getItem(TAB_KEY);
-    return TABS.some(([id]) => id === value) ? value : TABS[0][0];
-  } catch {
-    return TABS[0][0];
-  }
-}
 
 const idParam = (query, name) => (OBJECT_ID.test(query.get(name) || '') ? query.get(name) : '');
 
@@ -50,14 +42,13 @@ export default function Operation() {
   const { data: emergency } = useData(emergencyId ? `/emergencies/${emergencyId}` : null);
   const { data, loading } = useData('/dashboard');
   const { data: cities } = useData('/cities', []);
-  const [tab, setTab] = useState(() => (crewParam || emergencyId ? 'operacao' : storedTab()));
-  const choose = (id) => {
-    setTab(id);
-    try {
-      localStorage.setItem(TAB_KEY, id);
-    } catch {
-      // Storage unavailable: the choice just is not remembered.
-    }
+  const [stored, choose] = useStoredChoice(TAB_KEY, TABS.map(([id]) => id), TABS[0][0]);
+  // "Ver localização" and the UU alert force the map until the user picks another tab.
+  const [forced, setForced] = useState(Boolean(crewParam || emergencyId));
+  const tab = forced ? 'operacao' : stored;
+  const pick = (id) => {
+    setForced(false);
+    choose(id);
   };
   if (loading && !data) return <Loading />;
   if (!data) return <Empty text="Não foi possível carregar a operação." />;
@@ -65,21 +56,7 @@ export default function Operation() {
   return (
     <div className="situation-room">
       <PageTitle eyebrow="SALA DE SITUAÇÃO" title="Operação, Efetivo e Ocorrências" />
-      <div className="sr-tabs" role="tablist" aria-label="Seções da operação">
-        {TABS.map(([id, label, Icon]) => (
-          <button
-            key={id}
-            role="tab"
-            id={`operation-tab-${id}`}
-            aria-selected={tab === id}
-            aria-controls="operation-panel"
-            onClick={() => choose(id)}
-          >
-            <Icon size={16} aria-hidden="true" />
-            {label}
-          </button>
-        ))}
-      </div>
+      <Tabs tabs={TABS} value={tab} onChange={pick} label="Seções da operação" idPrefix="operation" />
       <div
         role="tabpanel"
         id="operation-panel"
