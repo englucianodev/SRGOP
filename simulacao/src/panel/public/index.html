@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SRGOP · Sala de Situação</title>
+  <script>
+    // Theme before first paint (no flash): saved choice, else the system's; photos use the theme in ?tema=.
+    (function () {
+      var theme = 'dark';
+      try {
+        var saved = localStorage.getItem('srgop-painel-tema');
+        if (saved === 'light' || saved === 'dark') theme = saved;
+        else if (window.matchMedia && matchMedia('(prefers-color-scheme: light)').matches) theme = 'light';
+      } catch (e) { /* storage blocked: follow the default */ }
+      if (/[?&]foto=/.test(location.search)) theme = /[?&]tema=light(&|$)/.test(location.search) ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', theme);
+    })();
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700;800&family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <symbol id="i-play" viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5z" fill="currentColor"/></symbol>
+    <symbol id="i-pause" viewBox="0 0 24 24"><path d="M7 5h3.5v14H7zm6.5 0H17v14h-3.5z" fill="currentColor"/></symbol>
+    <symbol id="i-resume" viewBox="0 0 24 24"><path d="M5 5h2.5v14H5zm5 .5v13L20 12z" fill="currentColor"/></symbol>
+    <symbol id="i-stop" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2.5" fill="currentColor"/></symbol>
+    <symbol id="i-map" viewBox="0 0 24 24"><path d="M9 4 3 6.5v13.5l6-2.5 6 2.5 6-2.5V4l-6 2.5zM9 4v13.5m6-11V20" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></symbol>
+    <symbol id="i-team" viewBox="0 0 24 24"><path d="M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm-7 10c0-4 3-6 7-6s7 2 7 6M17 3.5a3.5 3.5 0 0 1 0 7m2.5 10.5c0-2.5-1-4.3-3-5.3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+    <symbol id="i-gear" viewBox="0 0 24 24"><path d="M4 7h10m4 0h2M4 17h4m4 0h8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="16" cy="7" r="2.5" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="10" cy="17" r="2.5" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+    <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.5" fill="currentColor"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8m10.6 10.6 1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+    <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z" fill="currentColor"/></symbol>
+    <symbol id="i-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="7" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="2.5" fill="currentColor"/><path d="M12 1.5V5m0 14v3.5M1.5 12H5m14 0h3.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+    <symbol id="i-expand" viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5m11-5v5h-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  </svg>
+
+  <header class="top">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 40 44"><path d="M20 2 37 8v13c0 10.5-7 18.5-17 21C10 39.5 3 31.5 3 21V8z" class="shield"/><path d="M20 10.5 22.6 16l6 .6-4.5 4 1.3 5.9L20 23.5l-5.4 3 1.3-5.9-4.5-4 6-.6z" class="star"/></svg>
+      </span>
+      <div>
+        <h1>SRGOP <span>Sala de Situação</span></h1>
+        <p class="sub">Simulação operacional contínua · sistemas publicados</p>
+      </div>
+    </div>
+    <div class="status">
+      <span id="status-pill" class="pill">—</span>
+      <div class="progress" title="Tempo de teste cumprido"><span id="progress-bar"></span></div>
+      <span id="progress-text" class="muted">—</span>
+      <div id="prep-mini" class="prep-mini hidden" title="Preparação do efetivo">
+        <span id="prep-mini-text">Preparação</span>
+        <div class="progress"><span id="prep-mini-bar"></span></div>
+      </div>
+    </div>
+    <div class="clock" id="clock">--:--:--</div>
+    <nav class="controls" aria-label="Controle do teste">
+      <button data-action="iniciar" class="btn primary"><svg class="ico"><use href="#i-play"/></svg>Iniciar</button>
+      <button data-action="pausar" class="btn"><svg class="ico"><use href="#i-pause"/></svg>Pausar</button>
+      <button data-action="retomar" class="btn"><svg class="ico"><use href="#i-resume"/></svg>Retomar</button>
+      <button data-action="encerrar" class="btn danger"><svg class="ico"><use href="#i-stop"/></svg>Encerrar</button>
+      <button id="theme" class="btn icon theme" type="button" aria-label="Mudar para o modo claro" title="Modo claro / escuro">
+        <svg class="ico sun"><use href="#i-sun"/></svg><svg class="ico moon"><use href="#i-moon"/></svg>
+      </button>
+    </nav>
+  </header>
+
+  <nav class="tabs" role="tablist">
+    <button role="tab" data-tab="operacao" aria-selected="true"><svg class="ico"><use href="#i-map"/></svg>Operação</button>
+    <button role="tab" data-tab="efetivo" aria-selected="false"><svg class="ico"><use href="#i-team"/></svg>Efetivo</button>
+    <button role="tab" data-tab="configurar" aria-selected="false"><svg class="ico"><use href="#i-gear"/></svg>Configurar</button>
+  </nav>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <main>
+    <section id="tab-operacao" class="tab operacao">
+      <div class="map-wrap">
+        <div id="map" aria-label="Mapa das guarnições e atendimentos"></div>
+        <div class="map-tools">
+          <button id="follow" class="chip-btn on" type="button" aria-pressed="true" title="Aproxima o mapa ao máximo na área onde as guarnições estão atuando">
+            <svg class="ico"><use href="#i-target"/></svg><span>Seguindo guarnições</span>
+          </button>
+          <button id="overview" class="chip-btn" type="button" title="Mostra toda a área do teste">
+            <svg class="ico"><use href="#i-expand"/></svg><span>Área toda</span>
+          </button>
+        </div>
+        <div id="gps-info" class="map-badge">GPS: —</div>
+        <div class="legend">
+          <span><i class="dot livre"></i>Livre</span>
+          <span><i class="dot atendendo"></i>Em atendimento</span>
+          <span><i class="dot entrando"></i>Entrando</span>
+          <span><i class="dot saindo"></i>Saindo</span>
+          <span><i class="dot alvo"></i>Ocorrência</span>
+          <span><i class="trail-key"></i>Rastro do GPS</span>
+        </div>
+      </div>
+      <aside class="side">
+        <div class="kpis">
+          <div class="kpi"><b id="k-servico">0</b><span>em serviço</span></div>
+          <div class="kpi hot"><b id="k-atendimento">0</b><span>em atendimento</span></div>
+          <div class="kpi ok"><b id="k-livres">0</b><span>livres</span></div>
+          <div class="kpi"><b id="k-fotos">0</b><span>fotos</span></div>
+        </div>
+        <div class="cpu" id="cpu">CPU: —</div>
+        <h2>Atendimentos em andamento</h2>
+        <div id="attendances" class="cards"><p class="muted">Nenhum atendimento em andamento.</p></div>
+        <h2>Linha do tempo</h2>
+        <ol id="events" class="events"></ol>
+      </aside>
+    </section>
+
+    <section id="tab-efetivo" class="tab hidden">
+      <div class="prep-head">
+        <div>
+          <h2>Efetivo</h2>
+          <p class="muted">Nomes e patentes fictícios, sorteados em "Preparar efetivo" e mantidos em dados/efetivo.json. Clique num policial para ver a conta e a entrada em serviço.</p>
+        </div>
+        <button data-action="preparar" class="btn">Preparar efetivo</button>
+      </div>
+
+      <div class="totals">
+        <div class="total">
+          <div class="total-head"><b>Progresso total da preparação</b><span id="prep-count" class="muted"></span></div>
+          <div class="progress wide"><span id="prep-bar"></span></div>
+          <span id="prep-status" class="muted">Nenhuma preparação registrada.</span>
+        </div>
+        <div class="total">
+          <div class="total-head"><b>Entrada em serviço</b><span id="entry-count" class="muted"></span></div>
+          <div class="progress wide duty-bar"><span id="entry-bar"></span></div>
+          <span id="prep-cpu" class="muted">CPU: —</span>
+        </div>
+        <div id="ready" class="ready-box hidden" role="status">
+          <b>Pronto para iniciar</b>
+          <span>O efetivo está preparado. O botão "Iniciar" já está liberado.</span>
+          <button data-action="iniciar" class="btn primary"><svg class="ico"><use href="#i-play"/></svg>Iniciar simulação</button>
+        </div>
+      </div>
+
+      <div class="prep">
+        <div>
+          <div class="prep-head">
+            <h2>Policiais por cidade</h2>
+            <div class="filters" role="group" aria-label="Filtrar policiais">
+              <input id="officer-search" type="search" placeholder="Buscar nome ou cidade" aria-label="Buscar policial">
+              <select id="officer-filter" aria-label="Mostrar">
+                <option value="todos">Todos</option>
+                <option value="pendentes">Conta pendente</option>
+                <option value="entrando">Entrando em serviço</option>
+                <option value="servico">Em serviço</option>
+              </select>
+            </div>
+          </div>
+          <div id="prep-cities" class="prep-cities"><p class="muted">Nenhum policial preparado ainda.</p></div>
+        </div>
+        <div>
+          <h2>Entrada das guarnições</h2>
+          <p class="muted">Login → liberação da viatura → checklist do motorista → ingresso do comandante → em serviço. Atualiza a cada 5 s.</p>
+          <div id="prep-entries" class="entries"><p class="muted">Nenhuma guarnição entrando em serviço agora.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="tab-configurar" class="tab hidden">
+      <div class="config">
+        <form id="settings" class="settings panel-box">
+          <h2>Parâmetros do teste</h2>
+          <div id="fields" class="fields"></div>
+          <button type="submit" class="btn primary">Salvar configurações</button>
+          <p class="muted">Valem a partir do próximo "Iniciar". Credenciais e endereços continuam só no arquivo .env.</p>
+        </form>
+        <div class="tools">
+          <div class="panel-box">
+            <h2>Preparação</h2>
+            <button data-action="preparar" class="btn">Preparar efetivo</button>
+            <p class="muted">Sorteia nomes e patentes (comandantes: 1º, 2º ou 3º Sargento; motoristas: Soldado ou Cabo) e cria ou atualiza as contas no sistema publicado.</p>
+            <button data-action="novo-teste" class="btn">Novo teste</button>
+            <p class="muted">Arquiva o teste anterior em dados/arquivo/ (relatórios, eventos, fotos) para começar outro. Não apaga nada do banco.</p>
+          </div>
+          <div class="panel-box">
+            <h2>Limpeza</h2>
+            <button data-action="limpar-tudo" class="btn danger">Limpar dados de todas as simulações</button>
+            <p class="muted">Apaga do banco publicado tudo o que a simulação criou (contas @sim.srgop.local, guarnições e viaturas SIM, ocorrências, atendimentos e registros delas) e, depois, os relatórios, eventos e fotos de todos os testes neste computador. Dados reais não são tocados. Os nomes sorteados ficam guardados; antes do próximo teste use "Preparar efetivo".</p>
+            <p id="jobs" class="jobs"></p>
+          </div>
+          <div class="panel-box">
+            <h2>Fotos</h2>
+            <button data-action="foto" class="btn">Tirar foto do painel agora</button>
+            <p class="muted">Durante o teste, o painel se fotografa sozinho enquanto houver atendimento em andamento. As fotos entram no relatório final.</p>
+            <div id="photos" class="photos"></div>
+          </div>
+          <div class="panel-box danger-zone">
+            <h2>Emergência</h2>
+            <button data-action="interromper" class="btn danger ghost">Interromper processo agora</button>
+            <p class="muted">Só se o simulador travar. Prefira "Encerrar", que fecha os atendimentos e gera o relatório.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <script src="/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,29 @@
+{
+  "name": "srgop-simulacao",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Simulação contínua de operação do SRGOP com policiais e CPU fictícios.",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "verificar": "node src/cli/check.js",
+    "seed": "node src/cli/seed.js",
+    "start": "node src/cli/run.js",
+    "status": "node src/cli/control.js status",
+    "monitorar": "node src/cli/monitor.js",
+    "painel": "node src/cli/panel.js",
+    "pausar": "node src/cli/control.js pausar",
+    "retomar": "node src/cli/control.js retomar",
+    "encerrar": "node src/cli/control.js encerrar",
+    "relatorio": "node src/cli/report.js",
+    "limpar": "node src/cli/cleanup.js",
+    "test": "node --test test/*.test.js"
+  },
+  "dependencies": {
+    "mongodb": "6.10.0",
+    "playwright": "1.56.1",
+    "socket.io-client": "4.8.1"
+  }
+}

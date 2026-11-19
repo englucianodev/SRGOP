@@ -1,0 +1,21 @@
+services:
+  simulador:
+    build: .
+    container_name: srgop-simulador
+    # Volta sozinho após queda do processo ou reinício da VPS; o estado em ./dados
+    # permite continuar exatamente de onde parou.
+    restart: unless-stopped
+    init: true
+    env_file: .env
+    environment:
+      TZ: America/Fortaleza
+    volumes:
+      - ./dados:/app/dados
+      - ./config:/app/config:ro
+    shm_size: 1gb
+    mem_limit: 4g
+    logging:
+      driver: json-file
+      options:
+        max-size: 20m
+        max-file: "5"
