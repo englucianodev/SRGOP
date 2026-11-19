@@ -93,9 +93,12 @@ export async function me(req, res) {
   });
 }
 export async function activity(req, res) {
-  req.session.lastActivity = new Date();
-  await req.session.save();
-  res.json({ lastActivity: req.session.lastActivity, inactivityPolicy: req.inactivityPolicy });
+  // Clicking "Sair do sistema" also counts as activity, so this request can race the logout
+  // and find its session already deleted; that is an ended session, not a server failure.
+  const lastActivity = new Date();
+  const { matchedCount } = await Session.updateOne({ _id: req.session._id }, { lastActivity });
+  requireValue(matchedCount, 'Sessão encerrada. Entre novamente.', 401, 'Controle de sessão');
+  res.json({ lastActivity, inactivityPolicy: req.inactivityPolicy });
 }
 export async function logout(req, res) {
   await req.session.deleteOne();

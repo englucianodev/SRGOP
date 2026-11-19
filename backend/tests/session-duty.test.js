@@ -19,6 +19,7 @@ import {
 } from '../models/index.js';
 import { openCpuShift } from '../services/cpuShift.js';
 import { serviceWindow } from '../utils/time.js';
+import { activity } from '../controllers/authController.js';
 import { configureSocket } from '../services/realtime.js';
 let mongo, app, city;
 const origin = 'http://localhost:5173',
@@ -207,4 +208,18 @@ test('Socket.IO aceita sessão em serviço após duas horas e rejeita inatividad
     sockets.forEach((s) => s.disconnect());
     await new Promise((resolve) => io.close(resolve));
   }
+});
+test('atividade que chega junto com o logout responde 401, não erro 500', async () => {
+  // "Sair do sistema" is itself a click, so the browser renews activity and logs out at the
+  // same moment: the activity request can pass authentication and only then find its session
+  // deleted by the logout.
+  const p = await person('AtividadeNoLogout');
+  const stale = await Session.findById(p.session._id);
+  await Session.deleteOne({ _id: stale._id });
+  const res = { json: () => assert.fail('não deve responder como sucesso') };
+  await assert.rejects(
+    () => activity({ session: stale, inactivityPolicy: null }, res),
+    (e) => e.status === 401,
+  );
+  assert.equal(await Session.countDocuments({ _id: stale._id }), 0);
 });
