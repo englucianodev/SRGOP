@@ -4,6 +4,7 @@ import { requireValue } from '../utils/errors.js';
 import { transaction } from '../services/operations.js';
 import { crewLocationChanged } from '../services/realtime.js';
 import { audit } from '../services/audit.js';
+import { arriveByGps } from '../services/arrival.js';
 
 const LIVE_MS = 60000;
 const SAME_POINT_MS = 10000;
@@ -119,5 +120,10 @@ export async function location(req, res) {
   if (req.input.enabled) rememberPoint(req, crew.location);
   else lastPoints.delete(pointKey(req));
   crewLocationChanged(crew);
+  if (req.input.enabled)
+    // The position is already saved; a failed arrival check must not fail the GPS update.
+    await arriveByGps(req.user, crew).catch((error) =>
+      console.error('GPS: falha ao registrar a chegada automática:', error.message),
+    );
   res.json(crew.location);
 }

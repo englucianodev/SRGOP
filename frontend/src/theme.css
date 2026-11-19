@@ -356,6 +356,15 @@ td.num {
   justify-content: center;
   gap: 6px;
 }
+/* Per-member early exit (today's CPU only), kept compact beside the name. */
+.crew-members > span:not(.eyebrow) {
+  gap: 8px;
+}
+.crew-members .crew-member-end {
+  margin-left: auto;
+  min-height: 30px;
+  padding: 4px 10px;
+}
 .pagination-gap {
   align-self: center;
   color: var(--muted);

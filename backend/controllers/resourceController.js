@@ -37,7 +37,7 @@ import {
   deliverNotifications,
 } from '../services/realtime.js';
 import { transaction } from '../services/operations.js';
-import { dayKey, dayRange, serviceWindow } from '../utils/time.js';
+import { dayKey, serviceWindow } from '../utils/time.js';
 import { notifyPendingAfterCpuChange } from '../services/pendingDispatch.js';
 import { buildHandover } from '../services/handover.js';
 import { operationEvents } from '../services/operationEvents.js';
@@ -638,8 +638,14 @@ const managementView = async () => {
   return { open, events };
 };
 export async function dashboard(req, res) {
-  const today = dayRange();
-  const match = { deleted: false, occurredAt: today };
+  const service = serviceWindow();
+  const period = { $gte: service.start, $lt: service.end };
+  // One base set for every dashboard number: what the current service (8h–8h) registered or
+  // closed, plus anything still open whatever its date — so "Encerrada" equals "atendidas".
+  const match = {
+    deleted: false,
+    $or: [{ createdAt: period }, { endedAt: period }, { status: { $in: OPEN_STATUSES } }],
+  };
   const [counts, crews, recent, cpu, settings, support, myAttendance, completedToday] =
     await Promise.all([
       Occurrence.aggregate([
@@ -669,7 +675,7 @@ export async function dashboard(req, res) {
       SupportRequest.countDocuments({ status: 'Pendente' }),
       Attendance.findOne({ acceptedBy: req.user._id, status: 'Em atendimento' }),
       Occurrence.aggregate([
-        { $match: { deleted: false, status: 'Encerrada', endedAt: today } },
+        { $match: { deleted: false, status: 'Encerrada', endedAt: period } },
         {
           $group: {
             _id: null,
@@ -681,7 +687,7 @@ export async function dashboard(req, res) {
       ]),
     ]);
   const ongoing = await Occurrence.find({
-    ...match,
+    deleted: false,
     status: { $in: ['Despachada', 'Em atendimento'] },
   })
     .populate('city', 'name')

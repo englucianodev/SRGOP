@@ -5,16 +5,24 @@ import { api } from '../services/api';
 import { Button, Modal, Select, Textarea } from './UI';
 import { militaryLabel } from './PersonalFields';
 
-export default function CrewManagement({ crew }) {
+/** `canEndShift`: only today's CPU may end a member's shift early ("Saída"). */
+export default function CrewManagement({ crew, canEndShift = false }) {
   const app = useApp();
   const [open, setOpen] = useState(false);
   const motorcycle = crew.type === 'Motocicleta' || crew.shiftMode === 'Motocicleta';
-  const [action, setAction] = useState(motorcycle ? 'Saída' : 'Motorista');
+  const admin = app.user.role === 'Administrativo';
+  const actions = [
+    ...(motorcycle ? [] : ['Motorista']),
+    ...(canEndShift ? ['Saída'] : []),
+    ...(admin ? ['Indisponível', 'Disponível'] : []),
+  ];
+  const [action, setAction] = useState(actions[0]);
   const [member, setMember] = useState('');
   const [reason, setReason] = useState('');
   const [busy, setBusy] = useState(false);
   if (
     app.user.role === 'Praça' ||
+    !actions.length ||
     app.activeAttendance ||
     !crew.members.length ||
     !isOnDuty(crew, app.now)
@@ -37,6 +45,7 @@ export default function CrewManagement({ crew }) {
         variant="secondary"
         onClick={() => {
           setOpen(true);
+          setAction(actions[0]);
           setMember('');
           setReason('');
         }}
@@ -48,8 +57,8 @@ export default function CrewManagement({ crew }) {
           <form onSubmit={save}>
             <Select label="Ação" value={action} onChange={(e) => setAction(e.target.value)}>
               {!motorcycle && <option value="Motorista">Definir motorista atual</option>}
-              <option value="Saída">Autorizar saída de policial</option>
-              {app.user.role === 'Administrativo' && (
+              {canEndShift && <option value="Saída">Encerrar turno de um policial</option>}
+              {admin && (
                 <>
                   <option value="Indisponível">Marcar como indisponível</option>
                   <option value="Disponível">Marcar como disponível</option>

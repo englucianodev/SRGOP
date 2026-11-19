@@ -11,6 +11,7 @@ import * as account from '../controllers/accountController.js';
 import * as occurrence from '../controllers/occurrenceController.js';
 import * as resource from '../controllers/resourceController.js';
 import { requestTransfer, answerTransfer, cancelTransfer } from '../services/cpuTransfer.js';
+import { isCpu } from '../services/cpuShift.js';
 import * as chat from '../controllers/chatController.js';
 import * as gps from '../controllers/gpsController.js';
 import * as inspections from '../controllers/inspectionController.js';
@@ -50,6 +51,13 @@ import { arriveOccurrence } from '../services/arrival.js';
 const router = Router();
 const management = allow('Administrativo', 'Oficial');
 const admin = allow('Administrativo');
+// Ending a shift early (the whole crew or a single member) belongs to the officer holding today's CPU.
+const EARLY_EXIT_DENIED = 'Somente o CPU do dia pode encerrar turnos antecipadamente.';
+const cpuOnly = (applies = () => true) =>
+  a(async (req, _res, next) => {
+    if (applies(req)) requireValue(await isCpu(req.user._id), EARLY_EXIT_DENIED, 403);
+    next();
+  });
 const authLimit = rateLimit({
   windowMs: 15 * 60000,
   limit: 30,
@@ -309,6 +317,7 @@ router.post(
 router.post(
   '/crews/:id/end-shift',
   management,
+  cpuOnly(),
   v(s.reason),
   a(async (req, res) => res.json(await endShift(req.params.id, req.user, req.input.reason))),
 );
@@ -316,6 +325,7 @@ router.post(
   '/crews/:id/members',
   management,
   v(s.member),
+  cpuOnly((req) => req.input.action === 'Saída'),
   a(async (req, res) => res.json(await manageMember(req.user, req.params.id, req.input))),
 );
 router.patch(

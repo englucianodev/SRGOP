@@ -166,6 +166,35 @@ test('chegada ao local registra horário, histórico e recusa repetição', asyn
   assert.equal(closed.status, 200, JSON.stringify(closed.body));
   assert.ok(closed.body.arrivedAt);
 });
+test('GPS da guarnição registra a chegada sozinho ao se aproximar da ocorrência', async () => {
+  const gps = (latitude, longitude, accuracy = 15) =>
+    memberAgent
+      .patch(`/api/crews/${crew._id}/gps`)
+      .set('Origin', origin)
+      .send({ enabled: true, latitude, longitude, accuracy });
+  const started = await startAttendance({ latitude: -5.2, longitude: -44.4 });
+  const arrivedAt = async () => (await Occurrence.findById(started._id)).arrivedAt;
+  assert.equal((await gps(-5.25, -44.4)).status, 200); // ~5,5 km away: still on the way
+  assert.equal(await arrivedAt(), undefined);
+  assert.equal((await gps(-5.2002, -44.4, 800)).status, 200); // close but imprecise fix
+  assert.equal(await arrivedAt(), undefined);
+  assert.equal((await gps(-5.2003, -44.4001)).status, 200); // ~35 m away
+  const saved = await Occurrence.findById(started._id);
+  assert.ok(saved.arrivedAt);
+  const entry = saved.history.find((h) => h.action === 'Chegada ao local');
+  assert.match(entry.detail, /GPS/);
+  assert.equal(
+    +(await Attendance.findOne({ occurrence: started._id })).arrivedAt,
+    +saved.arrivedAt,
+  );
+  assert.equal((await gps(-5.2001, -44.4)).status, 200); // later points keep the first arrival
+  assert.equal(+(await arrivedAt()), +saved.arrivedAt);
+  assert.equal((await close(started._id)).status, 200);
+  await memberAgent
+    .patch(`/api/crews/${crew._id}/gps`)
+    .set('Origin', origin)
+    .send({ enabled: false });
+});
 test('chegada exige atendimento em andamento', async () => {
   const open = await openOccurrence();
   assert.equal((await arrive(officerAgent, open._id)).status, 409);

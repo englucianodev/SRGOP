@@ -10,6 +10,7 @@ import { io as connect } from 'socket.io-client';
 import { createApp } from '../app.js';
 import { connectDatabase } from '../config/database.js';
 import { configureSocket } from '../services/realtime.js';
+import { openCpuShift } from '../services/cpuShift.js';
 import {
   User,
   City,
@@ -99,6 +100,7 @@ before(async () => {
   app = createApp();
   admin = await account('Administrativo', 'administrador');
   officer = await account('Oficial', 'oficial');
+  await openCpuShift(officer.user._id); // early shift endings are reserved to the day's CPU
   first = await account('Praça', 'integranteum');
   teammate = await account('Praça', 'colega');
   second = await account('Praça', 'integrantedois');
@@ -405,11 +407,18 @@ test('GPS exige integrante em serviço, valida coordenadas e controla quem trans
     (await patch(teammate.agent, `/crews/${firstCrew._id}/gps`, { enabled: false })).status,
     409,
   );
-  const moved = await patch(first.agent, `/crews/${firstCrew._id}/gps`, { ...body, latitude: -5.26 });
+  const moved = await patch(first.agent, `/crews/${firstCrew._id}/gps`, {
+    ...body,
+    latitude: -5.26,
+  });
   assert.equal(moved.status, 200, JSON.stringify(moved.body));
   assert.equal(moved.body.latitude, -5.26);
   assert.equal(
-    await AuditLog.countDocuments({ actor: first.user._id, action: 'GPS ativado', entityId: firstCrew._id }),
+    await AuditLog.countDocuments({
+      actor: first.user._id,
+      action: 'GPS ativado',
+      entityId: firstCrew._id,
+    }),
     1,
     'atualização rotina de quem já transmite não gera nova auditoria',
   );

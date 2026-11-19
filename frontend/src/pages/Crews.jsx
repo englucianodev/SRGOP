@@ -42,6 +42,11 @@ export default function Crews() {
   const { data: crews } = useData('/crews', []);
   const { data: cities } = useData(canFilter ? '/cities' : null, []);
   const { data: vehicles } = useData(admin ? '/vehicles' : null, []);
+  const { data: cpu } = useData(manager ? '/cpu' : null);
+  // Early shift endings (the whole crew or one member) belong to the officer holding today's CPU.
+  const isDayCpu =
+    manager && String(cpu?.officer?._id ?? cpu?.officer ?? '') === String(app.user._id);
+  const [memberEnd, setMemberEnd] = useState(null);
   const [search, setSearch] = useState('');
   const [filters, setFilters] = useState({});
   const visibleCrews = filterCrews(crews, { ...filters, search }, app.now);
@@ -241,6 +246,19 @@ export default function Crews() {
                       ) : (
                         objectId(c.driver) === m._id && <small>Motorista</small>
                       )}
+                      {isDayCpu && active && (
+                        <Button
+                          variant="danger-ghost"
+                          className="crew-member-end"
+                          aria-label={`Encerrar turno de ${militaryLabel(m)}`}
+                          onClick={() => {
+                            setMemberEnd({ crew: c, member: m });
+                            setReason('');
+                          }}
+                        >
+                          Encerrar
+                        </Button>
+                      )}
                     </span>
                   ))
                 ) : (
@@ -277,7 +295,7 @@ export default function Crews() {
                     Sem localização GPS
                   </Button>
                 )}
-                <CrewManagement crew={c} />
+                <CrewManagement crew={c} canEndShift={isDayCpu} />
                 {mine && c.shiftMode === 'Motocicleta' && <MotorcycleExit crew={c} />}
                 {mine &&
                   c.driver?._id === app.user._id &&
@@ -310,7 +328,7 @@ export default function Crews() {
                         : 'Ingressar'}
                     </Button>
                   )}
-                {manager && active && (
+                {isDayCpu && active && (
                   <Button
                     variant="danger-ghost"
                     onClick={() => {
@@ -349,9 +367,9 @@ export default function Crews() {
                     </Button>
                   </>
                 )}
-                {mine && !manager && (
+                {active && (mine || manager) && !isDayCpu && (
                   <small className="muted">
-                    A saída antecipada depende de autorização do Oficial ou Administrativo.
+                    O encerramento antecipado depende de autorização do CPU do dia.
                   </small>
                 )}
               </div>
@@ -465,6 +483,40 @@ export default function Crews() {
             <p>
               Todos os integrantes de <strong>{end.name}</strong> sairão do turno. Atendimentos já
               aceitos continuam sob responsabilidade de quem os aceitou.
+            </p>
+            <Textarea
+              label="Motivo da autorização"
+              required
+              minLength={5}
+              maxLength={1000}
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+            />
+            <Button type="submit" variant="danger">
+              Autorizar e encerrar
+            </Button>
+          </form>
+        </Modal>
+      )}
+      {memberEnd && (
+        <Modal title="Encerrar turno do policial" onClose={() => setMemberEnd(null)}>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              app.run(async () => {
+                await api.post(`/crews/${memberEnd.crew._id}/members`, {
+                  member: memberEnd.member._id,
+                  action: 'Saída',
+                  reason,
+                });
+                setMemberEnd(null);
+              }, 'Turno do policial encerrado.');
+            }}
+          >
+            <p>
+              <strong>{militaryLabel(memberEnd.member)}</strong> sairá do turno de{' '}
+              <strong>{memberEnd.crew.name}</strong>. Os demais integrantes continuam em serviço; se
+              for o último, o turno da guarnição é encerrado.
             </p>
             <Textarea
               label="Motivo da autorização"

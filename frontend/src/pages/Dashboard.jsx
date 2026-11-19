@@ -53,8 +53,7 @@ export default function Dashboard() {
   const cpu = cpuDetail || data.cpu;
   const isMyCpu = !!cpu && String(cpu.officer?._id ?? cpu.officer) === String(app.user._id);
   const shiftOver = !!cpu?.plannedEnd && +new Date(cpu.plannedEnd) <= app.now;
-  const cancelTransfer = () =>
-    app.run(() => api.delete('/cpu/transfer'), 'Passagem cancelada.');
+  const cancelTransfer = () => app.run(() => api.delete('/cpu/transfer'), 'Passagem cancelada.');
   const metrics = [
     {
       name: 'Alertas',
@@ -66,7 +65,7 @@ export default function Dashboard() {
     {
       name: 'Ocorrências atendidas',
       value: data.results?.closed || 0,
-      note: 'Atendimentos encerrados hoje',
+      note: 'Encerrados neste serviço (desde 8h)',
       icon: CircleCheck,
       tone: 'green',
     },
@@ -163,8 +162,8 @@ export default function Dashboard() {
       <div className="dashboard-upper">
         <Panel
           title="Panorama operacional"
-          subtitle="Distribuição das ocorrências de hoje"
-          actions={<span className="period-pill">Hoje</span>}
+          subtitle="Ocorrências do serviço (8h às 8h) e pendências ainda abertas"
+          actions={<span className="period-pill">Serviço</span>}
         >
           <div className="panorama">
             <div
